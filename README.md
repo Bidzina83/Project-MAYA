@@ -18,3 +18,18 @@ Files of interest:
 - src/maya/adapters/openai_provider.py — OpenAI/Azure adapter
 - tests/test_embeddings.py — placeholder unit test (local fallback)
 - tests/test_openai_provider.py — live OpenAI integration test (skipped without OPENAI_API_KEY)
+
+## Developer notes: runtime scripts, testing, and deployment
+
+- Runtime scripts used by the scheduler live under `/opt/data/.hermes/scripts` on the host. Use the helper script `tools/maya-dev/deploy/ensure_runtime_scripts.sh` to copy the helper scripts into that directory:
+
+  ./tools/maya-dev/deploy/ensure_runtime_scripts.sh --source /opt/data/maya-dev/tools/maya-dev --dest /opt/data/.hermes/scripts --mode 755
+
+- To run the ingest test suite locally:
+
+  PYTHONPATH=/opt/data/.hermes_shim /opt/hermes/.venv/bin/pytest -c /dev/null -q plugins/memory/ingest/tests -p no:xdist
+
+  If pytest reports issues due to temporary directory ownership, set TMPDIR to a writable path (e.g. `TMPDIR=/opt/data/pytest_tmp`).
+
+- CI now installs the package in editable mode when possible and runs tests across Python versions. Optional provider smoke tests are gated by repository secrets (`OPENAI_API_KEY`, `HF_API_KEY`).
+
