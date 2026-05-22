@@ -1,0 +1,22 @@
+[project]
+name = "maya"
+version = "0.0.0"
+description = "Project MAYA: Info Manager (embeddings provider integration)"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-mock",
+    "openai",
+    "python-dotenv",
+]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-q"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=61.0","wheel"]
+build-backend = "setuptools.build_meta"
