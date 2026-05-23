@@ -27,9 +27,13 @@ jobs:
             pip install -e . || pip install .
           fi
           pip install pytest
+      - name: Prepare pytest tempdir
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/.pytest_tmp"
+          echo "TMPDIR=$GITHUB_WORKSPACE/.pytest_tmp" >> $GITHUB_ENV
       - name: Run ingest tests
         run: |
-          pytest -c /dev/null -q plugins/memory/ingest/tests -p no:xdist
+          pytest -q plugins/memory/ingest/tests -p no:xdist
 
   smoke-openai:
     name: OpenAI smoke test (optional)
