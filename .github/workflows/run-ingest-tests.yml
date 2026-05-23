@@ -31,6 +31,7 @@ jobs:
         run: |
           mkdir -p "$GITHUB_WORKSPACE/.pytest_tmp"
           echo "TMPDIR=$GITHUB_WORKSPACE/.pytest_tmp" >> $GITHUB_ENV
+          echo "PYTEST_ADDOPTS=--basetemp=$GITHUB_WORKSPACE/.pytest_tmp" >> $GITHUB_ENV
       - name: Run ingest tests
         run: |
           pytest -q plugins/memory/ingest/tests -p no:xdist
