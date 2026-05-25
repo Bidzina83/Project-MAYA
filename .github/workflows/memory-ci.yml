@@ -24,6 +24,10 @@ jobs:
         run: |
           # Create a local hermes package that points to the plugins/ tree so tests can import hermes.plugins.*
           mkdir -p hermes
+          # ensure hermes is a proper package for import
+          if [ ! -f hermes/__init__.py ]; then
+            printf "# temporary package created by CI for tests\n" > hermes/__init__.py
+          fi
           if [ ! -e hermes/plugins ]; then
             ln -s "$GITHUB_WORKSPACE/plugins" hermes/plugins
           fi
