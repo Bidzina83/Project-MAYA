@@ -1,0 +1,55 @@
+Planned PAT → GitHub App migration preview
+
+Context
+- Purpose: replace ad-hoc PAT-driven calls with the GitHub App helper (/opt/data/scripts/github_app_pr.py)
+- NOTE: This is a preview only. No source files are modified by this preview.
+
+Files found that reference PATs or token-based Authorization (sample list):
+- Many session transcripts under /opt/data/sessions/ (contain historical PATs; DO NOT modify these logs here)
+- /opt/data/skills/github/github-auth/references/pat_audit_and_migration.md (docs)
+- /opt/data/skills/github/github-auth/scripts/remove_embedded_pat.sh (remediation script)
+- /opt/data/scripts/ (search showed github_app_pr.py exists; other scripts executed via sessions embed PATs in session command invocations)
+- /opt/data/skills/mcp/native-mcp/SKILL.md (examples showing PAT placeholder)
+
+Suggested replacements (pattern -> replacement template)
+1) Curl calls that create PRs using a token
+- Pattern (examples found in sessions):
+  curl -s -X POST -H "Authorization: token $TOKEN" -H "Accept: application/vnd.github+json" https://api.github.com/repos/$OWNER/$REPO/pulls -d @/tmp/pr_payload.json
+- Replacement: call the GitHub App helper to create a PR (preferred, non-secret):
+  /opt/hermes/.venv/bin/python3 /opt/data/scripts/github_app_pr.py --app-id <APP_ID> --pem /opt/data/.secrets/github-app/app.pem --owner $OWNER --repo $REPO --head <branch> --base <base> --file-path <file> --file-content @/tmp/file --pr-title "<title>" --pr-body @/tmp/pr_body.txt
+  (If the original flow used an existing branch and payload, adapt flags accordingly.)
+
+2) Git clone/push using embedded token in URL
+- Pattern:
+  git clone https://<TOKEN>@github.com/owner/repo.git
+- Replacement:
+  Use a clean remote URL and push via a repo with proper auth (App flow does not require embedding token in URL). Example remediation command:
+  git clone https://github.com/owner/repo.git
+  git remote set-url origin https://github.com/owner/repo.git
+  # if pushing programmatically, use the App helper to create/modify files and open PRs instead of pushing directly
+
+3) Script-side Python urllib / requests with header 'Authorization': 'token <PAT>'
+- Pattern:
+  req = urllib.request.Request(url, headers={'Authorization': 'token ghp_xxx', ...})
+- Replacement options:
+  - If code runs on-host and has access to the PEM & app id, convert to the App JWT flow: generate JWT, exchange for installation token, and use that token in headers. You can call a small helper (wrap existing code around a function get_installation_token(app_id, pem_path, owner)) and reuse installation token for API calls.
+  - Alternatively, replace with a call to github_app_pr.py for PRs or use 'gh api' with GH config set to the App token.
+
+Concrete next steps I propose (I will not apply these yet; confirm first):
+A) Identify non-session script files to patch (candidates under /opt/data/scripts, /opt/hermes/scripts, and any .sh files under /opt/data/skills/**/scripts). I will list them for review.
+B) For each candidate script, prepare a suggested code patch (preview) that either:
+   - replaces a curl POST to create a PR with a call to github_app_pr.py, or
+   - adds a helper function get_installation_token() and uses it to set Authorization header.
+C) After your confirmation, apply patches (atomic replace) to the selected files and write an audit log at /opt/data/skill_github_auth/pat_migration_applied.log
+
+Sample candidate files to consider patching (from repo search):
+- /opt/data/scripts/* (check for any custom scripts) — review required
+- Files in /opt/data/skills/**/scripts that are real executables (e.g. remove_embedded_pat.sh) — may need updates
+
+Preview file location (this file): /opt/data/reports/pat_migration_preview.txt
+
+If you confirm, I will:
+1) produce per-file diffs for the selected scripts (preview patches) and save them under /opt/data/reports/pat_migration_diffs/ (one .diff per file). 
+2) after your approval, apply the patches and append entries to /opt/data/skill_github_auth/pat_migration_applied.log
+
+Recommendation: rotate/revoke any exposed PATs on GitHub immediately (these are present in session logs).
