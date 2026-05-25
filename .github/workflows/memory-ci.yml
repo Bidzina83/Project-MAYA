@@ -1,0 +1,33 @@
+name: memory-ci
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest jsonschema
+
+      - name: Run tests
+        run: |
+          # Use a writable basetemp to avoid permission issues
+          mkdir -p ${{ github.workspace }}/.pytest_tmp
+          export PYTEST_ADDOPTS="--basetemp=${{ github.workspace }}/.pytest_tmp"
+          pytest -q
