@@ -33,3 +33,26 @@ Files of interest:
 
 - CI now installs the package in editable mode when possible and runs tests across Python versions. Optional provider smoke tests are gated by repository secrets (`OPENAI_API_KEY`, `HF_API_KEY`).
 
+## Running integration tests locally
+
+Integration tests that exercise live provider APIs (OpenAI/Azure) are marked `openai_integration` and are skipped by default when the `OPENAI_API_KEY` is not set.
+
+To run only the OpenAI integration tests locally:
+
+1. Export your API key in the environment (do not commit it):
+
+   export OPENAI_API_KEY="sk-..."
+
+2. Run pytest with the integration marker (example):
+
+   PYTHONPATH=/opt/hermes /opt/hermes/.venv/bin/pytest -q --basetemp=/opt/data/pytest-basetemp /opt/hermes/plugins/memory/ingest/tests -k "openai_integration"
+
+To run the full test suite including integration tests:
+
+   export OPENAI_API_KEY="sk-..."
+   PYTHONPATH=/opt/hermes /opt/hermes/.venv/bin/pytest -q --basetemp=/opt/data/pytest-basetemp /opt/hermes/plugins/memory/ingest/tests
+
+Notes:
+- Never paste your API key into commits or public places. Use repository secrets in GitHub Actions for CI runs.
+- If using Azure OpenAI, set OPENAI_API_BASE, OPENAI_API_VERSION, and OPENAI_DEPLOYMENT accordingly in your environment before running tests.
+
