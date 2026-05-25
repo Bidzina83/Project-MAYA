@@ -1,3 +1,3 @@
-# hermes shim to map hermes.plugins -> ./plugins
+# hermes.plugins proxy package — exposes plugins/ directory as hermes.plugins namespace
 import os
-__path__ = [os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))]
+__path__ = [os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'plugins'))]
