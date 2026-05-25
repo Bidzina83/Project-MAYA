@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IndexEntry",
+  "type": "object",
+  "required": ["embedding_id", "chunk_id", "vector_dim", "created_at"],
+  "properties": {
+    "embedding_id": {"type": "string"},
+    "chunk_id": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "vector_dim": {"type": "integer", "minimum": 1},
+    "created_at": {"type": "string", "format": "date-time"},
+    "source_path": {"type": "string"},
+    "score_meta": {"type": "object", "additionalProperties": true}
+  },
+  "additionalProperties": false
+}
