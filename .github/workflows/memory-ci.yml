@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Prepare workspace for hermes imports
+      - name: Prepare workspace for hermes and maya_dev imports
         run: |
           # Create a local hermes package that points to the plugins/ tree so tests can import hermes.plugins.*
           mkdir -p hermes
@@ -31,6 +31,20 @@ jobs:
           if [ ! -e hermes/plugins ]; then
             ln -s "$GITHUB_WORKSPACE/plugins" hermes/plugins
           fi
+          # Create a shim maya_dev package so tests that import maya_dev.* succeed
+          mkdir -p maya_dev
+          if [ ! -f maya_dev/__init__.py ]; then
+            cat > maya_dev/__init__.py <<'PY'
+# maya_dev shim to expose plugins/ under maya_dev namespace
+import os
+import sys
+_this = os.path.dirname(__file__)
+_plugins_path = os.path.join(os.getcwd(), 'plugins')
+if _plugins_path not in __path__:
+    __path__.insert(0, _plugins_path)
+PY
+          fi
+
           echo "PYTHONPATH=$GITHUB_WORKSPACE:$PYTHONPATH" >> $GITHUB_ENV
 
       - name: Install dev dependencies
