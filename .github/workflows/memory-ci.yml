@@ -20,7 +20,13 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Prepare workspace for hermes and maya_dev imports
+      - name: Install package (editable) and dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest jsonschema
+
+      - name: Prepare workspace for hermes and maya_dev imports (fallback)
         run: |
           # Create a local hermes package that points to the plugins/ tree so tests can import hermes.plugins.*
           mkdir -p hermes
@@ -31,7 +37,7 @@ jobs:
           if [ ! -e hermes/plugins ]; then
             ln -s "$GITHUB_WORKSPACE/plugins" hermes/plugins
           fi
-          # Create a shim maya_dev package so tests that import maya_dev.* succeed
+          # Create a shim maya_dev package so tests that import maya_dev.* succeed (fallback)
           mkdir -p maya_dev
           if [ ! -f maya_dev/__init__.py ]; then
             cat > maya_dev/__init__.py <<'PY'
@@ -46,11 +52,6 @@ PY
           fi
 
           echo "PYTHONPATH=$GITHUB_WORKSPACE:$PYTHONPATH" >> $GITHUB_ENV
-
-      - name: Install dev dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest jsonschema
 
       - name: Run tests
         run: |
