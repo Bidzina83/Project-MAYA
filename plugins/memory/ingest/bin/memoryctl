@@ -1,36 +1,72 @@
 #!/usr/bin/env python3
-import sys, os, json
+"""Minimal memoryctl CLI for registry queries.
 
-def usage():
-    print("usage: memoryctl registry list --storage-root <path>")
-    sys.exit(2)
+Usage:
+  memoryctl registry list --storage-root /path/to/storage
+"""
+import argparse
+import json
+import os
+import sys
 
-if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        usage()
-    cmd = sys.argv[1:]
-    if cmd[0] == 'registry' and len(cmd) >= 2 and cmd[1] == 'list':
-        # parse --storage-root
-        if '--storage-root' in cmd:
-            idx = cmd.index('--storage-root')
-            try:
-                storage = cmd[idx+1]
-            except IndexError:
-                usage()
-        else:
-            usage()
-        regpath = os.path.join(storage, 'registry', 'memory_registry.json')
-        if not os.path.exists(regpath):
-            print('[]')
-            sys.exit(0)
-        with open(regpath, 'r', encoding='utf-8') as f:
-            try:
-                j = json.load(f)
-            except Exception:
-                j = {}
-        # print JSON array of entries
-        out = list(j.values())
-        print(json.dumps(out))
-        sys.exit(0)
-    else:
-        usage()
+
+def load_registry_json(storage_root: str):
+    reg_path = os.path.join(storage_root, "registry", "memory_registry.json")
+    if not os.path.exists(reg_path):
+        return None, reg_path
+    with open(reg_path, "r", encoding="utf-8") as f:
+        try:
+            data = json.load(f)
+        except Exception as e:
+            print(f"Failed to load registry JSON: {e}", file=sys.stderr)
+            return None, reg_path
+    return data, reg_path
+
+
+def cmd_registry_list(args):
+    data, path = load_registry_json(args.storage_root)
+    if data is None:
+        print(f"No registry found at {path}")
+        return 1
+    # print a compact table
+    rows = []
+    for cid, meta in data.items():
+        rows.append({
+            "chunk_id": cid,
+            "source_path": meta.get("source_path"),
+            "model": meta.get("model"),
+            "provider": meta.get("provider"),
+            "vector_dim": meta.get("vector_dim"),
+            "embedding_path": meta.get("embedding_path"),
+            "timestamp": meta.get("embedding_timestamp"),
+        })
+    # sort by timestamp
+    rows.sort(key=lambda r: r.get("timestamp") or "")
+    for r in rows:
+        provider = r['provider'] if r['provider'] else 'unknown'
+        model = r['model'] if r['model'] else 'unknown'
+        vector_dim = r['vector_dim'] if r['vector_dim'] is not None else 'unknown'
+        print(f"{r['chunk_id']}\t{provider}\t{model}\t{vector_dim}\t{r['source_path'] or '-'}\t{r['timestamp'] or '-'}")
+    return 0
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(prog="memoryctl")
+    sp = p.add_subparsers(dest="cmd")
+
+    reg = sp.add_parser("registry", help="registry operations")
+    reg_sub = reg.add_subparsers(dest="regcmd")
+
+    listp = reg_sub.add_parser("list", help="list registry entries")
+    listp.add_argument("--storage-root", required=True)
+
+    args = p.parse_args(argv)
+    if args.cmd == "registry" and args.regcmd == "list":
+        return cmd_registry_list(args)
+    p.print_help()
+    return 2
+
+
+if __name__ == "__main__":
+    rc = main()
+    sys.exit(rc)
