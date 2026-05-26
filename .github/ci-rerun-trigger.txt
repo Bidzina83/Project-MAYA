@@ -1,1 +1,1 @@
-auto-retry 2026-05-26T10:09:52Z iter3
+add plugins embedder_wrapper 2026-05-26T10:17:47Z
