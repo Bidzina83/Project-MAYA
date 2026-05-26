@@ -1,6 +1,11 @@
 name: Ingest tests
 
 on:
+  workflow_call:
+    inputs:
+      OPENAI_API_KEY:
+        required: false
+        type: string
   pull_request:
     paths:
       - 'plugins/memory/ingest/**'
@@ -42,6 +47,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
       - name: Run OpenAI integration tests (skip if secret missing)
+        env:
+          OPENAI_API_KEY: ${{ github.event.inputs.OPENAI_API_KEY != '' && github.event.inputs.OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
         run: |
           if [ -z "${OPENAI_API_KEY:-}" ]; then
             echo "OPENAI_API_KEY not set; skipping OpenAI integration tests"

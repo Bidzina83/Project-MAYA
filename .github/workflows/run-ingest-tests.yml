@@ -1,6 +1,14 @@
 name: Run ingest tests
 
 on:
+  workflow_call:
+    inputs:
+      OPENAI_API_KEY:
+        required: false
+        type: string
+      HF_API_KEY:
+        required: false
+        type: string
   push:
     branches: [ main, 'ci/**' ]
   pull_request:
@@ -56,6 +64,8 @@ jobs:
             pip install -e . || pip install .
           fi
       - name: Run OpenAI smoke embedding (skip if secret missing)
+        env:
+          OPENAI_API_KEY: ${{ github.event.inputs.OPENAI_API_KEY != '' && github.event.inputs.OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
         run: |
           if [ -z "${OPENAI_API_KEY:-}" ]; then
             echo "OPENAI_API_KEY not set; skipping OpenAI smoke"
@@ -89,6 +99,8 @@ jobs:
             pip install -e . || pip install .
           fi
       - name: Run HF smoke embedding (skip if secret missing)
+        env:
+          HF_API_KEY: ${{ github.event.inputs.HF_API_KEY != '' && github.event.inputs.HF_API_KEY || secrets.HF_API_KEY }}
         run: |
           if [ -z "${HF_API_KEY:-}" ]; then
             echo "HF_API_KEY not set; skipping HuggingFace smoke"
