@@ -1,3 +1,9 @@
+[project]
+name = "maya"
+version = "0.0.0"
+description = "Project MAYA: Info Manager (embeddings provider integration)"
+requires-python = ">=3.10"
+
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
