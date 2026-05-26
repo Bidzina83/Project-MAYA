@@ -40,7 +40,7 @@ jobs:
     name: OpenAI smoke test (optional)
     runs-on: ubuntu-latest
     needs: test-matrix
-    if: ${{ github.event_name != 'pull_request' && secrets.OPENAI_API_KEY != '' }}
+    if: ${{ github.event_name != 'pull_request' }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
@@ -55,23 +55,25 @@ jobs:
           if [ -f pyproject.toml ] || [ -f setup.py ]; then
             pip install -e . || pip install .
           fi
-      - name: Run OpenAI smoke embedding
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - name: Run OpenAI smoke embedding (skip if secret missing)
         run: |
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            echo "OPENAI_API_KEY not set; skipping OpenAI smoke"
+            exit 0
+          fi
           python - <<'PY'
-import os
-from hermes.plugins.memory.ingest.backends.openai_backend import OpenAIBackend
-b = OpenAIBackend()
-vecs = b.embed_batch(["smoke test"])
-print('len(vecs)=', len(vecs))
-PY
+            import os
+            from hermes.plugins.memory.ingest.backends.openai_backend import OpenAIBackend
+            b = OpenAIBackend()
+            vecs = b.embed_batch(["smoke test"])
+            print('len(vecs)=', len(vecs))
+          PY
 
   smoke-hf:
     name: Hugging Face smoke test (optional)
     runs-on: ubuntu-latest
     needs: test-matrix
-    if: ${{ github.event_name != 'pull_request' && secrets.HF_API_KEY != '' }}
+    if: ${{ github.event_name != 'pull_request' }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
@@ -86,14 +88,16 @@ PY
           if [ -f pyproject.toml ] || [ -f setup.py ]; then
             pip install -e . || pip install .
           fi
-      - name: Run HF smoke embedding
-        env:
-          HF_API_KEY: ${{ secrets.HF_API_KEY }}
+      - name: Run HF smoke embedding (skip if secret missing)
         run: |
+          if [ -z "${HF_API_KEY:-}" ]; then
+            echo "HF_API_KEY not set; skipping HuggingFace smoke"
+            exit 0
+          fi
           python - <<'PY'
-import os
-from hermes.plugins.memory.ingest.backends.hf_backend import HFBackend
-b = HFBackend()
-vecs = b.embed_batch(["smoke test"])
-print('len(vecs)=', len(vecs))
-PY
+            import os
+            from hermes.plugins.memory.ingest.backends.hf_backend import HFBackend
+            b = HFBackend()
+            vecs = b.embed_batch(["smoke test"])
+            print('len(vecs)=', len(vecs))
+          PY
