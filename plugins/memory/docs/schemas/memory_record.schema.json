@@ -6,13 +6,18 @@
     "chunk_id": {"type": "string"},
     "embedding_path": {"type": "string"},
     "text": {"type": "string"},
-    "vector": {"type": "array", "items": {"type": "number"}},
+    "embedding": {"type": "array", "items": {"type": "number"}},
     "model": {"type": ["string", "null"]},
     "provider": {"type": ["string", "null"]},
     "vector_dim": {"type": ["integer", "null"]},
-    "metadata": {"type": "object"},
     "extractor_version": {"type": ["string", "null"]},
-    "embedding_timestamp": {"type": ["string", "null"], "format": "date-time"}
+    "source_path": {"type": ["string", "null"]},
+    "source_hash": {"type": ["string", "null"]},
+    "chunk_start": {"type": ["integer", "null"]},
+    "chunk_end": {"type": ["integer", "null"]},
+    "chunk_text_snippet": {"type": ["string", "null"]},
+    "embedding_timestamp": {"type": ["string", "null"], "format": "date-time"},
+    "metadata": {"type": "object"}
   },
   "required": ["chunk_id"],
   "additionalProperties": true
