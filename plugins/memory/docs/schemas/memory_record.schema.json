@@ -2,15 +2,18 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "MemoryRecord",
   "type": "object",
-  "required": ["chunk_id", "text", "metadata"],
   "properties": {
-    "chunk_id": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "chunk_id": {"type": "string"},
+    "embedding_path": {"type": "string"},
     "text": {"type": "string"},
-    "vector": {
-      "type": "array",
-      "items": {"type": "number"}
-    },
-    "metadata": {"$ref": "provenance.schema.json"}
+    "vector": {"type": "array", "items": {"type": "number"}},
+    "model": {"type": ["string", "null"]},
+    "provider": {"type": ["string", "null"]},
+    "vector_dim": {"type": ["integer", "null"]},
+    "metadata": {"type": "object"},
+    "extractor_version": {"type": ["string", "null"]},
+    "embedding_timestamp": {"type": ["string", "null"], "format": "date-time"}
   },
-  "additionalProperties": false
+  "required": ["chunk_id"],
+  "additionalProperties": true
 }
