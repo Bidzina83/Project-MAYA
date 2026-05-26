@@ -17,9 +17,30 @@ import os
 from datetime import datetime, timezone
 from typing import List
 
-from .chunker import chunk_file
-from .embedder import Embedder, compute_chunk_id, EmbedderError
-from .registry import MemoryRegistry
+# resilient imports: support relative import when used as package and absolute when loaded in tests
+try:
+    from .chunker import chunk_file
+except Exception:
+    try:
+        from plugins.memory.ingest.chunker import chunk_file
+    except Exception:
+        from hermes.plugins.memory.ingest.chunker import chunk_file
+
+try:
+    from .embedder import Embedder, compute_chunk_id, EmbedderError
+except Exception:
+    try:
+        from plugins.memory.ingest.embedder import Embedder, compute_chunk_id, EmbedderError
+    except Exception:
+        from hermes.plugins.memory.ingest.embedder import Embedder, compute_chunk_id, EmbedderError
+
+try:
+    from .registry import MemoryRegistry
+except Exception:
+    try:
+        from plugins.memory.ingest.registry import MemoryRegistry
+    except Exception:
+        from hermes.plugins.memory.ingest.registry import MemoryRegistry
 
 # sqlite_registry is optional; import locally when needed
 
@@ -73,7 +94,11 @@ class IngestionPipeline:
                 from .sqlite_registry import SQLiteMemoryRegistry
                 sqlite_registry = SQLiteMemoryRegistry(storage_root)
             except Exception:
-                sqlite_registry = None
+                try:
+                    from plugins.memory.ingest.sqlite_registry import SQLiteMemoryRegistry
+                    sqlite_registry = SQLiteMemoryRegistry(storage_root)
+                except Exception:
+                    sqlite_registry = None
 
         chunks = chunk_file(path, max_chars=max_chars, extractor_version=extractor_version)
         texts = [c.text for c in chunks]
@@ -130,3 +155,9 @@ class IngestionPipeline:
                     pass
             written_paths.append(fname)
         return written_paths
+
+# Ensure compute_chunk_id exists for tests and external loaders
+if 'compute_chunk_id' not in globals():
+    import hashlib
+    def compute_chunk_id(text: str) -> str:
+        return hashlib.sha256(text.encode('utf-8')).hexdigest()
