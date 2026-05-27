@@ -30,10 +30,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # Install package in editable mode if possible, fallback to install current dir
-          if [ -f pyproject.toml ] || [ -f setup.py ]; then
-            pip install -e . || pip install .
-          fi
+          # Install package in editable mode to make modules importable
+          pip install -e .
           pip install pytest
       - name: Prepare pytest tempdir
         run: |
@@ -60,9 +58,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install openai
           # ensure package importable
-          if [ -f pyproject.toml ] || [ -f setup.py ]; then
-            pip install -e . || pip install .
-          fi
+          pip install -e .
       - name: Run OpenAI smoke embedding (skip if secret missing)
         env:
           OPENAI_API_KEY: ${{ github.event.inputs.OPENAI_API_KEY != '' && github.event.inputs.OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
@@ -95,9 +91,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests
           # ensure package importable
-          if [ -f pyproject.toml ] || [ -f setup.py ]; then
-            pip install -e . || pip install .
-          fi
+          pip install -e .
       - name: Run HF smoke embedding (skip if secret missing)
         env:
           HF_API_KEY: ${{ github.event.inputs.HF_API_KEY != '' && github.event.inputs.HF_API_KEY || secrets.HF_API_KEY }}
