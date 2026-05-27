@@ -4,7 +4,7 @@ import types
 
 import pytest
 
-from hermes.plugins.memory.ingest import embedder
+from .. import embedder
 
 
 def test_compute_chunk_id_known():
