@@ -13,9 +13,9 @@ def test_embedder_batching(monkeypatch):
             return [[len(t)] for t in texts]
 
     # Patch BackendFactory used inside Embedder to return our FakeBackend
-    monkeypatch.setattr('hermes.plugins.memory.ingest.embedder.BackendFactory', lambda name, model: FakeBackend(model), raising=True)
+    monkeypatch.setattr('plugins.memory.ingest.embedder.BackendFactory', lambda name, model: FakeBackend(model), raising=True)
 
-    from hermes.plugins.memory.ingest.embedder_wrapper import EmbeddingClient
+    from plugins.memory.ingest.embedder_wrapper import EmbeddingClient
 
     client = EmbeddingClient(backend='mock', model='m', batch_size=2)
     docs = [str(i) * (i + 1) for i in range(5)]  # lengths 1..5
