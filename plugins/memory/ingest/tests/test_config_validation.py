@@ -1,6 +1,6 @@
 import pytest
 
-from .. import config
+from plugins.memory.ingest import config
 
 
 def test_validate_backend_ok():
