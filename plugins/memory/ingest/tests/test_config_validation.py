@@ -1,6 +1,6 @@
 import pytest
 
-from maya_dev.plugins.memory.ingest import config
+from .. import config
 
 
 def test_validate_backend_ok():
