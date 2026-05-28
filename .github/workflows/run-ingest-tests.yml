@@ -52,7 +52,7 @@ jobs:
     name: OpenAI smoke test (optional)
     runs-on: ubuntu-latest
     needs: test-matrix
-    if: ${{ secrets.OPENAI_API_KEY != '' }}
+
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
@@ -68,6 +68,7 @@ jobs:
             pip install -e . || pip install .
           fi
       - name: Run OpenAI smoke embedding
+        if: ${{ secrets.OPENAI_API_KEY != '' }}
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
@@ -83,7 +84,7 @@ jobs:
     name: Hugging Face smoke test (optional)
     runs-on: ubuntu-latest
     needs: test-matrix
-    if: ${{ startsWith(secrets.HF_API_KEY, 'hf-') || startsWith(secrets.HUGGINGFACEHUB_API_TOKEN, 'hf-') }}
+
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
@@ -99,6 +100,7 @@ jobs:
             pip install -e . || pip install .
           fi
       - name: Run HF smoke embedding
+        if: ${{ startsWith(secrets.HF_API_KEY, 'hf-') || startsWith(secrets.HUGGINGFACEHUB_API_TOKEN, 'hf-') }}
         env:
           HF_API_KEY: ${{ secrets.HF_API_KEY }}
           HUGGINGFACEHUB_API_TOKEN: ${{ secrets.HUGGINGFACEHUB_API_TOKEN }}
