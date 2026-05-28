@@ -35,10 +35,10 @@ jobs:
       - name: Verify package import
         run: |
           python - <<'PY'
-import importlib
-importlib.import_module('plugins.memory.ingest')
-print('import OK')
-PY
+          import importlib
+          importlib.import_module('plugins.memory.ingest')
+          print('import OK')
+          PY
       - name: Prepare pytest tempdir
         run: |
           mkdir -p "$GITHUB_WORKSPACE/.pytest_tmp"
@@ -72,12 +72,12 @@ PY
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           python - <<'PY'
-import os
-from hermes.plugins.memory.ingest.backends.openai_backend import OpenAIBackend
-b = OpenAIBackend()
-vecs = b.embed_batch(["smoke test"])
-print('len(vecs)=', len(vecs))
-PY
+          import os
+          from hermes.plugins.memory.ingest.backends.openai_backend import OpenAIBackend
+          b = OpenAIBackend()
+          vecs = b.embed_batch(["smoke test"])
+          print('len(vecs)=', len(vecs))
+          PY
 
   smoke-hf:
     name: Hugging Face smoke test (optional)
@@ -104,9 +104,9 @@ PY
           HUGGINGFACEHUB_API_TOKEN: ${{ secrets.HUGGINGFACEHUB_API_TOKEN }}
         run: |
           python - <<'PY'
-import os
-from hermes.plugins.memory.ingest.backends.hf_backend import HFBackend
-b = HFBackend()
-vecs = b.embed_batch(["smoke test"])
-print('len(vecs)=', len(vecs))
-PY
+          import os
+          from hermes.plugins.memory.ingest.backends.hf_backend import HFBackend
+          b = HFBackend()
+          vecs = b.embed_batch(["smoke test"])
+          print('len(vecs)=', len(vecs))
+          PY
