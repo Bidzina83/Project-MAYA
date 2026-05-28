@@ -27,6 +27,16 @@ jobs:
             pip install -e . || pip install .
           fi
           pip install pytest
+      - name: Ensure repo root is on PYTHONPATH
+        run: |
+          echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
+      - name: Verify package import
+        run: |
+          python - <<'PY'
+          import importlib
+          importlib.import_module('plugins.memory.ingest')
+          print('import OK')
+          PY
       - name: Prepare pytest tempdir
         run: |
           mkdir -p "$GITHUB_WORKSPACE/.pytest_tmp"
