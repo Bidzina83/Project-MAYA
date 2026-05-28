@@ -2,7 +2,7 @@ import hashlib
 
 import pytest
 
-from .. import embedder
+from plugins.memory.ingest import embedder
 
 
 def test_compute_source_hash_and_provenance(monkeypatch):
