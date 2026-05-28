@@ -48,5 +48,3 @@ def _post(url, headers=None, json=None):
     return FakeResponse(200, headers={}, json_data=[[0.1, 0.2]])
 
 requests = SimpleNamespace(post=_post, exceptions=SimpleNamespace(RequestException=Exception))
-
-# ci: trigger new run (no-op)
