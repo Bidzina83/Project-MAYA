@@ -1,30 +1,63 @@
+"""SQLite-backed MemoryRegistry implementation.
+
+Provides a simple transactional registry using SQLite with WAL mode to support
+concurrent writers safely and efficiently. This is intended as a replacement
+for the JSON file-backed MemoryRegistry for higher-concurrency workloads.
+"""
+from __future__ import annotations
 import os
 import sqlite3
-import json
+from typing import Dict, Any, Optional
 
 class SQLiteMemoryRegistry:
-    """Minimal SQLite-backed registry used in tests. Stores JSON-serialized meta per chunk_id.
-    """
-    def __init__(self, storage_root: str):
-        self.db_path = os.path.join(storage_root, 'registry', 'memory_registry.db')
+    def __init__(self, storage_root: str, db_name: str = 'memory_registry.db'):
+        self.storage_root = storage_root
+        self.db_path = os.path.join(storage_root, 'registry', db_name)
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-        # sqlite3 connection with check_same_thread=False to be flexible in tests
-        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
-        self.conn.execute('''
-            CREATE TABLE IF NOT EXISTS registry (
-                chunk_id TEXT PRIMARY KEY,
-                meta TEXT NOT NULL
-            )
-        ''')
-        self.conn.commit()
+        self._ensure_db()
 
-    def add_entry(self, meta: dict):
-        chunk_id = meta.get('chunk_id')
-        if chunk_id is None:
-            raise ValueError('meta must include chunk_id')
-        self.conn.execute('INSERT OR REPLACE INTO registry (chunk_id, meta) VALUES (?, ?)', (chunk_id, json.dumps(meta)))
-        self.conn.commit()
+    def _conn(self):
+        conn = sqlite3.connect(self.db_path, timeout=30, isolation_level=None)
+        # use WAL for concurrent readers/writers
+        conn.execute('PRAGMA journal_mode=WAL;')
+        conn.execute('PRAGMA synchronous=NORMAL;')
+        return conn
 
-    def list_entries(self):
-        cur = self.conn.execute('SELECT meta FROM registry')
-        return [json.loads(row[0]) for row in cur.fetchall()]
+    def _ensure_db(self):
+        with self._conn() as c:
+            c.execute("CREATE TABLE IF NOT EXISTS registry (chunk_id TEXT PRIMARY KEY, metadata_json TEXT NOT NULL)")
+
+    def add_entry(self, metadata: Dict[str, Any]) -> None:
+        import json
+        if 'chunk_id' not in metadata:
+            raise ValueError('metadata must include chunk_id')
+        cid = metadata['chunk_id']
+        meta_json = json.dumps(metadata, separators=(',', ':'), ensure_ascii=False)
+        with self._conn() as c:
+            c.execute('BEGIN IMMEDIATE')
+            try:
+                c.execute('INSERT OR REPLACE INTO registry(chunk_id, metadata_json) VALUES (?, ?)', (cid, meta_json))
+                c.execute('COMMIT')
+            except Exception:
+                c.execute('ROLLBACK')
+                raise
+
+    def get_entry(self, chunk_id: str) -> Optional[Dict[str, Any]]:
+        import json
+        with self._conn() as c:
+            cur = c.execute('SELECT metadata_json FROM registry WHERE chunk_id = ?', (chunk_id,))
+            row = cur.fetchone()
+            if not row:
+                return None
+            return json.loads(row[0])
+
+    def list_entries(self) -> Dict[str, Dict[str, Any]]:
+        import json
+        with self._conn() as c:
+            cur = c.execute('SELECT chunk_id, metadata_json FROM registry')
+            return {row[0]: json.loads(row[1]) for row in cur.fetchall()}
+
+    def exists(self, chunk_id: str) -> bool:
+        with self._conn() as c:
+            cur = c.execute('SELECT 1 FROM registry WHERE chunk_id = ? LIMIT 1', (chunk_id,))
+            return cur.fetchone() is not None
