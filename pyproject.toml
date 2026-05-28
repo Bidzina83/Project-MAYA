@@ -1,13 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "build"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "maya"
 version = "0.0.0"
-description = "Project MAYA: Info Manager (embeddings provider integration)"
-requires-python = ">=3.10"
+description = "Project MAYA"
+readme = "README.md"
+authors = [
+  { name = "hermes" },
+]
+license = { text = "MIT" }
+# keep dependencies minimal here; CI will install requirements-dev.txt as needed
 
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+dynamic = []
+
+[tool.setuptools]
+# repository uses top-level package layout (not src/). Map package-dir to project root.
+package-dir = {"" = "."}
 
 [tool.setuptools.packages.find]
-where = ["src", "."]
-include = ["maya*", "maya_dev*", "hermes*"]
+where = ["."]
+include = ["maya*", "hermes*", "plugins*"]
