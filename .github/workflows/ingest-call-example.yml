@@ -6,6 +6,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Call ingest-integration workflow
-        uses: ./.github/workflows/ingest-integration.yml
+        uses: ./.github/workflows/ingest-integration.yml@main
         with:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
