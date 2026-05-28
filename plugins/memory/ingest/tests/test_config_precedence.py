@@ -4,7 +4,7 @@ import textwrap
 
 import pytest
 
-from .. import config
+from plugins.memory.ingest import config
 
 
 def write_toml(path, content):
