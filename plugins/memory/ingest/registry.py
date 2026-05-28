@@ -3,21 +3,13 @@
 Provides MemoryRegistry which stores an index at
 STORAGE_ROOT/registry/memory_registry.json mapping chunk_id -> metadata.
 
-Metadata fields stored per entry include:
-- chunk_id
-- embedding_path
-- source_path
-- source_hash
-- model
-- extractor_version
-- embedding_timestamp
-
 Writes are atomic via tempfile + os.replace to avoid partial writes.
 """
 from __future__ import annotations
 import json
 import os
 import tempfile
+import fcntl
 from typing import Dict, Any, Optional
 
 
@@ -27,6 +19,7 @@ class MemoryRegistry:
         self.registry_dir = os.path.join(storage_root, "registry")
         os.makedirs(self.registry_dir, exist_ok=True)
         self.path = os.path.join(self.registry_dir, "memory_registry.json")
+        self.lock_path = os.path.join(self.registry_dir, ".memory_registry.lock")
 
     def _load(self) -> Dict[str, Dict[str, Any]]:
         if not os.path.exists(self.path):
@@ -46,7 +39,6 @@ class MemoryRegistry:
                 json.dump(data, f, indent=2, ensure_ascii=False)
             os.replace(tmp, self.path)
         finally:
-            # if tmp still exists, remove it
             if os.path.exists(tmp):
                 try:
                     os.remove(tmp)
@@ -59,30 +51,64 @@ class MemoryRegistry:
             raise ValueError("metadata must include chunk_id")
         if "embedding_path" not in metadata:
             raise ValueError("metadata must include embedding_path")
-        data = self._load()
         cid = metadata["chunk_id"]
-        # normalize/trim large fields if present
         entry = {
             "chunk_id": cid,
             "embedding_path": metadata.get("embedding_path"),
             "source_path": metadata.get("source_path"),
             "source_hash": metadata.get("source_hash"),
             "model": metadata.get("model"),
-            # optional fields added: provider and vector_dim for completeness
             "provider": metadata.get("provider"),
             "vector_dim": metadata.get("vector_dim"),
             "extractor_version": metadata.get("extractor_version"),
             "embedding_timestamp": metadata.get("embedding_timestamp"),
         }
-        data[cid] = entry
-        self._save(data)
+        os.makedirs(self.registry_dir, exist_ok=True)
+        with open(self.lock_path, "a+") as lockf:
+            fcntl.flock(lockf, fcntl.LOCK_EX)
+            try:
+                data = self._load()
+                data[cid] = entry
+                self._save(data)
+            finally:
+                try:
+                    fcntl.flock(lockf, fcntl.LOCK_UN)
+                except Exception:
+                    pass
 
     def get_entry(self, chunk_id: str) -> Optional[Dict[str, Any]]:
-        data = self._load()
-        return data.get(chunk_id)
+        os.makedirs(self.registry_dir, exist_ok=True)
+        with open(self.lock_path, "a+") as lockf:
+            fcntl.flock(lockf, fcntl.LOCK_SH)
+            try:
+                data = self._load()
+                return data.get(chunk_id)
+            finally:
+                try:
+                    fcntl.flock(lockf, fcntl.LOCK_UN)
+                except Exception:
+                    pass
 
     def list_entries(self) -> Dict[str, Dict[str, Any]]:
-        return self._load()
+        os.makedirs(self.registry_dir, exist_ok=True)
+        with open(self.lock_path, "a+") as lockf:
+            fcntl.flock(lockf, fcntl.LOCK_SH)
+            try:
+                return self._load()
+            finally:
+                try:
+                    fcntl.flock(lockf, fcntl.LOCK_UN)
+                except Exception:
+                    pass
 
     def exists(self, chunk_id: str) -> bool:
-        return chunk_id in self._load()
+        os.makedirs(self.registry_dir, exist_ok=True)
+        with open(self.lock_path, "a+") as lockf:
+            fcntl.flock(lockf, fcntl.LOCK_SH)
+            try:
+                return chunk_id in self._load()
+            finally:
+                try:
+                    fcntl.flock(lockf, fcntl.LOCK_UN)
+                except Exception:
+                    pass
