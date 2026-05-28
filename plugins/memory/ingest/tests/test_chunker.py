@@ -1,6 +1,6 @@
 import os
 import tempfile
-from ..chunker import chunk_file
+from plugins.memory.ingest.chunker import chunk_file
 
 
 def test_chunk_file_roundtrip():

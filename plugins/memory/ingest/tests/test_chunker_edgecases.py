@@ -1,6 +1,6 @@
 import os
 import tempfile
-from ..chunker import chunk_file, chunk_text
+from plugins.memory.ingest.chunker import chunk_file, chunk_text
 
 
 def reconstruct_from_chunks(text, chunks):
@@ -17,7 +17,7 @@ def test_unicode_and_combining_chars():
     paras = [
         "Hello 👋 world!",
         "汉字测试 — 中文字符和标点。",
-        "Combining: a\u0301 e\u0301 o\u0301 (á é ó).",
+        "Combining: a\u0301 e\u0301 o\u0301 (á é ó).",
     ]
     text = "\n\n".join(paras)
     fd, path = tempfile.mkstemp(suffix=".txt")
