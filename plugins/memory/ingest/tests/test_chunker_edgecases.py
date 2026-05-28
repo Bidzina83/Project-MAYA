@@ -1,6 +1,6 @@
 import os
 import tempfile
-from hermes.plugins.memory.ingest.chunker import chunk_file, chunk_text
+from plugins.memory.ingest.chunker import chunk_file, chunk_text
 
 
 def reconstruct_from_chunks(text, chunks):
