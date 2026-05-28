@@ -3,23 +3,6 @@ requires = ["setuptools>=61.0", "wheel", "build"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "maya"
-version = "0.0.0"
-description = "Project MAYA"
-readme = "README.md"
-authors = [
-  { name = "hermes" },
-]
-license = { text = "MIT" }
-# keep dependencies minimal here; CI will install requirements-dev.txt as needed
-
-dynamic = []
-
-[tool.setuptools]
-# repository uses top-level package layout (not src/). Map package-dir to project root.
-package-dir = {"" = "."}
-
-[project]
 name = "hermes-agent"
 version = "0.14.0"
 description = "The self-improving AI agent — creates skills from experience, improves them during use, and runs anywhere"
@@ -200,5 +183,5 @@ hermes_cli = ["web_dist/**/*"]
 gateway = ["assets/**/*"]
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["maya*", "hermes*", "plugins*"]
+where = ["src"]
+include = ["agent", "agent.*", "tools", "tools.*", "hermes_cli", "gateway", "gateway.*", "tui_gateway", "tui_gateway.*", "cron", "acp_adapter", "plugins", "plugins.*", "providers", "providers.*", "maya", "maya.*"]
