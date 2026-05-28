@@ -3,8 +3,8 @@ from typing import List
 
 import pytest
 
-from .. import embedder_wrapper as ew
-from .. import embedder
+from plugins.memory.ingest import embedder_wrapper as ew
+from plugins.memory.ingest import embedder
 
 
 class FakeBackend:
