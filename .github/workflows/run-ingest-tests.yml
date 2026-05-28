@@ -101,6 +101,7 @@ PY
       - name: Run HF smoke embedding
         env:
           HF_API_KEY: ${{ secrets.HF_API_KEY }}
+          HUGGINGFACEHUB_API_TOKEN: ${{ secrets.HUGGINGFACEHUB_API_TOKEN }}
         run: |
           python - <<'PY'
 import os
