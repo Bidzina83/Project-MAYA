@@ -185,3 +185,29 @@ gateway = ["assets/**/*"]
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["agent", "agent.*", "tools", "tools.*", "hermes_cli", "gateway", "gateway.*", "tui_gateway", "tui_gateway.*", "cron", "acp_adapter", "plugins", "plugins.*", "providers", "providers.*", "maya", "maya.*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+   "integration: marks tests requiring external services (API keys, Modal, etc.)",
+]
+addopts = "-m 'not integration' -n auto"
+
+[tool.ty.environment]
+python-version = "3.13"
+
+[tool.ty.rules]
+unknown-argument = "warn"
+redundant-cast = "ignore"
+
+[tool.ruff]
+preview = true  # required for PLW1514 (unspecified-encoding)  preview rule
+
+[tool.ruff.lint]
+select = ["PLW1514"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["PLW1514"]
+"skills/**" = ["PLW1514"]
+"optional-skills/**" = ["PLW1514"]
+"plugins/**" = ["PLW1514"]
