@@ -3,9 +3,8 @@ on: [push]
 
 jobs:
   call-ingest:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Call ingest-integration workflow
-        uses: ./.github/workflows/ingest-integration.yml@main
-        with:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    uses: ./.github/workflows/ingest-integration.yml@add/rebased-pr31
+    with:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
