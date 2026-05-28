@@ -3,7 +3,7 @@ on: [push]
 
 jobs:
   call-ingest:
-    uses: ./.github/workflows/ingest-integration.yml@add/rebased-pr31
+    uses: ./.github/workflows/ingest-integration.yml@main
     with:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     secrets:
