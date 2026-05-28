@@ -1,0 +1,36 @@
+name: Workflow lint
+on: [pull_request, push]
+jobs:
+  lint-workflows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      - name: Lint workflows
+        run: |
+          python - <<'PY'
+import yaml,sys,os,re
+errs=0
+for root,_,files in os.walk('.github/workflows'):
+    for f in files:
+        p=os.path.join(root,f)
+        try:
+            with open(p,'r') as fh:
+                yaml.safe_load(fh)
+        except Exception as e:
+            print('YAML parse error in',p, e)
+            errs+=1
+        with open(p) as fh:
+            txt=fh.read()
+            if re.search(r"uses:\s*\.\/.github/workflows", txt):
+                print('Found step-level reusable workflow in',p)
+                errs+=1
+            if re.search(r"^\s*if:\s*.*secrets\.", txt, flags=re.M):
+                print('Found job-level secret usage in',p)
+                errs+=1
+if errs:
+    sys.exit(1)
+PY'
