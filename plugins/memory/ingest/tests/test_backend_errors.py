@@ -12,10 +12,10 @@ def test_openai_nonretryable_raises(monkeypatch):
     fake.error = types.SimpleNamespace()  # no retry classes
 
     # patch backend module directly
-    monkeypatch.setattr('hermes.plugins.memory.ingest.backends.openai_backend.openai', fake, raising=False)
-    monkeypatch.setattr('hermes.plugins.memory.ingest.backends.openai_backend.openai_error', fake.error, raising=False)
+    monkeypatch.setattr('plugins.memory.ingest.backends.openai_backend.openai', fake, raising=False)
+    monkeypatch.setattr('plugins.memory.ingest.backends.openai_backend.openai_error', fake.error, raising=False)
 
-    from hermes.plugins.memory.ingest.backends.openai_backend import OpenAIBackend
+    from plugins.memory.ingest.backends.openai_backend import OpenAIBackend
 
     monkeypatch.setenv("OPENAI_API_KEY", "x")
     b = OpenAIBackend(model="x", max_retries=3, backoff_factor=0.01)
@@ -52,9 +52,9 @@ def test_hf_retry_retryafter_nonint(monkeypatch):
         return FakeResp(200, json_data=[0.3, 0.4])
 
     fake_requests = types.SimpleNamespace(post=post, exceptions=types.SimpleNamespace(RequestException=Exception))
-    monkeypatch.setattr('hermes.plugins.memory.ingest.backends.hf_backend.requests', fake_requests, raising=False)
+    monkeypatch.setattr('plugins.memory.ingest.backends.hf_backend.requests', fake_requests, raising=False)
 
-    from hermes.plugins.memory.ingest.backends.hf_backend import HFBackend
+    from plugins.memory.ingest.backends.hf_backend import HFBackend
 
     monkeypatch.setenv("HF_API_KEY", "x")
     b = HFBackend(model="x", max_retries=3, backoff_factor=0.01)

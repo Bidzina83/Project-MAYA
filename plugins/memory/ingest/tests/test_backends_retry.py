@@ -20,14 +20,14 @@ def test_openai_retry(monkeypatch):
     fake.Embedding = types.SimpleNamespace(create=create)
 
     # Patch the backend module's openai reference directly
-    monkeypatch.setattr('hermes.plugins.memory.ingest.backends.openai_backend.openai', fake, raising=False)
+    monkeypatch.setattr('plugins.memory.ingest.backends.openai_backend.openai', fake, raising=False)
     # also patch openai_error if the module references it
-    monkeypatch.setattr('hermes.plugins.memory.ingest.backends.openai_backend.openai_error', fake.error, raising=False)
+    monkeypatch.setattr('plugins.memory.ingest.backends.openai_backend.openai_error', fake.error, raising=False)
 
     import os
     monkeypatch.setenv("OPENAI_API_KEY", "x")
 
-    from hermes.plugins.memory.ingest.backends.openai_backend import OpenAIBackend
+    from plugins.memory.ingest.backends.openai_backend import OpenAIBackend
 
     b = OpenAIBackend(model="x", max_retries=5, backoff_factor=0.01)
     vecs = b.embed_batch(["a", "b"])
@@ -60,11 +60,11 @@ def test_hf_retry(monkeypatch):
 
     fake_requests = types.SimpleNamespace(post=post, exceptions=types.SimpleNamespace(RequestException=Exception))
     # Patch the hf_backend.requests reference directly
-    monkeypatch.setattr('hermes.plugins.memory.ingest.backends.hf_backend.requests', fake_requests, raising=False)
+    monkeypatch.setattr('plugins.memory.ingest.backends.hf_backend.requests', fake_requests, raising=False)
 
     import os
     monkeypatch.setenv("HF_API_KEY", "x")
-    from hermes.plugins.memory.ingest.backends.hf_backend import HFBackend
+    from plugins.memory.ingest.backends.hf_backend import HFBackend
 
     b = HFBackend(model="x", max_retries=5, backoff_factor=0.01)
     vecs = b.embed_batch(["hello"])
