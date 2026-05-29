@@ -176,17 +176,15 @@ google = [
 # (the rest of the file unchanged)
 
 [tool.setuptools]
-# Using packages.find to discover packages under src/ and project root.
-# Removed py-modules listing because those single-file modules are not
-# present in this repository layout (we ship packages under src/maya etc.).
+py-modules = ["run_agent", "model_tools", "toolsets", "batch_runner", "trajectory_compressor", "toolset_distributions", "cli", "hermes_bootstrap", "hermes_constants", "hermes_state", "hermes_time", "hermes_logging", "utils"]
 
 [tool.setuptools.package-data]
 hermes_cli = ["web_dist/**/*"]
 gateway = ["assets/**/*"]
 
 [tool.setuptools.packages.find]
-where = [".", "src"]
-include = ["plugins", "maya"]
+where = ["src"]
+include = ["agent", "agent.*", "tools", "tools.*", "hermes_cli", "gateway", "gateway.*", "tui_gateway", "tui_gateway.*", "cron", "acp_adapter", "plugins", "plugins.*", "providers", "providers.*", "maya", "maya.*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -203,7 +201,7 @@ unknown-argument = "warn"
 redundant-cast = "ignore"
 
 [tool.ruff]
-preview = true  # required for PLW1514 (unspecified-encoding) preview rule
+preview = true  # required for PLW1514 (unspecified-encoding)  preview rule
 
 [tool.ruff.lint]
 select = ["PLW1514"]
