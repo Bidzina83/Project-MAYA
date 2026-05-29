@@ -209,7 +209,7 @@ hermes-acp = "acp_adapter.entry:main"
 [tool.setuptools]
 
 [tool.setuptools.packages.find]
-where = [".", "src"]
+where = ["."]
 include = ["maya*", "hermes*", "plugins*"]
 
 [tool.pytest.ini_options]
