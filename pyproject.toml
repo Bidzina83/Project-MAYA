@@ -186,7 +186,7 @@ gateway = ["assets/**/*"]
 
 [tool.setuptools.packages.find]
 where = [".", "src"]
-include = ["agent", "agent.*", "hermes_cli", "gateway", "gateway.*", "tui_gateway", "tui_gateway.*", "cron", "acp_adapter", "plugins", "plugins.*", "providers", "providers.*", "maya", "maya.*"]
+include = ["plugins", "maya"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
