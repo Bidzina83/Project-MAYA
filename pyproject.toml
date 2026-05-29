@@ -205,8 +205,9 @@ all = [
 hermes = "hermes_cli.main:main"
 hermes-agent = "run_agent:main"
 hermes-acp = "acp_adapter.entry:main"
-
-[tool.setuptools]
+[tool.setuptools.package-data]
+hermes_cli = ["web_dist/**/*"]
+gateway = ["assets/**/*"]
 
 [tool.setuptools.packages.find]
 where = ["."]
