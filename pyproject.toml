@@ -201,7 +201,7 @@ unknown-argument = "warn"
 redundant-cast = "ignore"
 
 [tool.ruff]
-preview = true  # required for PLW1514 (unspecified-encoding)  preview rule
+preview = true  # required for PLW1514 (unspecified-encoding)  preview rule
 
 [tool.ruff.lint]
 select = ["PLW1514"]
