@@ -59,8 +59,12 @@ jobs:
 
       - name: Ensure scheduler/dev scripts present
         run: |
-          chmod +x maya-dev/ensure_scripts.sh || true
-          ./maya-dev/ensure_scripts.sh
+          if [ -f "maya-dev/ensure_scripts.sh" ]; then
+            chmod +x maya-dev/ensure_scripts.sh || true
+            ./maya-dev/ensure_scripts.sh
+          else
+            echo "maya-dev/ensure_scripts.sh not found - skipping ensure_scripts step"
+          fi
 
       - name: Run ingest tests
         run: |
