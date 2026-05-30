@@ -17,30 +17,16 @@ import os
 from datetime import datetime, timezone
 from typing import List
 
-# resilient imports: support relative import when used as package and absolute when loaded in tests
 try:
+    # Prefer absolute imports so the module can be loaded via spec_from_file_location
+    from plugins.memory.ingest.chunker import chunk_file
+    from plugins.memory.ingest.embedder import Embedder, compute_chunk_id, EmbedderError
+    from plugins.memory.ingest.registry import MemoryRegistry
+except Exception:
+    # Fallback to relative imports when running as a package
     from .chunker import chunk_file
-except Exception:
-    try:
-        from plugins.memory.ingest.chunker import chunk_file
-    except Exception:
-        from hermes.plugins.memory.ingest.chunker import chunk_file
-
-try:
     from .embedder import Embedder, compute_chunk_id, EmbedderError
-except Exception:
-    try:
-        from plugins.memory.ingest.embedder import Embedder, compute_chunk_id, EmbedderError
-    except Exception:
-        from hermes.plugins.memory.ingest.embedder import Embedder, compute_chunk_id, EmbedderError
-
-try:
     from .registry import MemoryRegistry
-except Exception:
-    try:
-        from plugins.memory.ingest.registry import MemoryRegistry
-    except Exception:
-        from hermes.plugins.memory.ingest.registry import MemoryRegistry
 
 # sqlite_registry is optional; import locally when needed
 
@@ -56,27 +42,6 @@ class IngestionPipeline:
         embd = os.path.join(root, "embeddings")
         os.makedirs(embd, exist_ok=True)
         return embd
-
-    def _normalize_reg_meta(self, cid: str, fname: str, c, vec, metadata_timestamp: str | None = None):
-        provider = self.backend or "unknown"
-        vector_dim = None
-        try:
-            if hasattr(vec, '__len__'):
-                vector_dim = int(len(vec))
-        except Exception:
-            vector_dim = None
-        reg_meta = {
-            "chunk_id": cid,
-            "embedding_path": fname,
-            "source_path": c.metadata.get("source_path"),
-            "source_hash": c.metadata.get("source_hash"),
-            "model": self.model or "unknown",
-            "provider": provider,
-            "vector_dim": vector_dim,
-            "extractor_version": c.metadata.get("extractor_version"),
-            "embedding_timestamp": metadata_timestamp or datetime.now(timezone.utc).isoformat(),
-        }
-        return reg_meta
 
     def process_file(self, path: str, storage_root: str, force: bool = False, max_chars: int = 1000, extractor_version: str = "v0.1") -> List[str]:
         """Process a source file: chunk, embed, write embedding metadata files.
@@ -94,11 +59,7 @@ class IngestionPipeline:
                 from .sqlite_registry import SQLiteMemoryRegistry
                 sqlite_registry = SQLiteMemoryRegistry(storage_root)
             except Exception:
-                try:
-                    from plugins.memory.ingest.sqlite_registry import SQLiteMemoryRegistry
-                    sqlite_registry = SQLiteMemoryRegistry(storage_root)
-                except Exception:
-                    sqlite_registry = None
+                sqlite_registry = None
 
         chunks = chunk_file(path, max_chars=max_chars, extractor_version=extractor_version)
         texts = [c.text for c in chunks]
@@ -112,12 +73,21 @@ class IngestionPipeline:
         written_paths: List[str] = []
         for c, cid, vec in zip(chunks, chunk_ids, vectors):
             fname = os.path.join(emb_dir, f"{cid}.json")
-            metadata_timestamp = datetime.now(timezone.utc).isoformat()
-            # compute normalized registry meta early
-            reg_meta = self._normalize_reg_meta(cid, fname, c, vec, metadata_timestamp)
-
+            provider = self.backend
+            vector_dim = len(vec) if hasattr(vec, '__len__') else None
             if os.path.exists(fname) and not force:
                 # ensure registry entry exists even if file already present
+                reg_meta = {
+                    "chunk_id": cid,
+                    "embedding_path": fname,
+                    "source_path": c.metadata.get("source_path"),
+                    "source_hash": c.metadata.get("source_hash"),
+                    "model": self.model,
+                    "provider": provider,
+                    "vector_dim": vector_dim,
+                    "extractor_version": c.metadata.get("extractor_version"),
+                    "embedding_timestamp": datetime.now(timezone.utc).isoformat(),
+                }
                 registry.add_entry(reg_meta)
                 if sqlite_registry is not None:
                     try:
@@ -130,21 +100,31 @@ class IngestionPipeline:
             metadata = {
                 "chunk_id": cid,
                 "embedding": vec,
-                "model": self.model or "unknown",
-                "provider": reg_meta["provider"],
-                "vector_dim": reg_meta["vector_dim"],
+                "model": self.model,
+                "provider": provider,
+                "vector_dim": vector_dim,
                 "extractor_version": c.metadata.get("extractor_version"),
                 "source_path": c.metadata.get("source_path"),
                 "source_hash": c.metadata.get("source_hash"),
                 "chunk_start": c.start,
                 "chunk_end": c.end,
                 "chunk_text_snippet": c.text[:512],
-                "embedding_timestamp": metadata_timestamp,
+                "embedding_timestamp": datetime.now(timezone.utc).isoformat(),
             }
             with open(fname, "w", encoding="utf-8") as f:
                 json.dump(metadata, f, indent=2)
-
             # record in JSON registry
+            reg_meta = {
+                "chunk_id": cid,
+                "embedding_path": fname,
+                "source_path": c.metadata.get("source_path"),
+                "source_hash": c.metadata.get("source_hash"),
+                "model": self.model,
+                "provider": provider,
+                "vector_dim": vector_dim,
+                "extractor_version": c.metadata.get("extractor_version"),
+                "embedding_timestamp": metadata["embedding_timestamp"],
+            }
             registry.add_entry(reg_meta)
             # optionally record in sqlite
             if sqlite_registry is not None:
@@ -155,9 +135,3 @@ class IngestionPipeline:
                     pass
             written_paths.append(fname)
         return written_paths
-
-# Ensure compute_chunk_id exists for tests and external loaders
-if 'compute_chunk_id' not in globals():
-    import hashlib
-    def compute_chunk_id(text: str) -> str:
-        return hashlib.sha256(text.encode('utf-8')).hexdigest()

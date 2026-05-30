@@ -3,6 +3,15 @@
 Provides MemoryRegistry which stores an index at
 STORAGE_ROOT/registry/memory_registry.json mapping chunk_id -> metadata.
 
+Metadata fields stored per entry include:
+- chunk_id
+- embedding_path
+- source_path
+- source_hash
+- model
+- extractor_version
+- embedding_timestamp
+
 Writes are atomic via tempfile + os.replace to avoid partial writes.
 """
 from __future__ import annotations
@@ -39,6 +48,7 @@ class MemoryRegistry:
                 json.dump(data, f, indent=2, ensure_ascii=False)
             os.replace(tmp, self.path)
         finally:
+            # if tmp still exists, remove it
             if os.path.exists(tmp):
                 try:
                     os.remove(tmp)
@@ -52,19 +62,23 @@ class MemoryRegistry:
         if "embedding_path" not in metadata:
             raise ValueError("metadata must include embedding_path")
         cid = metadata["chunk_id"]
+        # normalize/trim large fields if present
         entry = {
             "chunk_id": cid,
             "embedding_path": metadata.get("embedding_path"),
             "source_path": metadata.get("source_path"),
             "source_hash": metadata.get("source_hash"),
             "model": metadata.get("model"),
+            # optional fields added: provider and vector_dim for completeness
             "provider": metadata.get("provider"),
             "vector_dim": metadata.get("vector_dim"),
             "extractor_version": metadata.get("extractor_version"),
             "embedding_timestamp": metadata.get("embedding_timestamp"),
         }
+        # Use an advisory file lock to serialize concurrent writers on this registry directory.
+        # This prevents lost updates when multiple processes/threads read-modify-write concurrently.
         os.makedirs(self.registry_dir, exist_ok=True)
-        with open(self.lock_path, "a+") as lockf:
+        with open(self.lock_path, "w") as lockf:
             fcntl.flock(lockf, fcntl.LOCK_EX)
             try:
                 data = self._load()
@@ -77,8 +91,11 @@ class MemoryRegistry:
                     pass
 
     def get_entry(self, chunk_id: str) -> Optional[Dict[str, Any]]:
-        os.makedirs(self.registry_dir, exist_ok=True)
-        with open(self.lock_path, "a+") as lockf:
+        # shared lock for readers
+        if not os.path.exists(self.lock_path):
+            # no lock file yet; safe to read
+            return self._load().get(chunk_id)
+        with open(self.lock_path, "r") as lockf:
             fcntl.flock(lockf, fcntl.LOCK_SH)
             try:
                 data = self._load()
@@ -90,8 +107,9 @@ class MemoryRegistry:
                     pass
 
     def list_entries(self) -> Dict[str, Dict[str, Any]]:
-        os.makedirs(self.registry_dir, exist_ok=True)
-        with open(self.lock_path, "a+") as lockf:
+        if not os.path.exists(self.lock_path):
+            return self._load()
+        with open(self.lock_path, "r") as lockf:
             fcntl.flock(lockf, fcntl.LOCK_SH)
             try:
                 return self._load()
@@ -102,8 +120,9 @@ class MemoryRegistry:
                     pass
 
     def exists(self, chunk_id: str) -> bool:
-        os.makedirs(self.registry_dir, exist_ok=True)
-        with open(self.lock_path, "a+") as lockf:
+        if not os.path.exists(self.lock_path):
+            return chunk_id in self._load()
+        with open(self.lock_path, "r") as lockf:
             fcntl.flock(lockf, fcntl.LOCK_SH)
             try:
                 return chunk_id in self._load()
