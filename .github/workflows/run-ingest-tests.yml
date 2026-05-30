@@ -32,6 +32,7 @@ jobs:
         run: |
           echo "Creating /opt/hermes and copying plugins/memory into it so tests that load from /opt/hermes succeed"
           sudo mkdir -p /opt/hermes
+          sudo mkdir -p /opt/hermes/plugins
           sudo rm -rf /opt/hermes/plugins/memory || true
           candidates=(
             "${GITHUB_WORKSPACE}/plugins/memory"
