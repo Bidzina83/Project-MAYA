@@ -28,35 +28,6 @@ jobs:
           pip install pytest pytest-mock requests openai jsonschema
           pip install -e .
           # Optional (heavy): pip install sentence-transformers
-      - name: Mirror repo plugins into /opt/hermes for tests
-        run: |
-          echo "Creating /opt/hermes and copying plugins/memory into it so tests that load from /opt/hermes succeed"
-          sudo mkdir -p /opt/hermes
-          sudo mkdir -p /opt/hermes/plugins
-          sudo rm -rf /opt/hermes/plugins/memory || true
-          candidates=(
-            "${GITHUB_WORKSPACE}/plugins/memory"
-            "${GITHUB_WORKSPACE}/Project-MAYA/plugins/memory"
-            "${GITHUB_WORKSPACE}/Project-MAYA/Project-MAYA/plugins/memory"
-            "$(pwd)/plugins/memory"
-          )
-          found=false
-          for c in "${candidates[@]}"; do
-            if [ -d "$c" ]; then
-              echo "Found plugins at $c"
-              sudo cp -a "$c" /opt/hermes/plugins/memory
-              found=true
-              break
-            fi
-          done
-          if [ "$found" = false ]; then
-            echo "Could not find plugins/memory at candidates: ${candidates[*]}"
-            ls -la "${GITHUB_WORKSPACE}" || true
-            ls -la "${GITHUB_WORKSPACE}/Project-MAYA" || true
-            ls -la "${GITHUB_WORKSPACE}/Project-MAYA/Project-MAYA" || true
-            exit 1
-          fi
-
       - name: Ensure scheduler/dev scripts present
         run: |
           if [ -f "maya-dev/ensure_scripts.sh" ]; then
