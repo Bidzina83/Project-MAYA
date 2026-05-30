@@ -43,10 +43,7 @@ def cmd_registry_list(args):
     # sort by timestamp
     rows.sort(key=lambda r: r.get("timestamp") or "")
     for r in rows:
-        provider = r['provider'] if r['provider'] else 'unknown'
-        model = r['model'] if r['model'] else 'unknown'
-        vector_dim = r['vector_dim'] if r['vector_dim'] is not None else 'unknown'
-        print(f"{r['chunk_id']}\t{provider}\t{model}\t{vector_dim}\t{r['source_path'] or '-'}\t{r['timestamp'] or '-'}")
+        print(f"{r['chunk_id']}\t{r['provider'] or '-'}\t{r['model'] or '-'}\t{r['vector_dim'] or '-'}\t{r['source_path'] or '-'}\t{r['timestamp'] or '-'}")
     return 0
 
 
