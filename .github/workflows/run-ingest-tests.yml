@@ -53,7 +53,10 @@ jobs:
           pytest -c /dev/null -q plugins/memory/ingest/tests -p no:xdist
 
       - name: "Optional: Run a smoke embedding (OpenAI)"
-        if: ${{ secrets.OPENAI_API_KEY != '' }}
         run: |
-          export PYTHONPATH="${{ github.workspace }}/maya-dev/.hermes_shim"
-          python -c "from hermes.plugins.memory.ingest.embedder_wrapper import EmbeddingClient; print(EmbeddingClient(backend='openai', model=None).embed_documents(['hello world']))"
+          if [ -n "$OPENAI_API_KEY" ]; then
+            export PYTHONPATH="${{ github.workspace }}/maya-dev/.hermes_shim"
+            python -c "from hermes.plugins.memory.ingest.embedder_wrapper import EmbeddingClient; print(EmbeddingClient(backend='openai', model=None).embed_documents(['hello world']))"
+          else
+            echo "OPENAI_API_KEY not set - skipping OpenAI smoke test"
+          fi
