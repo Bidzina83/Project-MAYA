@@ -6,6 +6,15 @@ import importlib.util
 
 
 def load_module_from_path(path, name):
+    # If tests reference absolute /opt/hermes paths (CI), prefer the repo copy when available.
+    if not os.path.exists(path):
+        # map /opt/hermes/... to repository-relative path
+        if path.startswith('/opt/hermes/'):
+            rel = path[len('/opt/hermes/'):].lstrip('/')
+            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
+            alt = os.path.join(repo_root, rel)
+            if os.path.exists(alt):
+                path = alt
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
