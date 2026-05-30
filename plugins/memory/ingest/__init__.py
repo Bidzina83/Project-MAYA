@@ -1,5 +1,3 @@
-# Package plugins.memory.ingest package for Project-MAYA
-
 # Minimal package initializer to expose submodules as attributes for test monkeypatch resolution.
 __all__ = [
     "chunker",

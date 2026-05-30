@@ -11,6 +11,8 @@ from typing import List, Any, Union
 
 from .embedder import Embedder, compute_chunk_id, EmbedderError
 
+print("DEBUG: import embedder_wrapper - Embedder class is", Embedder, "module=", Embedder.__module__)
+
 
 class EmbeddingClient:
     """Thin wrapper providing convenience methods around Embedder.
@@ -23,6 +25,7 @@ class EmbeddingClient:
 
     def __init__(self, backend: str = "mock", model: str | None = None, batch_size: int = 32):
         self.embedder = Embedder(backend=backend, model=model, batch_size=batch_size)
+        print("DEBUG: EmbeddingClient created embedder instance", self.embedder, "type=", type(self.embedder))
         self.batch_size = int(batch_size)
 
     def _normalize_inputs(self, docs: List[Union[str, dict]]) -> List[dict]:
