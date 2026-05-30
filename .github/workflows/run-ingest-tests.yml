@@ -43,6 +43,8 @@ jobs:
 
       - name: Run ingest tests
         run: |
+          mkdir -p "${{ github.workspace }}/.pytest_tmp"
+          export PYTEST_ADDOPTS="--basetemp=${{ github.workspace }}/.pytest_tmp"
           export PYTHONPATH="${{ github.workspace }}/maya-dev/.hermes_shim"
           pytest -c /dev/null -q plugins/memory/ingest/tests -p no:xdist
 
