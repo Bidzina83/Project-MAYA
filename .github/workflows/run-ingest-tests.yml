@@ -25,7 +25,7 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-mock requests openai
+          pip install pytest pytest-mock requests openai jsonschema
           pip install -e .
           # Optional (heavy): pip install sentence-transformers
       - name: Mirror repo plugins into /opt/hermes for tests
@@ -65,6 +65,11 @@ jobs:
           else
             echo "maya-dev/ensure_scripts.sh not found - skipping ensure_scripts step"
           fi
+
+      - name: Prepare pytest basetemp
+        run: |
+          mkdir -p "${{ github.workspace }}/.pytest_tmp"
+          echo "PYTEST_ADDOPTS=--basetemp=${{ github.workspace }}/.pytest_tmp" >> $GITHUB_ENV
 
       - name: Run ingest tests
         run: |
