@@ -28,6 +28,12 @@ jobs:
           pip install pytest pytest-mock requests openai
           pip install -e .
           # Optional (heavy): pip install sentence-transformers
+      - name: Mirror repo plugins into /opt/hermes for tests
+        run: |
+          echo "Creating /opt/hermes and copying plugins/memory into it so tests that load from /opt/hermes succeed"
+          sudo mkdir -p /opt/hermes
+          sudo rm -rf /opt/hermes/plugins/memory || true
+          sudo cp -a "${{ github.workspace }}/plugins/memory" /opt/hermes/plugins/memory
 
       - name: Mirror repo plugins into /opt/hermes for tests
         run: |
