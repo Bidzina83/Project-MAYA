@@ -8,13 +8,22 @@ import importlib.util
 def load_module_from_path(path, name):
     # If tests reference absolute /opt/hermes paths (CI), prefer the repo copy when available.
     if not os.path.exists(path):
-        # map /opt/hermes/... to repository-relative path
+        # map /opt/hermes/... to repository-relative path and common workspace locations
         if path.startswith('/opt/hermes/'):
             rel = path[len('/opt/hermes/'):].lstrip('/')
+            candidates = []
             repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
-            alt = os.path.join(repo_root, rel)
-            if os.path.exists(alt):
-                path = alt
+            candidates.append(os.path.join(repo_root, rel))
+            gw = os.environ.get('GITHUB_WORKSPACE')
+            if gw:
+                candidates.append(os.path.join(gw, rel))
+            # also try current working directory root
+            cwd = os.getcwd()
+            candidates.append(os.path.join(cwd, rel))
+            for alt in candidates:
+                if os.path.exists(alt):
+                    path = alt
+                    break
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
