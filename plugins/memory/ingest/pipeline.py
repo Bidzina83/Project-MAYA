@@ -17,9 +17,16 @@ import os
 from datetime import datetime, timezone
 from typing import List
 
-from .chunker import chunk_file
-from .embedder import Embedder, compute_chunk_id, EmbedderError
-from .registry import MemoryRegistry
+try:
+    # Prefer absolute imports so the module can be loaded via spec_from_file_location
+    from plugins.memory.ingest.chunker import chunk_file
+    from plugins.memory.ingest.embedder import Embedder, compute_chunk_id, EmbedderError
+    from plugins.memory.ingest.registry import MemoryRegistry
+except Exception:
+    # Fallback to relative imports when running as a package
+    from .chunker import chunk_file
+    from .embedder import Embedder, compute_chunk_id, EmbedderError
+    from .registry import MemoryRegistry
 
 # sqlite_registry is optional; import locally when needed
 
