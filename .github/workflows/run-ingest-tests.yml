@@ -25,21 +25,30 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-mock requests openai
+          pip install pytest pytest-mock requests openai jsonschema
           pip install -e .
           # Optional (heavy): pip install sentence-transformers
+
+      - name: Prepare pytest basetemp
+        run: |
+          mkdir -p "${{ github.workspace }}/.pytest_tmp"
+          echo "PYTEST_ADDOPTS=--basetemp=${{ github.workspace }}/.pytest_tmp" >> $GITHUB_ENV
 
       - name: Mirror repo plugins into /opt/hermes for tests
         run: |
           echo "Creating /opt/hermes and copying plugins/memory into it so tests that load from /opt/hermes succeed"
-          sudo mkdir -p /opt/hermes
+          sudo mkdir -p /opt/hermes/plugins
           sudo rm -rf /opt/hermes/plugins/memory || true
-          sudo cp -a "${{ github.workspace }}/plugins/memory" /opt/hermes/plugins/memory
+          sudo cp -a "${{ github.workspace }}/plugins/memory" /opt/hermes/plugins/memory || true
 
       - name: Ensure scheduler/dev scripts present
         run: |
-          chmod +x maya-dev/ensure_scripts.sh || true
-          ./maya-dev/ensure_scripts.sh
+          if [ -f "maya-dev/ensure_scripts.sh" ]; then
+            chmod +x maya-dev/ensure_scripts.sh || true
+            ./maya-dev/ensure_scripts.sh
+          else
+            echo "maya-dev/ensure_scripts.sh not found - skipping ensure_scripts step"
+          fi
 
       - name: Run ingest tests
         run: |
@@ -49,7 +58,10 @@ jobs:
           pytest -c /dev/null -q plugins/memory/ingest/tests -p no:xdist
 
       - name: "Optional: Run a smoke embedding (OpenAI)"
-        if: ${{ secrets.OPENAI_API_KEY != '' }}
         run: |
-          export PYTHONPATH="${{ github.workspace }}/maya-dev/.hermes_shim"
-          python -c "from hermes.plugins.memory.ingest.embedder_wrapper import EmbeddingClient; print(EmbeddingClient(backend='openai', model=None).embed_documents(['hello world']))"
+          if [ -n "$OPENAI_API_KEY" ]; then
+            export PYTHONPATH="${{ github.workspace }}/maya-dev/.hermes_shim"
+            python -c "from hermes.plugins.memory.ingest.embedder_wrapper import EmbeddingClient; print(EmbeddingClient(backend='openai', model=None).embed_documents(['hello world']))"
+          else
+            echo "OPENAI_API_KEY not set - skipping OpenAI smoke test"
+          fi
