@@ -5,6 +5,7 @@ import math
 
 from plugins.memory.retriever_api import Retriever, RetrievalResult, RetrieverError, ProviderInfo
 from plugins.memory.governance_validator import GovernanceValidator, GovernanceReport
+from plugins.memory.context_builder import build_context
 
 
 class RetrieverService:
@@ -31,6 +32,7 @@ class RetrieverService:
         min_trust: float = 0.0,
         temporal_decay_half_life_days: int = 0,
         governance_validator: Optional[GovernanceValidator] = None,
+        token_budget: int = 2048,
     ) -> None:
         self.providers: Dict[str, Retriever] = {}
         self.provider_info: Dict[str, ProviderInfo] = {}
@@ -44,6 +46,10 @@ class RetrieverService:
         self.governance_validator = governance_validator
         # store last governance report for callers that want to inspect it
         self.last_governance_report: Optional[GovernanceReport] = None
+        # store last OperationalContext produced by ContextBuilder
+        self.last_operational_context: Optional[Dict[str, Any]] = None
+        # token budget for context building
+        self.token_budget = int(token_budget)
 
     def register_provider(self, name: str, provider: Retriever, info: Optional[ProviderInfo] = None) -> None:
         self.providers[name] = provider
@@ -85,12 +91,19 @@ class RetrieverService:
         try:
             r = p.get(id)
             if not r:
+                # still build empty context for callers
+                self.last_operational_context = build_context([], token_budget=self.token_budget)
                 return None
             normalized = self._apply_governance_and_normalize(r, provider_name=target)
             # passive governance check
             if self.governance_validator:
                 report = self.governance_validator.validate([normalized])
                 self.last_governance_report = report
+                # build an operational context from the normalized results
+                self.last_operational_context = build_context([normalized], token_budget=self.token_budget)
+            else:
+                # always update last_operational_context for callers even if no governance
+                self.last_operational_context = build_context([normalized], token_budget=self.token_budget)
             return normalized
         except RetrieverError:
             return None
@@ -115,6 +128,8 @@ class RetrieverService:
                     if self.governance_validator:
                         report = self.governance_validator.validate(results)
                         self.last_governance_report = report
+                    # always build an operational context for callers
+                    self.last_operational_context = build_context(results, token_budget=self.token_budget)
                     return results
                 tried.append(p_name)
             except RetrieverError:
@@ -126,6 +141,8 @@ class RetrieverService:
         if self.governance_validator:
             report = self.governance_validator.validate([])
             self.last_governance_report = report
+        # update last_operational_context to empty
+        self.last_operational_context = build_context([], token_budget=self.token_budget)
         return []
 
     def search(self, query: str, category: Optional[str] = None, limit: int = 10, provider: Optional[str] = None) -> List[RetrievalResult]:
@@ -142,6 +159,8 @@ class RetrieverService:
                     if self.governance_validator:
                         report = self.governance_validator.validate(results)
                         self.last_governance_report = report
+                    # build operational context
+                    self.last_operational_context = build_context(results, token_budget=self.token_budget)
                     return results
             except RetrieverError:
                 self.metrics["fallbacks"] += 1
@@ -149,6 +168,7 @@ class RetrieverService:
         if self.governance_validator:
             report = self.governance_validator.validate([])
             self.last_governance_report = report
+        self.last_operational_context = build_context([], token_budget=self.token_budget)
         return []
 
     def normalize_score(self, score: Optional[float]) -> float:
