@@ -2,6 +2,7 @@ from __future__ import annotations
 import os, json
 from datetime import datetime, timezone
 from typing import List
+import hashlib
 
 # Import submodules with fallback to absolute names so module works when executed
 # via importlib.spec_from_file_location (no parent package) or normal package import.
@@ -19,6 +20,14 @@ except Exception:
 
 def _now_iso():
     return datetime.now(timezone.utc).isoformat()
+
+
+def compute_chunk_id(text: str) -> str:
+    """Compute a deterministic chunk id for given text. Exposed so tests can monkeypatch it.
+
+    Default: sha256 hex digest of the text.
+    """
+    return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
 
 class IngestionPipeline:
@@ -48,12 +57,13 @@ class IngestionPipeline:
         written_paths = []
         ts = _now_iso()
         for c, v in zip(chunks, vectors):
-            chunk_id = c.id
+            chunk_id = getattr(c, 'id', None) or compute_chunk_id(c.text)
             # prepare embedding record
             emb_obj = {
                 'chunk_id': chunk_id,
                 'embedding': v,
                 'model': self.model,
+                'provider': self.backend,
                 'extractor_version': c.metadata.get('extractor_version', extractor_version),
                 'source_path': c.metadata.get('source_path'),
                 'source_hash': c.metadata.get('source_hash'),
@@ -82,6 +92,7 @@ class IngestionPipeline:
                 'source_path': emb_obj['source_path'],
                 'source_hash': emb_obj['source_hash'],
                 'model': emb_obj['model'],
+                'provider': emb_obj['provider'],
                 'extractor_version': emb_obj['extractor_version'],
                 'embedding_timestamp': emb_obj['embedding_timestamp'],
             }
