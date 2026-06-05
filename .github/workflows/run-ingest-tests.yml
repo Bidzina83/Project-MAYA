@@ -54,7 +54,9 @@ jobs:
         run: |
           mkdir -p "${{ github.workspace }}/.pytest_tmp"
           export PYTEST_ADDOPTS="--basetemp=${{ github.workspace }}/.pytest_tmp"
-          export PYTHONPATH="${{ github.workspace }}/maya-dev/.hermes_shim"
+          # Ensure workspace root is on PYTHONPATH so imports like
+          # 'plugins.memory.adapters.*' resolve correctly during test collection.
+          export PYTHONPATH="${{ github.workspace }}:${{ github.workspace }}/maya-dev/.hermes_shim"
           pytest -c /dev/null -q plugins/memory/ingest/tests -p no:xdist
 
       - name: "Optional: Run a smoke embedding (OpenAI)"
