@@ -27,13 +27,15 @@ def normalize_confidence(val) -> float:
         return float(governance_config.DEFAULT_CONFIDENCE)
     if v < 0:
         return 0.0
-    # If user passed percentages like 75 (meaning 75%), normalize to fraction 0.75.
-    # Heuristic: treat values > 1 and <= 100 as percentages.
-    if v > 1.0 and v <= 100.0:
+    # Heuristic:
+    # - Treat values in [10, 100] as percentages (e.g. 75 -> 0.75) to support commonly provided percentage inputs.
+    # - Treat small integers (>1 and <10) as explicit multipliers (e.g. 3 stays 3.0).
+    # - Clamp to a reasonable upper bound to avoid runaway boosts from accidental huge inputs.
+    MAX_CONFIDENCE = 10.0
+    if 10.0 <= v <= 100.0:
         v = v / 100.0
-    # For very large numbers (>100), clamp to 1.0 as a safe upper bound.
-    if v > 1.0:
-        return 1.0
+    if v > MAX_CONFIDENCE:
+        return float(MAX_CONFIDENCE)
     return v
 
 
