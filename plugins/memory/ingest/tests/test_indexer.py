@@ -1,7 +1,7 @@
 import os
 import tempfile
 import json
-from plugins.memory.indexer import Indexer, LocalVectorStore
+from hermes.plugins.memory.indexer import Indexer, LocalVectorStore
 
 
 def test_indexer_atomic_write(tmp_path):

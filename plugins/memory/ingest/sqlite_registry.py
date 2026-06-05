@@ -1,148 +1,80 @@
-"""SQLite-backed Memory Registry for Project MAYA.
-
-Provides a small SQLite wrapper suitable as a drop-in alternative to the JSON registry.
-
-Usage:
-    reg = SQLiteMemoryRegistry(storage_root)
-    reg.add_entry(metadata)
-    reg.get_entry(chunk_id)
-    reg.list_entries()
-    reg.bulk_import(dict_of_entries)
-
-The SQLite DB is stored at STORAGE_ROOT/registry/memory_registry.sqlite
-"""
-from __future__ import annotations
 import os
 import sqlite3
 import json
-from typing import Dict, Any, Optional
-
+from typing import Dict, Any, List, Optional
 
 class SQLiteMemoryRegistry:
+    """SQLite-backed registry used in tests. Stores JSON-serialized meta per chunk_id.
+
+    Schema:
+      registry(chunk_id TEXT PRIMARY KEY, meta TEXT NOT NULL)
+    """
+
     def __init__(self, storage_root: str):
-        self.storage_root = storage_root
-        self.registry_dir = os.path.join(storage_root, "registry")
-        os.makedirs(self.registry_dir, exist_ok=True)
-        self.db_path = os.path.join(self.registry_dir, "memory_registry.sqlite")
-        self._init_db()
-
-    def _connect(self):
-        conn = sqlite3.connect(self.db_path, timeout=10)
-        return conn
-
-    def _init_db(self):
-        conn = self._connect()
-        try:
-            cur = conn.cursor()
-            # pragmas for WAL and reasonable durability
-            cur.execute("PRAGMA journal_mode=WAL;")
-            cur.execute("PRAGMA synchronous=NORMAL;")
-            cur.execute(
-                """
-                CREATE TABLE IF NOT EXISTS embeddings (
-                    chunk_id TEXT PRIMARY KEY,
-                    embedding_path TEXT,
-                    source_path TEXT,
-                    source_hash TEXT,
-                    model TEXT,
-                    extractor_version TEXT,
-                    embedding_timestamp TEXT,
-                    updated_at TEXT
-                )
-                """
+        self.db_path = os.path.join(storage_root, 'registry', 'memory_registry.db')
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        # sqlite3 connection with check_same_thread=False to be flexible in tests
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        self.conn.execute('''
+            CREATE TABLE IF NOT EXISTS registry (
+                chunk_id TEXT PRIMARY KEY,
+                meta TEXT NOT NULL
             )
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_source_hash ON embeddings(source_hash);")
-            conn.commit()
-        finally:
-            conn.close()
+        ''')
+        self.conn.commit()
 
-    def add_entry(self, metadata: Dict[str, Any]):
-        if "chunk_id" not in metadata:
-            raise ValueError("metadata must include chunk_id")
-        cid = metadata["chunk_id"]
-        conn = self._connect()
-        try:
-            cur = conn.cursor()
-            cur.execute(
-                """
-                INSERT INTO embeddings(chunk_id, embedding_path, source_path, source_hash, model, extractor_version, embedding_timestamp, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-                ON CONFLICT(chunk_id) DO UPDATE SET
-                    embedding_path=excluded.embedding_path,
-                    source_path=excluded.source_path,
-                    source_hash=excluded.source_hash,
-                    model=excluded.model,
-                    extractor_version=excluded.extractor_version,
-                    embedding_timestamp=excluded.embedding_timestamp,
-                    updated_at=datetime('now')
-                """,
-                (
-                    cid,
-                    metadata.get("embedding_path"),
-                    metadata.get("source_path"),
-                    metadata.get("source_hash"),
-                    metadata.get("model"),
-                    metadata.get("extractor_version"),
-                    metadata.get("embedding_timestamp"),
-                ),
-            )
-            conn.commit()
-        finally:
-            conn.close()
+    def add_entry(self, meta: Dict[str, Any]):
+        chunk_id = meta.get('chunk_id')
+        if chunk_id is None:
+            raise ValueError('meta must include chunk_id')
+        self.conn.execute('INSERT OR REPLACE INTO registry (chunk_id, meta) VALUES (?, ?)', (chunk_id, json.dumps(meta)))
+        self.conn.commit()
 
     def get_entry(self, chunk_id: str) -> Optional[Dict[str, Any]]:
-        conn = self._connect()
-        try:
-            cur = conn.cursor()
-            cur.execute("SELECT chunk_id, embedding_path, source_path, source_hash, model, extractor_version, embedding_timestamp, updated_at FROM embeddings WHERE chunk_id = ?", (chunk_id,))
-            row = cur.fetchone()
-            if not row:
-                return None
-            keys = ["chunk_id", "embedding_path", "source_path", "source_hash", "model", "extractor_version", "embedding_timestamp", "updated_at"]
-            return dict(zip(keys, row))
-        finally:
-            conn.close()
+        cur = self.conn.execute('SELECT meta FROM registry WHERE chunk_id = ?', (chunk_id,))
+        row = cur.fetchone()
+        if not row:
+            return None
+        return json.loads(row[0])
 
-    def list_entries(self, limit: int = 100, offset: int = 0) -> Dict[str, Dict[str, Any]]:
-        conn = self._connect()
-        try:
-            cur = conn.cursor()
-            cur.execute("SELECT chunk_id, embedding_path, source_path, source_hash, model, extractor_version, embedding_timestamp, updated_at FROM embeddings ORDER BY updated_at DESC LIMIT ? OFFSET ?", (limit, offset))
+    def list_entries(self, limit: Optional[int] = None) -> Any:
+        """If limit is None, return a dict mapping chunk_id -> meta.
+        If limit is provided, return a list of meta dicts up to the limit (most-recent insertion order unspecified).
+        """
+        cur = self.conn.cursor()
+        if limit is None:
+            cur.execute('SELECT chunk_id, meta FROM registry')
             rows = cur.fetchall()
-            keys = ["chunk_id", "embedding_path", "source_path", "source_hash", "model", "extractor_version", "embedding_timestamp", "updated_at"]
-            return {r[0]: dict(zip(keys, r)) for r in rows}
-        finally:
-            conn.close()
+            return {r[0]: json.loads(r[1]) for r in rows}
+        else:
+            cur.execute('SELECT meta FROM registry LIMIT ?', (limit,))
+            rows = cur.fetchall()
+            return [json.loads(r[0]) for r in rows]
 
-    def bulk_import(self, data: Dict[str, Dict[str, Any]]):
-        """Import many entries from a dict mapping chunk_id -> metadata"""
-        conn = self._connect()
+    def bulk_import(self, entries: Any) -> None:
+        """Bulk import entries. Accepts either a dict mapping chunk_id->meta or an iterable/list of meta dicts.
+        Upserts entries into the sqlite registry.
+        """
+        if entries is None:
+            return
+        cur = self.conn.cursor()
+        if isinstance(entries, dict):
+            items = entries.items()
+        else:
+            # assume iterable of meta dicts
+            items = ((m.get('chunk_id'), m) for m in entries)
+        for cid, meta in items:
+            if cid is None:
+                # try to find chunk_id inside meta
+                cid = meta.get('chunk_id') if isinstance(meta, dict) else None
+            if cid is None:
+                # skip malformed
+                continue
+            cur.execute('INSERT OR REPLACE INTO registry (chunk_id, meta) VALUES (?, ?)', (cid, json.dumps(meta)))
+        self.conn.commit()
+
+    def close(self) -> None:
         try:
-            cur = conn.cursor()
-            for cid, meta in data.items():
-                cur.execute(
-                    """
-                    INSERT INTO embeddings(chunk_id, embedding_path, source_path, source_hash, model, extractor_version, embedding_timestamp, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-                    ON CONFLICT(chunk_id) DO UPDATE SET
-                        embedding_path=excluded.embedding_path,
-                        source_path=excluded.source_path,
-                        source_hash=excluded.source_hash,
-                        model=excluded.model,
-                        extractor_version=excluded.extractor_version,
-                        embedding_timestamp=excluded.embedding_timestamp,
-                        updated_at=datetime('now')
-                    """,
-                    (
-                        cid,
-                        meta.get("embedding_path"),
-                        meta.get("source_path"),
-                        meta.get("source_hash"),
-                        meta.get("model"),
-                        meta.get("extractor_version"),
-                        meta.get("embedding_timestamp"),
-                    ),
-                )
-            conn.commit()
-        finally:
-            conn.close()
+            self.conn.close()
+        except Exception:
+            pass

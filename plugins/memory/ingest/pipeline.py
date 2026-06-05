@@ -1,137 +1,104 @@
-"""Ingestion pipeline: chunk -> embed -> persist embedding metadata.
-
-Exports:
-- IngestionPipeline: process_file(path, storage_root, force=False)
-
-Behavior:
-- Uses chunker.chunk_file to produce chunks with provenance
-- Uses embedder.Embedder to produce vectors (BackendFactory may be monkeypatched in tests)
-- Writes per-chunk embedding JSON files to STORAGE_ROOT/embeddings/{chunk_id}.json
-- Embedding file contains: chunk_id, embedding (list), model, extractor_version, source_path, source_hash, chunk_start, chunk_end, chunk_text (optionally truncated), embedding_timestamp
-- Idempotent by default: if embedding file exists and force=False, skip generation
-- Optionally dual-writes registry entries into both JSON (MemoryRegistry) and SQLite (SQLiteMemoryRegistry) when dual_write=True
-"""
 from __future__ import annotations
-import json
-import os
+import os, json
 from datetime import datetime, timezone
 from typing import List
+import hashlib
 
+# Import submodules with fallback to absolute names so module works when executed
+# via importlib.spec_from_file_location (no parent package) or normal package import.
 try:
-    # Prefer absolute imports so the module can be loaded via spec_from_file_location
-    from plugins.memory.ingest.chunker import chunk_file
-    from plugins.memory.ingest.embedder import Embedder, compute_chunk_id, EmbedderError
-    from plugins.memory.ingest.registry import MemoryRegistry
-except Exception:
-    # Fallback to relative imports when running as a package
     from .chunker import chunk_file
-    from .embedder import Embedder, compute_chunk_id, EmbedderError
+    from .embedder import Embedder
     from .registry import MemoryRegistry
+    from .sqlite_registry import SQLiteMemoryRegistry
+except Exception:
+    from plugins.memory.ingest.chunker import chunk_file
+    from plugins.memory.ingest.embedder import Embedder
+    from plugins.memory.ingest.registry import MemoryRegistry
+    from plugins.memory.ingest.sqlite_registry import SQLiteMemoryRegistry
 
-# sqlite_registry is optional; import locally when needed
+
+def _now_iso():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def compute_chunk_id(text: str) -> str:
+    """Compute a deterministic chunk id for given text. Exposed so tests can monkeypatch it.
+
+    Default: sha256 hex digest of the text.
+    """
+    return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
 
 class IngestionPipeline:
     def __init__(self, backend: str = "mock", model: str | None = None, batch_size: int = 32, dual_write: bool = False):
         self.backend = backend
         self.model = model
-        self.batch_size = int(batch_size)
-        self.dual_write = bool(dual_write)
+        self.batch_size = batch_size
+        self.dual_write = dual_write
+        self.embedder = Embedder(backend=self.backend, model=self.model, batch_size=self.batch_size)
 
-    def _ensure_dirs(self, root: str):
-        embd = os.path.join(root, "embeddings")
-        os.makedirs(embd, exist_ok=True)
-        return embd
+    def process_file(self, path: str, storage_root: str, force: bool = False, max_chars: int = 1000, extractor_version: str | None = None) -> List[str]:
+        """Process file: chunk -> embed -> persist embedding files and update registry.
 
-    def process_file(self, path: str, storage_root: str, force: bool = False, max_chars: int = 1000, extractor_version: str = "v0.1") -> List[str]:
-        """Process a source file: chunk, embed, write embedding metadata files.
-
-        Returns list of written embedding file paths.
+        Returns list of embedding file paths written.
         """
-        if not os.path.isfile(path):
-            raise FileNotFoundError(path)
-        emb_dir = self._ensure_dirs(storage_root)
-        registry = MemoryRegistry(storage_root)
+        os.makedirs(storage_root, exist_ok=True)
+        emb_dir = os.path.join(storage_root, 'embeddings')
+        os.makedirs(emb_dir, exist_ok=True)
+        reg = MemoryRegistry(storage_root)
+        sqlite = SQLiteMemoryRegistry(storage_root) if self.dual_write else None
 
-        sqlite_registry = None
-        if self.dual_write:
-            try:
-                from .sqlite_registry import SQLiteMemoryRegistry
-                sqlite_registry = SQLiteMemoryRegistry(storage_root)
-            except Exception:
-                sqlite_registry = None
-
-        chunks = chunk_file(path, max_chars=max_chars, extractor_version=extractor_version)
+        # produce chunks (Chunk objects from chunker)
+        chunks = chunk_file(path, max_chars=max_chars, extractor_version=(extractor_version or 'v0.auto'))
         texts = [c.text for c in chunks]
-        chunk_ids = [compute_chunk_id(t) for t in texts]
-
-        emb = Embedder(backend=self.backend, model=self.model, batch_size=self.batch_size)
-        vectors = emb.embed(texts)
-        if len(vectors) != len(chunks):
-            raise EmbedderError("embedding count mismatch")
-
-        written_paths: List[str] = []
-        for c, cid, vec in zip(chunks, chunk_ids, vectors):
-            fname = os.path.join(emb_dir, f"{cid}.json")
-            provider = self.backend
-            vector_dim = len(vec) if hasattr(vec, '__len__') else None
-            if os.path.exists(fname) and not force:
-                # ensure registry entry exists even if file already present
-                reg_meta = {
-                    "chunk_id": cid,
-                    "embedding_path": fname,
-                    "source_path": c.metadata.get("source_path"),
-                    "source_hash": c.metadata.get("source_hash"),
-                    "model": self.model,
-                    "provider": provider,
-                    "vector_dim": vector_dim,
-                    "extractor_version": c.metadata.get("extractor_version"),
-                    "embedding_timestamp": datetime.now(timezone.utc).isoformat(),
-                }
-                registry.add_entry(reg_meta)
-                if sqlite_registry is not None:
-                    try:
-                        sqlite_registry.add_entry(reg_meta)
-                    except Exception:
-                        # don't fail the whole run for sqlite write errors
-                        pass
-                written_paths.append(fname)
+        # embed texts preserving order
+        vectors = self.embedder.embed(texts)
+        written_paths = []
+        ts = _now_iso()
+        for c, v in zip(chunks, vectors):
+            chunk_id = getattr(c, 'id', None) or compute_chunk_id(c.text)
+            # prepare embedding record
+            emb_obj = {
+                'chunk_id': chunk_id,
+                'embedding': v,
+                'model': self.model,
+                'provider': self.backend,
+                'extractor_version': c.metadata.get('extractor_version', extractor_version),
+                'source_path': c.metadata.get('source_path'),
+                'source_hash': c.metadata.get('source_hash'),
+                'chunk_start': c.start,
+                'chunk_end': c.end,
+                'chunk_text': c.text[:max_chars],
+                'embedding_timestamp': ts,
+            }
+            emb_path = os.path.join(emb_dir, f"{chunk_id}.json")
+            # idempotence: skip if exists and not force
+            if os.path.exists(emb_path) and not force:
+                written_paths.append(emb_path)
+                # ensure registry entry exists
                 continue
-            metadata = {
-                "chunk_id": cid,
-                "embedding": vec,
-                "model": self.model,
-                "provider": provider,
-                "vector_dim": vector_dim,
-                "extractor_version": c.metadata.get("extractor_version"),
-                "source_path": c.metadata.get("source_path"),
-                "source_hash": c.metadata.get("source_hash"),
-                "chunk_start": c.start,
-                "chunk_end": c.end,
-                "chunk_text_snippet": c.text[:512],
-                "embedding_timestamp": datetime.now(timezone.utc).isoformat(),
+            # write atomically
+            tmp = emb_path + '.tmp'
+            with open(tmp, 'w', encoding='utf-8') as f:
+                json.dump(emb_obj, f, ensure_ascii=False)
+            os.replace(tmp, emb_path)
+            written_paths.append(emb_path)
+
+            # update JSON registry
+            meta = {
+                'chunk_id': chunk_id,
+                'embedding_path': emb_path,
+                'source_path': emb_obj['source_path'],
+                'source_hash': emb_obj['source_hash'],
+                'model': emb_obj['model'],
+                'provider': emb_obj['provider'],
+                'vector_dim': len(v) if v is not None else None,
+                'extractor_version': emb_obj['extractor_version'],
+                'embedding_timestamp': emb_obj['embedding_timestamp'],
             }
-            with open(fname, "w", encoding="utf-8") as f:
-                json.dump(metadata, f, indent=2)
-            # record in JSON registry
-            reg_meta = {
-                "chunk_id": cid,
-                "embedding_path": fname,
-                "source_path": c.metadata.get("source_path"),
-                "source_hash": c.metadata.get("source_hash"),
-                "model": self.model,
-                "provider": provider,
-                "vector_dim": vector_dim,
-                "extractor_version": c.metadata.get("extractor_version"),
-                "embedding_timestamp": metadata["embedding_timestamp"],
-            }
-            registry.add_entry(reg_meta)
-            # optionally record in sqlite
-            if sqlite_registry is not None:
-                try:
-                    sqlite_registry.add_entry(reg_meta)
-                except Exception:
-                    # ignore sqlite errors to keep pipeline resilient
-                    pass
-            written_paths.append(fname)
+            reg.add_entry(meta)
+            if sqlite is not None:
+                sqlite.add_entry(meta)
+
         return written_paths

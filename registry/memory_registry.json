@@ -1,0 +1,13 @@
+{
+  "ed27c4e25c05e88226ef5372582ddc10f38e30d45348219744eb246698e363c6": {
+    "chunk_id": "ed27c4e25c05e88226ef5372582ddc10f38e30d45348219744eb246698e363c6",
+    "embedding_path": "/opt/data/maya-memory-repo/embeddings/ed27c4e25c05e88226ef5372582ddc10f38e30d45348219744eb246698e363c6.json",
+    "source_path": "/tmp/fake_source.txt",
+    "source_hash": "b5d54c39e66671c9731b9f471e585d8262cd4f54963f0c93082d8dcf334d4c78",
+    "model": "local-smoke-vec",
+    "provider": "local-smoke",
+    "vector_dim": 3,
+    "extractor_version": "v0.1",
+    "embedding_timestamp": "2026-05-26T18:47:21.326305Z"
+  }
+}
