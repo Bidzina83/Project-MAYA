@@ -1,0 +1,6 @@
+Metadata-Version: 2.4
+Name: maya_dev
+Version: 0.0.0
+Summary: Project MAYA shim package for CI
+Author: hermes
+License: MIT

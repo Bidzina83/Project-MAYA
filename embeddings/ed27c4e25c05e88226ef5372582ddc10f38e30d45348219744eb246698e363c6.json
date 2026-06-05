@@ -1,0 +1,1 @@
+{"embedding": [0.1, 0.2, 0.3], "model": "local-smoke-vec", "provider": "local-smoke", "vector_dim": 3, "extractor_version": "v0.1", "embedding_timestamp": "2026-05-26T18:47:21.326305Z"}

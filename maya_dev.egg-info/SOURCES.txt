@@ -1,0 +1,15 @@
+pyproject.toml
+setup.cfg
+hermes/__init__.py
+hermes/plugins/__init__.py
+hermes/plugins/memory/__init__.py
+hermes/plugins/memory/ingest/__init__.py
+hermes/plugins/memory/ingest/embedder_wrapper.py
+maya/__init__.py
+maya/embeddings.py
+maya_dev/__init__.py
+maya_dev.egg-info/PKG-INFO
+maya_dev.egg-info/SOURCES.txt
+maya_dev.egg-info/dependency_links.txt
+maya_dev.egg-info/top_level.txt
+maya_dev/plugins/__init__.py
