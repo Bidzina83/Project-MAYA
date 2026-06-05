@@ -14,7 +14,12 @@ missing_provenance | warning | Required provenance fields missing (fields listed
 privacy_block | error | Privacy-sensitive pattern matched in content
 category_blocked | warning | Category is blocked by policy
 invalid_timestamp | warning | Timestamp could not be parsed
-duplicate | info | Duplicate chunk detected by deduplication step
+duplicate | info | Duplicate chunk detected by deduplication
+contradictory | warning | Two facts were flagged as contradictory by a provider or analyzer
+incomplete_metadata | warning | Missing optional metadata that impairs provenance scoring
+provenance_low_quality | warning | Provenance present but scored low (e.g., unknown source)
+legal_restriction | error | Content may be restricted due to legal/regulatory constraints
+sensitive_personal_data | error | Content contains highly sensitive personal data (PII/PHI)
 
 Notes:
 - Codes may be namespaced with additional context, e.g. missing_provenance:field1,field2
