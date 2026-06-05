@@ -93,6 +93,7 @@ class IngestionPipeline:
                 'source_hash': emb_obj['source_hash'],
                 'model': emb_obj['model'],
                 'provider': emb_obj['provider'],
+                'vector_dim': len(v) if v is not None else None,
                 'extractor_version': emb_obj['extractor_version'],
                 'embedding_timestamp': emb_obj['embedding_timestamp'],
             }
