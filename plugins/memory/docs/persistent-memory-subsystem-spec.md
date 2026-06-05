@@ -1,6 +1,6 @@
 # Persistent Memory Subsystem - Current State Snapshot
 
-Last updated: 2026-06-05T21:40:00+00:00 (UTC)
+Last updated: 2026-06-05T21:55:03+00:00 (UTC)
 
 Purpose
 - Snapshot the current architecture and operational state for the persistent-memory (ingest) subsystem so the assistant can resume work next session without re-discovery.
@@ -20,6 +20,8 @@ Recent changes (2026-06-05)
 - Added maya-dev/.hermes_shim/__init__.py to mirror the CI PYTHONPATH target and ensure repository root + plugins path are added to sys.path when CI sets PYTHONPATH to that shim.
 - CI workflow edits (branch: fix/holographic-import-fallback-20260605): run-ingest-tests.yml and memory-ci.yml were patched to install `hermes_state` and to prepend the workspace root to PYTHONPATH in the test steps. NOTE: `hermes_state` is not published on PyPI — see "Known blockers" below.
 - Committed and pushed the above changes to branch fix/holographic-import-fallback-20260605. The holographic adapter unit test (plugins/memory/ingest/tests/test_holographic_adapter.py) passes locally in a venv after adding the store fallback.
+
+Update: the most recent PR was merged and CI on main ran green. Verified by the user and merged on 2026-06-05T21:55:03Z.
 
 Known blockers & recommendations
 - hermes_state is not available on PyPI (pip reports: "No matching distribution found for hermes_state"). Installing `hermes_state` in CI by name will fail on standard runners. Two recommended approaches:
