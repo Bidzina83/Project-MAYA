@@ -15,8 +15,9 @@ import json
 import os
 import sqlite3
 import tempfile
+import math
 from datetime import datetime
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Tuple
 
 
 def atomic_write_json(obj: Dict[str, Any], path: str) -> None:
@@ -81,6 +82,8 @@ class LocalVectorStore:
         self.db_path = db_path
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         self.conn = sqlite3.connect(self.db_path)
+        # Return rows as dict-like when using row factory
+        self.conn.row_factory = sqlite3.Row
         self._ensure_table()
 
     def _ensure_table(self) -> None:
@@ -125,6 +128,62 @@ class LocalVectorStore:
             "source_path": row[5],
             "score_meta": json.loads(row[6] or "{}"),
         }
+
+    def _cosine_similarity(self, a: List[float], b: List[float]) -> float:
+        """Compute cosine similarity between two equal-length vectors.
+
+        Returns a float in [-1.0, 1.0]. If either vector is zero, returns 0.0.
+        """
+        if not a or not b or len(a) != len(b):
+            return 0.0
+        # compute dot and norms
+        dot = 0.0
+        na = 0.0
+        nb = 0.0
+        for x, y in zip(a, b):
+            dot += float(x) * float(y)
+            na += float(x) * float(x)
+            nb += float(y) * float(y)
+        if na == 0.0 or nb == 0.0:
+            return 0.0
+        return dot / (math.sqrt(na) * math.sqrt(nb))
+
+    def query_by_vector(self, vector: List[float], top_k: int = 5, metric: str = "cosine") -> List[Dict[str, Any]]:
+        """Query the local vector store by a numeric vector and return the top_k matches.
+
+        Returns a list of dicts with keys: embedding_id, chunk_id, vector, vector_dim, created_at, source_path, score_meta, similarity
+        Similarity is in [-1,1] for cosine; for other metrics adapt accordingly.
+        """
+        cur = self.conn.cursor()
+        cur.execute("SELECT embedding_id, chunk_id, vector, vector_dim, created_at, source_path, score_meta FROM entries")
+        rows = cur.fetchall()
+        parsed: List[Tuple[float, Dict[str, Any]]] = []
+        for row in rows:
+            try:
+                vec = json.loads(row[2]) if row[2] else []
+            except Exception:
+                vec = []
+            if metric == "cosine":
+                sim = self._cosine_similarity(vector, vec)
+            else:
+                # fallback to cosine
+                sim = self._cosine_similarity(vector, vec)
+            entry = {
+                "embedding_id": row[0],
+                "chunk_id": row[1],
+                "vector": vec,
+                "vector_dim": row[3],
+                "created_at": row[4],
+                "source_path": row[5],
+                "score_meta": json.loads(row[6] or "{}"),
+                "similarity": sim,
+            }
+            parsed.append((sim, entry))
+
+        # sort by similarity descending
+        parsed.sort(key=lambda t: t[0], reverse=True)
+        results = [t[1] for t in parsed[:top_k]]
+        return results
 
     def close(self) -> None:
         self.conn.close()
