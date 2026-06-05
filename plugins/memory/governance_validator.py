@@ -32,6 +32,9 @@ class GovernancePolicy:
     required_provenance_fields: List[str] = field(default_factory=list)
     privacy_blocking_regexes: List[str] = field(default_factory=list)
     category_blocklist: List[str] = field(default_factory=list)
+    # enforcement_rules: mapping from reason_code -> rule dict
+    # rule dict may contain: score_adjust (float), block_flag (bool), redact (list), note (str)
+    enforcement_rules: Dict[str, Dict[str, Any]] = field(default_factory=dict)
 
 
 # V1 dataclasses retained for compatibility
@@ -146,43 +149,69 @@ class GovernanceValidator:
         self._privacy_patterns = [re.compile(p) for p in (self.policy.privacy_blocking_regexes or [])]
 
     def _build_enforcement_hints(self, reasons: List[str], severity: str, details: Dict[str, Any]) -> Optional[EnforcementHint]:
-        # Default: no hints
+        # Default: use policy-driven rules if present, otherwise fall back to heuristics
         hint = EnforcementHint()
         set_any = False
+        # Check policy-driven rules first
+        for r in reasons:
+            root = r.split(":", 1)[0]
+            rule = self.policy.enforcement_rules.get(root)
+            if rule:
+                # score_adjust
+                if "score_adjust" in rule:
+                    # take the minimum adjustment (most conservative) if multiple rules apply
+                    val = float(rule["score_adjust"])
+                    if hint.score_adjust is None:
+                        hint.score_adjust = val
+                    else:
+                        hint.score_adjust = min(hint.score_adjust, val)
+                    set_any = True
+                if "block_flag" in rule and rule["block_flag"]:
+                    hint.block_flag = True
+                    set_any = True
+                if "redact" in rule and rule["redact"]:
+                    if hint.redact is None:
+                        hint.redact = []
+                    hint.redact.extend(rule["redact"])
+                    set_any = True
+                if "note" in rule and rule["note"]:
+                    hint.note = (hint.note or "") + " " + str(rule["note"]) if hint.note else str(rule["note"])
+                    set_any = True
+        if set_any:
+            return hint
+
+        # Fallback heuristics (legacy behavior)
         # privacy_block -> strong block and redact suggestion
         if "privacy_block" in reasons:
             hint.block_flag = True
             hint.redact = [{"reason": "privacy_block", "note": "contains privacy-sensitive pattern"}]
             hint.note = "Privacy-sensitive content matched; consider redaction or blocking."
-            set_any = True
+            return hint
         # provider deny -> block
         if "provider_denied" in reasons or "provider_not_allowed" in reasons:
             hint.block_flag = True
             hint.note = (hint.note or "") + " Provider not allowed by policy."
-            set_any = True
+            return hint
         # low trust -> suggest score adjustment to derived trust if present
         for r in reasons:
             if r == "low_trust":
-                # use derived_trust from details if available
                 dt = details.get("derived_trust")
                 if dt is not None:
                     hint.score_adjust = float(dt)
                 else:
                     hint.score_adjust = 0.7
                 hint.note = (hint.note or "") + " Low trust detected; suggest lowering score."
-                set_any = True
+                return hint
         # missing provenance -> mild score penalty
         for r in reasons:
             if r.startswith("missing_provenance"):
-                hint.score_adjust = hint.score_adjust or 0.9
+                hint.score_adjust = 0.9
                 hint.note = (hint.note or "") + " Missing provenance fields." 
-                set_any = True
+                return hint
         # category_blocked -> suggest score reduction
         if "category_blocked" in reasons:
-            hint.score_adjust = hint.score_adjust or 0.5
+            hint.score_adjust = 0.5
             hint.note = (hint.note or "") + " Category is blocked by policy." 
-            set_any = True
-        if set_any:
             return hint
         return None
 
@@ -310,6 +339,3 @@ class GovernanceValidator:
 
     def last_report_v2(self) -> Optional[GovernanceReportV2]:
         return self._last_report_v2
-
-
-__all__ = ["GovernanceValidator", "GovernancePolicy", "GovernanceReport", "AuditEntry", "GovernanceReportV2", "REASON_CODE_CATALOG"]
