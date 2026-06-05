@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GovernanceReportV2",
+  "type": "object",
+  "required": ["version", "total", "annotations", "summary", "generated_at"],
+  "properties": {
+    "version": {"type": "string", "enum": ["v2"]},
+    "total": {"type": "integer", "minimum": 0},
+    "annotations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["chunk_id", "provider", "action", "reasons", "severity", "details"],
+        "properties": {
+          "chunk_id": {"type": "string"},
+          "provider": {"type": "string"},
+          "action": {"type": "string", "enum": ["kept", "warning"]},
+          "reasons": {"type": "array", "items": {"type": "string"}},
+          "severity": {"type": "string", "enum": ["info", "warning", "error"]},
+          "details": {"type": "object"}
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    },
+    "generated_at": {"type": "string", "format": "date-time"}
+  }
+}
