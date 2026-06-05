@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+src/maya/__init__.py
+src/maya/config.py
+src/maya/embeddings.py
+src/maya.egg-info/PKG-INFO
+src/maya.egg-info/SOURCES.txt
+src/maya.egg-info/dependency_links.txt
+src/maya.egg-info/requires.txt
+src/maya.egg-info/top_level.txt
+src/maya/adapters/openai_provider.py
+tests/test_embeddings.py
+tests/test_openai_provider.py

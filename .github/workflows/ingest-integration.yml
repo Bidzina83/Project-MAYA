@@ -1,0 +1,9 @@
+name: ingest-integration
+on: [workflow_dispatch, pull_request]
+jobs:
+  call-ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ingest example
+        run: echo 'No workflow content found; please review'

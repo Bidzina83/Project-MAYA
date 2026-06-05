@@ -1,0 +1,28 @@
+name: CI Diagnostics
+on: [pull_request, push]
+
+jobs:
+  diagnostics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Run tests (diagnostic)
+        run: |
+          mkdir -p reports logs
+          pytest -q --maxfail=1 --junitxml=reports/junit.xml --log-cli-level=INFO || true
+          tar -czf logs.tar.gz reports logs || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-diagnostics-logs
+          path: |
+            reports/junit.xml
+            logs.tar.gz
