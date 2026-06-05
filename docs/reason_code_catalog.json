@@ -1,0 +1,16 @@
+{
+  "low_trust": {"description": "Derived trust below minimum threshold", "severity": "warning"},
+  "too_old": {"description": "Document age exceeds max_age_days policy", "severity": "warning"},
+  "provider_not_allowed": {"description": "Provider not in allowlist", "severity": "error"},
+  "provider_denied": {"description": "Provider explicitly denied", "severity": "error"},
+  "missing_provenance": {"description": "Required provenance fields missing", "severity": "warning"},
+  "privacy_block": {"description": "Privacy-sensitive pattern matched", "severity": "error"},
+  "category_blocked": {"description": "Category is blocked by policy", "severity": "warning"},
+  "invalid_timestamp": {"description": "Timestamp could not be parsed", "severity": "warning"},
+  "duplicate": {"description": "Duplicate chunk detected by deduplication", "severity": "info"},
+  "contradictory": {"description": "Two facts were flagged as contradictory by a provider or analyzer", "severity": "warning"},
+  "incomplete_metadata": {"description": "Missing optional metadata that impairs provenance scoring", "severity": "warning"},
+  "provenance_low_quality": {"description": "Provenance present but scored low (e.g., unknown source)", "severity": "warning"},
+  "legal_restriction": {"description": "Content may be restricted due to legal/regulatory constraints", "severity": "error"},
+  "sensitive_personal_data": {"description": "Content contains highly sensitive personal data (PII/PHI)", "severity": "error"}
+}

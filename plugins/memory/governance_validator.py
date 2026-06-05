@@ -20,6 +20,11 @@ REASON_CODE_CATALOG: Dict[str, Dict[str, Any]] = {
     "invalid_timestamp": {"description": "Timestamp could not be parsed", "severity": "warning"},
     "duplicate": {"description": "Duplicate chunk detected by deduplication", "severity": "info"},
     "missing_provenance:fields": {"description": "Specific provenance fields missing (comma-separated)", "severity": "warning"},
+    "contradictory": {"description": "Two facts were flagged as contradictory by a provider or analyzer", "severity": "warning"},
+    "incomplete_metadata": {"description": "Missing optional metadata that impairs provenance scoring", "severity": "warning"},
+    "provenance_low_quality": {"description": "Provenance present but scored low (e.g., unknown source)", "severity": "warning"},
+    "legal_restriction": {"description": "Content may be restricted due to legal/regulatory constraints", "severity": "error"},
+    "sensitive_personal_data": {"description": "Content contains highly sensitive personal data (PII/PHI)", "severity": "error"},
 }
 
 
