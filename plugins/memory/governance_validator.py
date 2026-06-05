@@ -1,10 +1,25 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
 import re
 
 from plugins.memory.retriever_api import RetrievalResult
+
+
+# Reason-code catalog (basic): code -> {description, severity}
+REASON_CODE_CATALOG: Dict[str, Dict[str, Any]] = {
+    "low_trust": {"description": "Derived trust below minimum threshold", "severity": "warning"},
+    "too_old": {"description": "Document age exceeds max_age_days policy", "severity": "warning"},
+    "provider_not_allowed": {"description": "Provider not in allowlist", "severity": "error"},
+    "provider_denied": {"description": "Provider explicitly denied", "severity": "error"},
+    "missing_provenance": {"description": "Required provenance fields missing", "severity": "warning"},
+    "privacy_block": {"description": "Privacy-sensitive pattern matched", "severity": "error"},
+    "category_blocked": {"description": "Category is blocked by policy", "severity": "warning"},
+    "invalid_timestamp": {"description": "Timestamp could not be parsed", "severity": "warning"},
+    "duplicate": {"description": "Duplicate chunk detected by deduplication", "severity": "info"},
+    "missing_provenance:fields": {"description": "Specific provenance fields missing (comma-separated)", "severity": "warning"},
+}
 
 
 @dataclass
@@ -18,6 +33,7 @@ class GovernancePolicy:
     category_blocklist: List[str] = field(default_factory=list)
 
 
+# V1 dataclasses retained for compatibility
 @dataclass
 class AuditEntry:
     chunk_id: str
@@ -36,28 +52,61 @@ class GovernanceReport:
     generated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
+# V2 dataclasses: structured annotations and summary
+@dataclass
+class BlockAnnotation:
+    chunk_id: str
+    provider: str
+    action: str  # 'kept' | 'warning'
+    reasons: List[str]
+    severity: str
+    details: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class GovernanceReportV2:
+    version: str = "v2"
+    total: int = 0
+    annotations: List[BlockAnnotation] = field(default_factory=list)
+    summary: Dict[str, int] = field(default_factory=dict)
+    generated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
 class GovernanceValidator:
-    """Passive Governance Validator (Version 1).
+    """Passive Governance Validator.
 
-    - Inspects RetrievalResult[]
-    - Generates governance warnings with reason codes
-    - Produces a GovernanceReport
+    Versioning:
+      - validate(...) still returns the legacy GovernanceReport (for compatibility)
+      - A structured GovernanceReportV2 is also produced and stored at self._last_report_v2
 
-    Does NOT filter, modify, or reject records. Callers should use the report for decision-making.
+    Behavior:
+      - Inspects RetrievalResult[]
+      - Generates reason codes using REASON_CODE_CATALOG
+      - Produces both legacy GovernanceReport and GovernanceReportV2 (v2 is preferred going forward)
+
+    Does NOT filter, modify, or reject records. Callers should use the reports for decision-making.
     """
 
     def __init__(self, policy: Optional[GovernancePolicy] = None, provider_trust_overrides: Optional[Dict[str, float]] = None):
         self.policy = policy or GovernancePolicy()
         self.provider_trust_overrides = provider_trust_overrides or {}
-        # store last report for explain()
+        # store last reports for explain()/inspection
         self._last_report: Optional[GovernanceReport] = None
+        self._last_report_v2: Optional[GovernanceReportV2] = None
         # precompile privacy regexes
         self._privacy_patterns = [re.compile(p) for p in (self.policy.privacy_blocking_regexes or [])]
 
     def validate(self, retrievals: List[RetrievalResult]) -> GovernanceReport:
+        """Legacy validate: returns GovernanceReport (keeps old behavior), but also produces V2 report.
+
+        The V2 report is stored at self._last_report_v2 and includes structured per-block annotations
+        with severity levels resolved from the REASON_CODE_CATALOG.
+        """
         warnings: List[AuditEntry] = []
         summary_counters: Dict[str, int] = {}
         now = datetime.now(timezone.utc)
+
+        annotations: List[BlockAnnotation] = []
 
         for r in retrievals:
             chunk_id = r.get("chunk_id") or r.get("id") or ""
@@ -100,7 +149,9 @@ class GovernanceValidator:
                 if not r.get("meta") or f not in r.get("meta", {}):
                     missing.append(f)
             if missing:
+                # encode as a namespaced reason so catalog lookups can be approximate
                 reasons.append("missing_provenance:" + ",".join(missing))
+                details.setdefault("missing_provenance", missing)
 
             # privacy regexes
             content = r.get("content", "") or ""
@@ -117,7 +168,7 @@ class GovernanceValidator:
                 reasons.append("category_blocked")
                 details["category"] = cat
 
-            # finalize
+            # finalize legacy warnings / summary
             if reasons:
                 ae = AuditEntry(
                     chunk_id=chunk_id,
@@ -133,9 +184,29 @@ class GovernanceValidator:
             else:
                 summary_counters["kept"] = summary_counters.get("kept", 0) + 1
 
-        report = GovernanceReport(total=len(retrievals), warnings=warnings, summary=summary_counters, generated_at=now.isoformat())
-        self._last_report = report
-        return report
+            # Build V2 annotation for this block: derive severity by taking the max severity among reason codes
+            severity = "info"
+            for rc in reasons:
+                # normalize reason key (split missing_provenance:fields to root)
+                rc_root = rc.split(":", 1)[0]
+                meta = REASON_CODE_CATALOG.get(rc_root)
+                if meta:
+                    sev = meta.get("severity", "info")
+                    if sev == "error":
+                        severity = "error"
+                        break
+                    if sev == "warning" and severity != "error":
+                        severity = "warning"
+            ba = BlockAnnotation(chunk_id=chunk_id, provider=provider, action=("warning" if reasons else "kept"), reasons=reasons, severity=severity, details=details)
+            annotations.append(ba)
+
+        # assemble reports
+        legacy_report = GovernanceReport(total=len(retrievals), warnings=warnings, summary=summary_counters, generated_at=now.isoformat())
+        v2_report = GovernanceReportV2(version="v2", total=len(retrievals), annotations=annotations, summary=summary_counters, generated_at=now.isoformat())
+
+        self._last_report = legacy_report
+        self._last_report_v2 = v2_report
+        return legacy_report
 
     def explain(self, chunk_id: str) -> Optional[AuditEntry]:
         if not self._last_report:
@@ -145,5 +216,8 @@ class GovernanceValidator:
                 return w
         return None
 
+    def last_report_v2(self) -> Optional[GovernanceReportV2]:
+        return self._last_report_v2
 
-__all__ = ["GovernanceValidator", "GovernancePolicy", "GovernanceReport", "AuditEntry"]
+
+__all__ = ["GovernanceValidator", "GovernancePolicy", "GovernanceReport", "AuditEntry", "GovernanceReportV2", "REASON_CODE_CATALOG"]
