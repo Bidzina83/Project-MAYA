@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import math
 
 from plugins.memory.retriever_api import Retriever, RetrievalResult, RetrieverError, ProviderInfo
-from plugins.memory.governance_validator import GovernanceValidator, GovernanceReport
+from plugins.memory.governance_validator import GovernanceValidator, GovernanceReport, GovernanceReportV2
 from plugins.memory.context_builder import build_context
 
 
@@ -99,8 +99,10 @@ class RetrieverService:
             if self.governance_validator:
                 report = self.governance_validator.validate([normalized])
                 self.last_governance_report = report
-                # build an operational context from the normalized results
-                self.last_operational_context = build_context([normalized], token_budget=self.token_budget)
+                # build an operational context from the normalized results including governance
+                v2 = self.governance_validator.last_report_v2()
+                gov = v2.to_dict() if v2 else None
+                self.last_operational_context = build_context([normalized], token_budget=self.token_budget, governance=gov)
             else:
                 # always update last_operational_context for callers even if no governance
                 self.last_operational_context = build_context([normalized], token_budget=self.token_budget)
@@ -128,8 +130,13 @@ class RetrieverService:
                     if self.governance_validator:
                         report = self.governance_validator.validate(results)
                         self.last_governance_report = report
-                    # always build an operational context for callers
-                    self.last_operational_context = build_context(results, token_budget=self.token_budget)
+                        v2 = self.governance_validator.last_report_v2()
+                        gov = v2.to_dict() if v2 else None
+                        # build operational context including governance annotations
+                        self.last_operational_context = build_context(results, token_budget=self.token_budget, governance=gov)
+                    else:
+                        # always build an operational context for callers
+                        self.last_operational_context = build_context(results, token_budget=self.token_budget)
                     return results
                 tried.append(p_name)
             except RetrieverError:
@@ -159,8 +166,12 @@ class RetrieverService:
                     if self.governance_validator:
                         report = self.governance_validator.validate(results)
                         self.last_governance_report = report
-                    # build operational context
-                    self.last_operational_context = build_context(results, token_budget=self.token_budget)
+                        v2 = self.governance_validator.last_report_v2()
+                        gov = v2.to_dict() if v2 else None
+                        # build operational context including governance annotations
+                        self.last_operational_context = build_context(results, token_budget=self.token_budget, governance=gov)
+                    else:
+                        self.last_operational_context = build_context(results, token_budget=self.token_budget)
                     return results
             except RetrieverError:
                 self.metrics["fallbacks"] += 1

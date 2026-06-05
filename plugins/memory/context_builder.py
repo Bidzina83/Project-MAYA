@@ -13,6 +13,7 @@ class OperationalContext(TypedDict):
     total_tokens: int
     token_budget: int
     truncated: bool
+    governance_summary: Optional[Dict[str, int]]
 
 
 def _estimate_tokens(text: str) -> int:
@@ -25,7 +26,7 @@ def _estimate_tokens(text: str) -> int:
     return max(1, len(text.split()))
 
 
-def build_context(retrievals: List[Dict[str, Any]], token_budget: int = 2048) -> OperationalContext:
+def build_context(retrievals: List[Dict[str, Any]], token_budget: int = 2048, governance: Optional[Dict[str, Any]] = None) -> OperationalContext:
     """Build an OperationalContext from normalized RetrievalResult dicts.
 
     Behavior (minimal, deterministic):
@@ -34,6 +35,7 @@ def build_context(retrievals: List[Dict[str, Any]], token_budget: int = 2048) ->
       - Deduplicates by 'chunk_id' keeping the highest-ranked entry.
       - Accumulates blocks until token_budget is exhausted (by _estimate_tokens), sets 'truncated' if not all deduped items fit.
       - Each block includes provenance and a conservative token estimate.
+      - If governance is provided (GovernanceReportV2 as dict), attaches governance_summary and per-block gov_annotations.
 
     This is intentionally simple to provide a stable surface for higher-level logic
     and tests. Future iterations will add summarization hooks, smarter token
@@ -87,4 +89,24 @@ def build_context(retrievals: List[Dict[str, Any]], token_budget: int = 2048) ->
         blocks.append(block)
         total_tokens += est
 
-    return OperationalContext(blocks=blocks, total_tokens=total_tokens, token_budget=token_budget, truncated=truncated)
+    ctx: OperationalContext = OperationalContext(blocks=blocks, total_tokens=total_tokens, token_budget=token_budget, truncated=truncated, governance_summary=None)
+
+    # Attach governance summary and per-block gov_annotations if provided
+    if governance:
+        # governance expected to be a dict like GovernanceReportV2.to_dict()
+        gs = governance.get("summary") if isinstance(governance, dict) else None
+        ctx["governance_summary"] = gs
+        ann = governance.get("annotations") if isinstance(governance, dict) else None
+        if ann:
+            # index annotations by chunk_id
+            idx = {a.get("chunk_id"): a for a in ann}
+            for b in ctx["blocks"]:
+                cid = b.get("chunk_id")
+                a = idx.get(cid)
+                if a:
+                    # attach governance annotation
+                    b["gov_annotations"] = a
+                else:
+                    b["gov_annotations"] = None
+
+    return ctx
