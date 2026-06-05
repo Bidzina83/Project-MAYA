@@ -67,6 +67,18 @@ class GovernanceReport:
         return json.dumps(self.to_dict())
 
 
+# Enforcement hint dataclass (advisory-only)
+@dataclass
+class EnforcementHint:
+    score_adjust: Optional[float] = None
+    redact: Optional[List[Dict[str, Any]]] = None
+    block_flag: Optional[bool] = None
+    note: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
 # V2 dataclasses: structured annotations and summary
 @dataclass
 class BlockAnnotation:
@@ -76,9 +88,16 @@ class BlockAnnotation:
     reasons: List[str]
     severity: str
     details: Dict[str, Any] = field(default_factory=dict)
+    enforcement_hints: Optional[EnforcementHint] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        d = asdict(self)
+        # enforcement_hints -> dict if present
+        if self.enforcement_hints is not None:
+            d["enforcement_hints"] = self.enforcement_hints.to_dict()
+        else:
+            d["enforcement_hints"] = None
+        return d
 
 
 @dataclass
@@ -125,6 +144,47 @@ class GovernanceValidator:
         self._last_report_v2: Optional[GovernanceReportV2] = None
         # precompile privacy regexes
         self._privacy_patterns = [re.compile(p) for p in (self.policy.privacy_blocking_regexes or [])]
+
+    def _build_enforcement_hints(self, reasons: List[str], severity: str, details: Dict[str, Any]) -> Optional[EnforcementHint]:
+        # Default: no hints
+        hint = EnforcementHint()
+        set_any = False
+        # privacy_block -> strong block and redact suggestion
+        if "privacy_block" in reasons:
+            hint.block_flag = True
+            hint.redact = [{"reason": "privacy_block", "note": "contains privacy-sensitive pattern"}]
+            hint.note = "Privacy-sensitive content matched; consider redaction or blocking."
+            set_any = True
+        # provider deny -> block
+        if "provider_denied" in reasons or "provider_not_allowed" in reasons:
+            hint.block_flag = True
+            hint.note = (hint.note or "") + " Provider not allowed by policy."
+            set_any = True
+        # low trust -> suggest score adjustment to derived trust if present
+        for r in reasons:
+            if r == "low_trust":
+                # use derived_trust from details if available
+                dt = details.get("derived_trust")
+                if dt is not None:
+                    hint.score_adjust = float(dt)
+                else:
+                    hint.score_adjust = 0.7
+                hint.note = (hint.note or "") + " Low trust detected; suggest lowering score."
+                set_any = True
+        # missing provenance -> mild score penalty
+        for r in reasons:
+            if r.startswith("missing_provenance"):
+                hint.score_adjust = hint.score_adjust or 0.9
+                hint.note = (hint.note or "") + " Missing provenance fields." 
+                set_any = True
+        # category_blocked -> suggest score reduction
+        if "category_blocked" in reasons:
+            hint.score_adjust = hint.score_adjust or 0.5
+            hint.note = (hint.note or "") + " Category is blocked by policy." 
+            set_any = True
+        if set_any:
+            return hint
+        return None
 
     def validate(self, retrievals: List[RetrievalResult]) -> GovernanceReport:
         """Legacy validate: returns GovernanceReport (keeps old behavior), but also produces V2 report.
@@ -227,7 +287,9 @@ class GovernanceValidator:
                         break
                     if sev == "warning" and severity != "error":
                         severity = "warning"
-            ba = BlockAnnotation(chunk_id=chunk_id, provider=provider, action=("warning" if reasons else "kept"), reasons=reasons, severity=severity, details=details)
+
+            enforcement = self._build_enforcement_hints(reasons, severity, details)
+            ba = BlockAnnotation(chunk_id=chunk_id, provider=provider, action=("warning" if reasons else "kept"), reasons=reasons, severity=severity, details=details, enforcement_hints=enforcement)
             annotations.append(ba)
 
         # assemble reports
