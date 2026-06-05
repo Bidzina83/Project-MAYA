@@ -1,8 +1,9 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
 import re
+import json
 
 from plugins.memory.retriever_api import RetrievalResult
 
@@ -43,6 +44,9 @@ class AuditEntry:
     timestamp: str
     details: Dict[str, Any] = field(default_factory=dict)
 
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
 
 @dataclass
 class GovernanceReport:
@@ -50,6 +54,17 @@ class GovernanceReport:
     warnings: List[AuditEntry] = field(default_factory=list)
     summary: Dict[str, int] = field(default_factory=dict)
     generated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "total": self.total,
+            "warnings": [w.to_dict() for w in self.warnings],
+            "summary": dict(self.summary),
+            "generated_at": self.generated_at,
+        }
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict())
 
 
 # V2 dataclasses: structured annotations and summary
@@ -62,6 +77,9 @@ class BlockAnnotation:
     severity: str
     details: Dict[str, Any] = field(default_factory=dict)
 
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
 
 @dataclass
 class GovernanceReportV2:
@@ -70,6 +88,18 @@ class GovernanceReportV2:
     annotations: List[BlockAnnotation] = field(default_factory=list)
     summary: Dict[str, int] = field(default_factory=dict)
     generated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "version": self.version,
+            "total": self.total,
+            "annotations": [a.to_dict() for a in self.annotations],
+            "summary": dict(self.summary),
+            "generated_at": self.generated_at,
+        }
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict())
 
 
 class GovernanceValidator:
