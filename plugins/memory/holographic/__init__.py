@@ -36,7 +36,15 @@ except Exception:
         def __init__(self, *args, **kwargs):
             pass
 
-from tools.registry import tool_error
+try:
+    from tools.registry import tool_error
+except Exception:
+    def tool_error(msg: str) -> str:
+        """Fallback tool_error used in CI/test environments when the tools.registry
+        package isn't available. Returns a simple error string so imports succeed
+        and tests can run in isolation.
+        """
+        return f"TOOL_ERROR: {msg}"
 from .store import MemoryStore
 from .retrieval import FactRetriever
 from hermes_cli.config import cfg_get
