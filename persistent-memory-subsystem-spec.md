@@ -1,6 +1,7 @@
 # Persistent Memory Subsystem — Formal Implementation Spec
 
 Status: Draft for implementation
+Last updated: 2026-06-05T21:40:00+00:00 (UTC)
 Scope: filesystem-first persistent memory for organizational intelligence (Project: Maya — Information Manager AI Employee)
 Canonical path: /opt/hermes/plugins/memory/docs/persistent-memory-subsystem-spec.md
 
@@ -56,6 +57,33 @@ Principles:
 - Deterministic and reproducible indexing / chunking
 - Always return provenance and confidence statements alongside semantic results
 - Minimal surprises: never expose derived state without the source link(s)
+
+---
+
+## 1.x Recent operational changes (summary)
+
+- 2026-06-05: Defensive hardening and CI/test compatibility updates were applied to the repository to address import-time failures observed on minimal CI runners. Changes included:
+  - Added fallbacks in plugins/memory/holographic to tolerate missing runtime packages (agent, tools.registry, hermes_state) during test collection.
+  - Made the MemoryStore initialization tolerant to a missing `hermes_state` by providing a best-effort fallback for apply_wal_with_fallback (no-op/WAL PRAGMA). This allows unit tests to run on runners where hermes_state is not installed.
+  - Added missing adapter files and package markers (plugins/memory/adapters/*) and a maya-dev/.hermes_shim to mirror CI PYTHONPATH expectations.
+  - CI workflow edits (branch fix/holographic-import-fallback-20260605) attempted to install `hermes_state` in test jobs, but `hermes_state` is not available on PyPI (pip reports no matching distribution). See "Known blockers" below.
+
+Known blocker and guidance
+
+- `hermes_state` is not published to PyPI; installing it by name in CI will fail. Options:
+  1) Remove hermes_state from the CI install list and rely on the `apply_wal_with_fallback` fallback in store.py (already committed). This avoids failing installs and keeps tests runnable in minimal runners.
+  2) If `hermes_state` is required for production behavior, point CI at a concrete source (git URL or internal package index) and update the workflows to install from that source. Provide the URL if you want this option.
+
+Local verification
+
+- The holographic adapter unit test (plugins/memory/ingest/tests/test_holographic_adapter.py) passes locally in a virtualenv after adding the store fallback.
+- Attempting `pip install -e . pytest jsonschema hermes_state` failed locally because `hermes_state` is not on PyPI.
+
+Recommended immediate actions
+
+1) Decide how CI should handle `hermes_state` (remove from installs, or provide an install source). If you prefer removal, I can update the workflows accordingly and push the change.
+2) After CI install issues are resolved, re-run the failing workflows and fetch full logs for the most recent run to confirm no further import/runtime issues.
+3) Consider keeping the `apply_wal_with_fallback` fallback (non-invasive, safe) to make test discovery more robust on minimal images, or replace it with the canonical `hermes_state` implementation when available.
 
 ---
 

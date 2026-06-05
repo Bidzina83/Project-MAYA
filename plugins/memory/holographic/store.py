@@ -130,7 +130,16 @@ class MemoryStore:
         # Use the shared WAL-fallback helper so memory_store.db degrades
         # gracefully on NFS/SMB/FUSE-mounted HERMES_HOME (same issue as
         # state.db / kanban.db — see hermes_state._WAL_INCOMPAT_MARKERS).
-        from hermes_state import apply_wal_with_fallback
+        try:
+            from hermes_state import apply_wal_with_fallback  # type: ignore
+        except Exception:
+            def apply_wal_with_fallback(conn, db_label="memory_store.db (holographic)"):
+                """Fallback no-op helper used in CI/test runners where hermes_state isn't available."""
+                try:
+                    conn.execute("PRAGMA journal_mode=WAL;")
+                except Exception:
+                    # Best-effort; ignore if the platform doesn't support WAL
+                    return
         apply_wal_with_fallback(self._conn, db_label="memory_store.db (holographic)")
         self._conn.executescript(_SCHEMA)
         # Migrate: add hrr_vector column if missing (safe for existing databases)
