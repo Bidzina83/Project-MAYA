@@ -1,0 +1,26 @@
+{
+  "version": "v2",
+  "total": 2,
+  "annotations": [
+    {
+      "chunk_id": "c-a",
+      "provider": "local",
+      "action": "warning",
+      "reasons": ["low_trust"],
+      "severity": "warning",
+      "details": {"derived_trust": 0.1, "age_days": 10.0},
+      "enforcement_hints": {"score_adjust": 0.1, "redact": null, "block_flag": true, "note": "Low trust: suggest lowering score"}
+    },
+    {
+      "chunk_id": "c-b",
+      "provider": "local",
+      "action": "kept",
+      "reasons": [],
+      "severity": "info",
+      "details": {},
+      "enforcement_hints": null
+    }
+  ],
+  "summary": {"low_trust": 1, "kept": 1},
+  "generated_at": "2026-06-05T00:00:00Z"
+}

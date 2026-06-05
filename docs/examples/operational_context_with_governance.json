@@ -1,0 +1,42 @@
+{
+  "blocks": [
+    {
+      "chunk_id": "c-a",
+      "content": "alpha beta gamma",
+      "provider": "local",
+      "score": 0.09,
+      "similarity": 0.9,
+      "trust_score": 0.1,
+      "source_path": "/data/c-a.txt",
+      "created_at": "2026-01-01T00:00:00Z",
+      "meta": {"category": "note"},
+      "estimated_tokens": 3,
+      "gov_annotations": {
+        "chunk_id": "c-a",
+        "provider": "local",
+        "action": "warning",
+        "reasons": ["low_trust"],
+        "severity": "warning",
+        "details": {"derived_trust": 0.1},
+        "enforcement_hints": {"score_adjust": 0.1, "redact": null, "block_flag": true, "note": "Low trust: suggest lowering score"}
+      }
+    },
+    {
+      "chunk_id": "c-b",
+      "content": "delta epsilon",
+      "provider": "local",
+      "score": 0.85,
+      "similarity": 0.85,
+      "trust_score": 1.0,
+      "source_path": "/data/c-b.txt",
+      "created_at": "2026-01-02T00:00:00Z",
+      "meta": {"category": "note"},
+      "estimated_tokens": 2,
+      "gov_annotations": null
+    }
+  ],
+  "total_tokens": 5,
+  "token_budget": 2048,
+  "truncated": false,
+  "governance_summary": {"low_trust": 1, "kept": 1}
+}
