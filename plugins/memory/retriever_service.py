@@ -6,6 +6,7 @@ import math
 from plugins.memory.retriever_api import Retriever, RetrievalResult, RetrieverError, ProviderInfo
 from plugins.memory.governance_validator import GovernanceValidator, GovernanceReport, GovernanceReportV2
 from plugins.memory.context_builder import build_context
+from plugins.memory.governance_audit import persist_report
 
 
 class RetrieverService:
@@ -50,6 +51,8 @@ class RetrieverService:
         self.last_operational_context: Optional[Dict[str, Any]] = None
         # token budget for context building
         self.token_budget = int(token_budget)
+        # path to last persisted governance audit (if any)
+        self.last_persisted_report_path: Optional[str] = None
 
     def register_provider(self, name: str, provider: Retriever, info: Optional[ProviderInfo] = None) -> None:
         self.providers[name] = provider
@@ -102,6 +105,14 @@ class RetrieverService:
                 # build an operational context from the normalized results including governance
                 v2 = self.governance_validator.last_report_v2()
                 gov = v2.to_dict() if v2 else None
+                # persist v2 report if present
+                if v2 is not None:
+                    try:
+                        path = persist_report(v2)
+                        self.last_persisted_report_path = path
+                    except Exception:
+                        # do not fail callers if audit persistence fails; just skip
+                        pass
                 self.last_operational_context = build_context([normalized], token_budget=self.token_budget, governance=gov)
             else:
                 # always update last_operational_context for callers even if no governance
@@ -132,6 +143,13 @@ class RetrieverService:
                         self.last_governance_report = report
                         v2 = self.governance_validator.last_report_v2()
                         gov = v2.to_dict() if v2 else None
+                        # persist v2 report if present
+                        if v2 is not None:
+                            try:
+                                path = persist_report(v2)
+                                self.last_persisted_report_path = path
+                            except Exception:
+                                pass
                         # build operational context including governance annotations
                         self.last_operational_context = build_context(results, token_budget=self.token_budget, governance=gov)
                     else:
@@ -148,6 +166,13 @@ class RetrieverService:
         if self.governance_validator:
             report = self.governance_validator.validate([])
             self.last_governance_report = report
+            v2 = self.governance_validator.last_report_v2()
+            if v2 is not None:
+                try:
+                    path = persist_report(v2)
+                    self.last_persisted_report_path = path
+                except Exception:
+                    pass
         # update last_operational_context to empty
         self.last_operational_context = build_context([], token_budget=self.token_budget)
         return []
@@ -168,7 +193,13 @@ class RetrieverService:
                         self.last_governance_report = report
                         v2 = self.governance_validator.last_report_v2()
                         gov = v2.to_dict() if v2 else None
-                        # build operational context including governance annotations
+                        # persist v2 report if present
+                        if v2 is not None:
+                            try:
+                                path = persist_report(v2)
+                                self.last_persisted_report_path = path
+                            except Exception:
+                                pass
                         self.last_operational_context = build_context(results, token_budget=self.token_budget, governance=gov)
                     else:
                         self.last_operational_context = build_context(results, token_budget=self.token_budget)
@@ -179,6 +210,13 @@ class RetrieverService:
         if self.governance_validator:
             report = self.governance_validator.validate([])
             self.last_governance_report = report
+            v2 = self.governance_validator.last_report_v2()
+            if v2 is not None:
+                try:
+                    path = persist_report(v2)
+                    self.last_persisted_report_path = path
+                except Exception:
+                    pass
         self.last_operational_context = build_context([], token_budget=self.token_budget)
         return []
 
