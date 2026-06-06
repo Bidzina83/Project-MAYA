@@ -20,4 +20,12 @@ setup(
     packages=packages,
     package_dir=package_dir,
     include_package_data=True,
+    # Optional extras for test/development workflows. Keep minimal and focused.
+    extras_require={
+        'test': [
+            'pytest>=7.0',
+            'pytest-mock',
+            'jsonschema',
+        ],
+    },
 )
