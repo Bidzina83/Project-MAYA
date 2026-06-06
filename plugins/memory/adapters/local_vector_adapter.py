@@ -61,10 +61,6 @@ class LocalVectorAdapter(Retriever):
     def bulk_upsert(self, docs: List[Dict[str, Any]]) -> None:
         for d in docs:
             self.upsert(d)
-'
-(self, docs: List[Dict[str, Any]]) -> None:
-        for d in docs:
-            self.upsert(d)
 
     def get(self, id: str) -> Optional[RetrievalResult]:
         try:
