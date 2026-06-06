@@ -56,7 +56,7 @@ jobs:
           export PYTEST_ADDOPTS="--basetemp=${{ github.workspace }}/.pytest_tmp"
           # Ensure workspace root is on PYTHONPATH so imports like
           # 'plugins.memory.adapters.*' resolve correctly during test collection.
-          export PYTHONPATH="${{ github.workspace }}:${{ github.workspace }}/maya-dev/.hermes_shim"
+          export PYTHONPATH="/opt/hermes:${{ github.workspace }}:${{ github.workspace }}/maya-dev/.hermes_shim:$PYTHONPATH"
           pytest -c /dev/null -q plugins/memory/ingest/tests -p no:xdist
 
       - name: "Optional: Run a smoke embedding (OpenAI)"
@@ -64,7 +64,7 @@ jobs:
           if [ -n "$OPENAI_API_KEY" ]; then
             # Keep PYTHONPATH consistent with the test step so imports resolve the
             # same way in the smoke test as they do during pytest collection.
-            export PYTHONPATH="${{ github.workspace }}:${{ github.workspace }}/maya-dev/.hermes_shim"
+            export PYTHONPATH="/opt/hermes:${{ github.workspace }}:${{ github.workspace }}/maya-dev/.hermes_shim:$PYTHONPATH"
             python -c "from hermes.plugins.memory.ingest.embedder_wrapper import EmbeddingClient; print(EmbeddingClient(backend='openai', model=None).embed_documents(['hello world']))"
           else
             echo "OPENAI_API_KEY not set - skipping OpenAI smoke test"
