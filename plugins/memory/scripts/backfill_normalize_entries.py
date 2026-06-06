@@ -22,7 +22,7 @@ from typing import List
 from plugins.memory.utils.normalization import vector_normalize, text_normalize
 
 
-def ensure_columns(conn: sqlite3.Connection):
+def ensure_columns(conn: sqlite3.Connection, dry_run: bool=False):
     cur = conn.cursor()
     # Check existing columns
     cur.execute("PRAGMA table_info(entries)")
@@ -38,9 +38,13 @@ def ensure_columns(conn: sqlite3.Connection):
         to_add.append("ALTER TABLE entries ADD COLUMN normalized_at TEXT")
     if 'normalized_version' not in cols:
         to_add.append("ALTER TABLE entries ADD COLUMN normalized_version INTEGER")
-    for stmt in to_add:
-        cur.execute(stmt)
-    conn.commit()
+    if to_add:
+        if dry_run:
+            print('dry-run: would add columns:', to_add)
+        else:
+            for stmt in to_add:
+                cur.execute(stmt)
+            conn.commit()
 
 
 def rows_to_process(conn: sqlite3.Connection, chunk: int):
@@ -54,7 +58,7 @@ def rows_to_process(conn: sqlite3.Connection, chunk: int):
 
 def backfill(db_path: str, chunk: int=100, dry_run: bool=False, algo: str='l2-v1', version: int=1):
     conn = sqlite3.connect(db_path)
-    ensure_columns(conn)
+    ensure_columns(conn, dry_run)
     updated = 0
     for batch in rows_to_process(conn, chunk):
         updates = []
