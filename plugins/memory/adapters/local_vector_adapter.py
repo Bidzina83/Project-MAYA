@@ -24,9 +24,10 @@ class LocalVectorAdapter(Retriever):
 
     def upsert(self, doc: Dict[str, Any]) -> None:
         try:
-            embedding = doc.get("embedding") or []
-            # normalize embedding at upsert time to avoid repeated work at query time
-            embedding = vector_normalize(embedding)
+            # preserve original embedding for auditability
+            original_embedding = doc.get("embedding") or []
+            # compute normalized vector but do NOT overwrite the original embedding
+            normalized_vec = vector_normalize(original_embedding) if original_embedding else []
             embedding_id = doc.get("embedding_id") or doc.get("chunk_id") or ""
             chunk_id = doc.get("chunk_id") or embedding_id or ""
             score_meta = doc.get("meta") or {}
@@ -35,8 +36,25 @@ class LocalVectorAdapter(Retriever):
                 # store normalized content for search while preserving original in meta
                 score_meta.setdefault("content", doc.get("content"))
                 score_meta.setdefault("content_normalized", text_normalize(doc.get("content")))
-            # store normalized vector
-            self.store.add_entry(str(embedding_id), str(chunk_id), embedding, created_at=doc.get("created_at"), source_path=doc.get("source_path"), score_meta=score_meta)
+            # normalized vector metadata
+            from datetime import datetime
+            now = datetime.utcnow().isoformat() + "Z"
+            normalized_algo = "l2-v1"
+            normalized_version = 1
+            # store entry: original embedding preserved, normalized vector and metadata stored as first-class fields
+            self.store.add_entry(
+                str(embedding_id),
+                str(chunk_id),
+                original_embedding,
+                normalized_vector=normalized_vec,
+                normalized_vector_algo=normalized_algo,
+                normalized_vector_dim=len(normalized_vec),
+                normalized_at=now,
+                normalized_version=normalized_version,
+                created_at=doc.get("created_at"),
+                source_path=doc.get("source_path"),
+                score_meta=score_meta,
+            )
         except Exception as e:
             raise RetrieverError(str(e))
 
