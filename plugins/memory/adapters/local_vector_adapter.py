@@ -106,7 +106,6 @@ class LocalVectorAdapter(Retriever):
                     # fallback to empty normalized vector on parse errors
                     nvec = []
                 sim = self._cosine_similarity(qvec, nvec)
->>>>>>> origin/main
                 parsed.append((sim, {
                     "embedding_id": embedding_id,
                     "chunk_id": chunk_id,
