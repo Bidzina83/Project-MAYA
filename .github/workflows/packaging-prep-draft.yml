@@ -1,0 +1,52 @@
+name: "DRAFT - Packaging: editable-install workflow (preparation)"
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  packaging-prep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Create virtualenv
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          python -m pip install --upgrade pip build wheel
+
+      - name: Editable install (tests)
+        run: |
+          . .venv/bin/activate
+          # Attempt editable install with test extras (defined in setup.py)
+          pip install -e .[test]
+
+      - name: Run pytest (editable-install verification)
+        run: |
+          . .venv/bin/activate
+          # Use a workspace basetemp similar to CI to avoid permission issues
+          mkdir -p $GITHUB_WORKSPACE/.pytest_tmp
+          PYTEST_ADDOPTS="--basetemp=$GITHUB_WORKSPACE/.pytest_tmp"
+          export PYTEST_ADDOPTS
+          pip show project_maya || true
+          pytest -q
+
+      - name: Archive tests output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-log
+          path: .pytest_cache || $GITHUB_WORKSPACE/.pytest_tmp
+
+# NOTES:
+# - This workflow is a draft/manual workflow (workflow_dispatch) intended for
+#   validation. It does not replace existing CI workflows and will only run
+#   when triggered manually from the Actions tab.
+# - Keep PYTHONPATH-based shims and conftest compatibility until multiple
+#   runs confirm editable-install stable.
