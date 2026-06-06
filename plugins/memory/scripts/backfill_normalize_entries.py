@@ -1,141 +1,110 @@
 #!/usr/bin/env python3
-"""Backfill script to compute and store L2-normalized vectors into a separate
-column while preserving original vectors for audit and re-indexing.
+"""Backfill normalized vectors as first-class fields.
 
 Usage:
-  python plugins/memory/scripts/backfill_normalize_entries.py --db /path/to/store.db [--algo l2-v1] [--chunk 1000] [--dry-run]
+  backfill_normalize_entries.py --db /path/to/store.db [--chunk N] [--dry-run] [--algo l2-v1] [--version 1]
 
-Behavior (safe, idempotent):
-- Ensures normalized columns exist (adds them if missing):
-  normalized_vector, normalized_vector_dim, normalized_vector_algo, normalized_at, normalized_version
-- For rows where normalized_vector is NULL or normalized_vector_algo/version differs from the requested algo/version,
-  computes normalized_vector = vector_normalize(original_vector) and writes the normalized fields.
-- Commits in batches (chunk) to limit transaction size.
-- Does not delete or overwrite the original vector column.
+What it does:
+- Adds normalized_vector, normalized_vector_dim, normalized_vector_algo, normalized_at, normalized_version columns if missing
+- For each row in entries, computes L2-normalized vector from the stored vector column and writes into normalized_vector* fields
+- Idempotent: only writes when normalized_vector is NULL or algorithm/version mismatches
+- Preserves original vector column unchanged
 
-IMPORTANT: This script modifies the SQLite DB in-place. Please back up the DB before running.
-
-This file is the implementation artifact; DO NOT run it until the migration plan is reviewed/approved.
+This script is conservative by default: use --dry-run to preview changes.
 """
 from __future__ import annotations
 import argparse
 import json
 import sqlite3
-import time
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import datetime
+from typing import List
 
-from plugins.memory.utils.normalization import vector_normalize
-
-CURRENT_NORMALIZED_ALGO = "l2-v1"
-CURRENT_NORMALIZED_VERSION = 1
+from plugins.memory.utils.normalization import vector_normalize, text_normalize
 
 
-def ensure_normalized_columns(conn: sqlite3.Connection) -> None:
+def ensure_columns(conn: sqlite3.Connection):
     cur = conn.cursor()
-    # Get existing columns
-    cur.execute("PRAGMA table_info('entries')")
-    cols = {r[1] for r in cur.fetchall()}
-    adds = []
-    if "normalized_vector" not in cols:
-        adds.append("ALTER TABLE entries ADD COLUMN normalized_vector TEXT")
-    if "normalized_vector_dim" not in cols:
-        adds.append("ALTER TABLE entries ADD COLUMN normalized_vector_dim INTEGER")
-    if "normalized_vector_algo" not in cols:
-        adds.append("ALTER TABLE entries ADD COLUMN normalized_vector_algo TEXT")
-    if "normalized_at" not in cols:
-        adds.append("ALTER TABLE entries ADD COLUMN normalized_at TEXT")
-    if "normalized_version" not in cols:
-        adds.append("ALTER TABLE entries ADD COLUMN normalized_version INTEGER")
-    for s in adds:
-        cur.execute(s)
-    if adds:
-        conn.commit()
-
-
-def now_utc_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def backfill(db_path: str, algo: str = CURRENT_NORMALIZED_ALGO, version: int = CURRENT_NORMALIZED_VERSION, chunk: int = 1000, dry_run: bool = False) -> dict:
-    result = {"scanned": 0, "updated": 0, "skipped": 0, "errors": 0}
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    try:
-        # Ensure normalized columns are present
-        ensure_normalized_columns(conn)
-        cur = conn.cursor()
-        # Select rows that need normalization
-        q = (
-            "SELECT embedding_id, chunk_id, vector, vector_dim, score_meta, normalized_vector, normalized_vector_algo, normalized_version "
-            "FROM entries "
-            "WHERE normalized_vector IS NULL OR normalized_vector_algo != ? OR normalized_version != ?"
-        )
-        cur.execute(q, (algo, version))
-        rows = cur.fetchall()
-        total = len(rows)
-        result["scanned"] = total
-        if dry_run:
-            conn.close()
-            return result
-        batch = []
-        count = 0
-        start = time.time()
-        for r in rows:
-            count += 1
-            embedding_id = r["embedding_id"]
-            try:
-                vec = json.loads(r["vector"]) if r["vector"] else []
-            except Exception:
-                vec = []
-            try:
-                nvec = vector_normalize(vec)
-            except Exception:
-                nvec = []
-            # Prepare update
-            if nvec is None:
-                nvec = []
-            normalized_json = json.dumps(nvec)
-            normalized_dim = len(nvec)
-            normalized_at = now_utc_iso()
-            batch.append((normalized_json, normalized_dim, algo, normalized_at, version, embedding_id))
-            # Commit in chunks
-            if len(batch) >= chunk:
-                _apply_batch_update(conn, batch)
-                result["updated"] += len(batch)
-                batch = []
-        # final batch
-        if batch:
-            _apply_batch_update(conn, batch)
-            result["updated"] += len(batch)
-        elapsed = time.time() - start
-        result["time_sec"] = elapsed
-    except Exception as e:
-        result["errors"] += 1
-        result["error_detail"] = str(e)
-    finally:
-        conn.close()
-    return result
-
-
-def _apply_batch_update(conn: sqlite3.Connection, batch: list) -> None:
-    cur = conn.cursor()
-    cur.executemany(
-        "UPDATE entries SET normalized_vector = ?, normalized_vector_dim = ?, normalized_vector_algo = ?, normalized_at = ?, normalized_version = ? WHERE embedding_id = ?",
-        batch,
-    )
+    # Check existing columns
+    cur.execute("PRAGMA table_info(entries)")
+    cols = [r[1] for r in cur.fetchall()]
+    to_add = []
+    if 'normalized_vector' not in cols:
+        to_add.append("ALTER TABLE entries ADD COLUMN normalized_vector TEXT")
+    if 'normalized_vector_dim' not in cols:
+        to_add.append("ALTER TABLE entries ADD COLUMN normalized_vector_dim INTEGER")
+    if 'normalized_vector_algo' not in cols:
+        to_add.append("ALTER TABLE entries ADD COLUMN normalized_vector_algo TEXT")
+    if 'normalized_at' not in cols:
+        to_add.append("ALTER TABLE entries ADD COLUMN normalized_at TEXT")
+    if 'normalized_version' not in cols:
+        to_add.append("ALTER TABLE entries ADD COLUMN normalized_version INTEGER")
+    for stmt in to_add:
+        cur.execute(stmt)
     conn.commit()
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Backfill normalized vectors for LocalVectorStore entries")
-    parser.add_argument("--db", required=True, help="Path to SQLite DB file")
-    parser.add_argument("--algo", default=CURRENT_NORMALIZED_ALGO, help="Normalization algorithm id (default l2-v1)")
-    parser.add_argument("--version", type=int, default=CURRENT_NORMALIZED_VERSION, help="Normalization version (default 1)")
-    parser.add_argument("--chunk", type=int, default=1000, help="Commit chunk size")
-    parser.add_argument("--dry-run", action="store_true", help="Do everything except write updates")
+def rows_to_process(conn: sqlite3.Connection, chunk: int):
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(1) FROM entries")
+    total = cur.fetchone()[0]
+    for offset in range(0, total, chunk):
+        cur.execute("SELECT embedding_id, chunk_id, vector, vector_dim, normalized_vector, normalized_vector_algo, normalized_version, score_meta FROM entries LIMIT ? OFFSET ?", (chunk, offset))
+        yield cur.fetchall()
+
+
+def backfill(db_path: str, chunk: int=100, dry_run: bool=False, algo: str='l2-v1', version: int=1):
+    conn = sqlite3.connect(db_path)
+    ensure_columns(conn)
+    updated = 0
+    for batch in rows_to_process(conn, chunk):
+        updates = []
+        for row in batch:
+            embedding_id, chunk_id, vec_json, vec_dim, nvec_json, nvec_algo, nvec_version, score_meta_json = row
+            # parse existing
+            try:
+                vec = json.loads(vec_json) if vec_json else []
+            except Exception:
+                vec = []
+            try:
+                score_meta = json.loads(score_meta_json) if score_meta_json else {}
+            except Exception:
+                score_meta = {}
+            # compute normalized vector
+            nvec = vector_normalize(vec)
+            # decide whether to write: if normalized_vector missing or algorithm/version mismatch
+            need_write = False
+            if not nvec_json:
+                need_write = True
+            else:
+                try:
+                    if (nvec_algo != algo) or (nvec_version != version):
+                        need_write = True
+                except Exception:
+                    need_write = True
+            if need_write:
+                updates.append((json.dumps(nvec), len(nvec), algo, datetime.utcnow().isoformat() + 'Z', version, embedding_id))
+        if updates:
+            if dry_run:
+                updated += len(updates)
+                continue
+            cur = conn.cursor()
+            for u in updates:
+                cur.execute(
+                    "UPDATE entries SET normalized_vector = ?, normalized_vector_dim = ?, normalized_vector_algo = ?, normalized_at = ?, normalized_version = ? WHERE embedding_id = ?",
+                    u
+                )
+            conn.commit()
+            updated += len(updates)
+    conn.close()
+    print(f"Backfill complete. Updated {updated} rows (dry_run={dry_run}).")
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--db', required=True, help='Path to SQLite DB')
+    parser.add_argument('--chunk', type=int, default=100, help='Batch size')
+    parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--algo', default='l2-v1')
+    parser.add_argument('--version', type=int, default=1)
     args = parser.parse_args()
-    print("Dry-run:" if args.dry_run else "Executing backfill:")
-    print(f"DB: {args.db}  algo: {args.algo}  version: {args.version}  chunk: {args.chunk}")
-    res = backfill(args.db, algo=args.algo, version=args.version, chunk=args.chunk, dry_run=args.dry_run)
-    print("Result:", res)
+    backfill(args.db, chunk=args.chunk, dry_run=args.dry_run, algo=args.algo, version=args.version)

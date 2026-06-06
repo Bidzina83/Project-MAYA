@@ -58,7 +58,10 @@ class LocalVectorAdapter(Retriever):
         except Exception as e:
             raise RetrieverError(str(e))
 
-    def bulk_upsert'
+    def bulk_upsert(self, docs: List[Dict[str, Any]]) -> None:
+        for d in docs:
+            self.upsert(d)
+'
 (self, docs: List[Dict[str, Any]]) -> None:
         for d in docs:
             self.upsert(d)
@@ -102,7 +105,8 @@ class LocalVectorAdapter(Retriever):
                 except Exception:
                     # fallback to empty normalized vector on parse errors
                     nvec = []
-
+                sim = self._cosine_similarity(qvec, nvec)
+>>>>>>> origin/main
                 parsed.append((sim, {
                     "embedding_id": embedding_id,
                     "chunk_id": chunk_id,
