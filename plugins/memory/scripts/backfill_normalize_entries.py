@@ -97,6 +97,7 @@ def backfill(db_path: str, chunk: int=100, dry_run: bool=False, algo: str='l2-v1
             updated += len(updates)
     conn.close()
     print(f"Backfill complete. Updated {updated} rows (dry_run={dry_run}).")
+    return {"updated": updated}
 
 
 if __name__ == '__main__':
@@ -107,4 +108,5 @@ if __name__ == '__main__':
     parser.add_argument('--algo', default='l2-v1')
     parser.add_argument('--version', type=int, default=1)
     args = parser.parse_args()
-    backfill(args.db, chunk=args.chunk, dry_run=args.dry_run, algo=args.algo, version=args.version)
+    res = backfill(args.db, chunk=args.chunk, dry_run=args.dry_run, algo=args.algo, version=args.version)
+    print(res)
