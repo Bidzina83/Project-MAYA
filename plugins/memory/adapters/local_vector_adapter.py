@@ -58,18 +58,31 @@ class LocalVectorAdapter(Retriever):
             # normalize input vector
             qvec = vector_normalize(vector)
             cur = self.store.conn.cursor()
-            cur.execute("SELECT embedding_id, chunk_id, vector, vector_dim, created_at, source_path, score_meta FROM entries")
+            cur.execute("SELECT embedding_id, chunk_id, vector, vector_dim, created_at, source_path, score_meta" \
+                        "{extra_columns} FROM entries".format(extra_columns=", normalized_vector") )
             rows = cur.fetchall()
             parsed = []
             for row in rows:
                 embedding_id = row[0]
                 chunk_id = row[1]
+                # prefer precomputed normalized_vector if available (new schema)
+                nvec = []
                 try:
-                    vec = json.loads(row[2]) if row[2] else []
+                    nvec_json = None
+                    try:
+                        nvec_json = row[7]  # normalized_vector if present in the SELECT
+                    except Exception:
+                        nvec_json = None
                 except Exception:
-                    vec = []
-                # normalize stored vector before similarity computation
-                nvec = vector_normalize(vec)
+                    nvec_json = None
+                try:
+                    if nvec_json:
+                        nvec = json.loads(nvec_json)
+                    else:
+                        vec = json.loads(row[2]) if row[2] else []
+                        nvec = vector_normalize(vec)
+                except Exception:
+                    nvec = []
                 sim = self._cosine_similarity(qvec, nvec)
                 parsed.append((sim, {
                     "embedding_id": embedding_id,
