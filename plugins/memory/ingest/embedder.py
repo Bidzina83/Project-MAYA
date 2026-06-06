@@ -67,8 +67,15 @@ def BackendFactory(name: str, model: str):
         except Exception as e:
             raise NotImplementedError(f"HuggingFace backend not available: {e}")
 
-    if name == "mock" and "MockBackend" in globals():
-        return globals()["MockBackend"](model=model)
+    if name == "mock":
+        try:
+            from .backends.mock_backend import MockBackend as _MockBackend
+            return _MockBackend(model)
+        except Exception:
+            # fallback to legacy global MockBackend if tests injected it
+            if "MockBackend" in globals():
+                return globals()["MockBackend"](model=model)
+            raise NotImplementedError("mock backend not available; please install or provide MockBackend")
     raise NotImplementedError("no backend factory for %s" % name)
 
 
