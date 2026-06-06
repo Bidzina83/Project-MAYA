@@ -35,7 +35,6 @@ class LocalVectorAdapter(Retriever):
                 # store normalized content for search while preserving original in meta
                 score_meta.setdefault("content", doc.get("content"))
                 score_meta.setdefault("content_normalized", text_normalize(doc.get("content")))
-            # store normalized vector
             self.store.add_entry(str(embedding_id), str(chunk_id), embedding, created_at=doc.get("created_at"), source_path=doc.get("source_path"), score_meta=score_meta)
         except Exception as e:
             raise RetrieverError(str(e))
