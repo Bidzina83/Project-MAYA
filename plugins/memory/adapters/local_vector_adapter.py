@@ -5,6 +5,7 @@ import math
 
 from plugins.memory.retriever_api import Retriever, RetrievalResult, RetrieverError
 from plugins.memory.indexer import LocalVectorStore
+from plugins.memory.utils.normalization import text_normalize, vector_normalize
 
 
 class LocalVectorAdapter(Retriever):
@@ -29,7 +30,9 @@ class LocalVectorAdapter(Retriever):
             score_meta = doc.get("meta") or {}
             # Keep content in score_meta for simple keyword search
             if doc.get("content"):
+                # store normalized content for search while preserving original in meta
                 score_meta.setdefault("content", doc.get("content"))
+                score_meta.setdefault("content_normalized", text_normalize(doc.get("content")))
             self.store.add_entry(str(embedding_id), str(chunk_id), embedding, created_at=doc.get("created_at"), source_path=doc.get("source_path"), score_meta=score_meta)
         except Exception as e:
             raise RetrieverError(str(e))
@@ -49,6 +52,8 @@ class LocalVectorAdapter(Retriever):
 
     def query_vector(self, vector: List[float], top_k: int = 10, metric: str = "cosine") -> List[RetrievalResult]:
         try:
+            # normalize input vector
+            qvec = vector_normalize(vector)
             cur = self.store.conn.cursor()
             cur.execute("SELECT embedding_id, chunk_id, vector, vector_dim, created_at, source_path, score_meta FROM entries")
             rows = cur.fetchall()
@@ -60,11 +65,13 @@ class LocalVectorAdapter(Retriever):
                     vec = json.loads(row[2]) if row[2] else []
                 except Exception:
                     vec = []
-                sim = self._cosine_similarity(vector, vec)
+                # normalize stored vector before similarity computation
+                nvec = vector_normalize(vec)
+                sim = self._cosine_similarity(qvec, nvec)
                 parsed.append((sim, {
                     "embedding_id": embedding_id,
                     "chunk_id": chunk_id,
-                    "vector": vec,
+                    "vector": nvec,
                     "vector_dim": row[3],
                     "created_at": row[4],
                     "source_path": row[5],
@@ -76,7 +83,10 @@ class LocalVectorAdapter(Retriever):
             for sim, r in parsed[:top_k]:
                 rr = self._normalize_row(r)
                 # convert cosine [-1,1] to [0,1]
-                rr["similarity"] = (sim + 1.0) / 2.0
+                try:
+                    rr["similarity"] = (sim + 1.0) / 2.0
+                except Exception:
+                    rr["similarity"] = 0.0
                 rr.setdefault("score", rr["similarity"])
                 out.append(rr)
             return out
@@ -89,11 +99,11 @@ class LocalVectorAdapter(Retriever):
             cur.execute("SELECT embedding_id, chunk_id, vector, vector_dim, created_at, source_path, score_meta FROM entries")
             rows = cur.fetchall()
             matches = []
-            q = query.lower()
+            q_norm = text_normalize(query)
             for row in rows:
                 score_meta = json.loads(row[6] or "{}") if row[6] else {}
-                content = (score_meta.get("content") or "").lower()
-                if q in content:
+                content_norm = text_normalize(score_meta.get("content") or "")
+                if q_norm in content_norm:
                     r = {
                         "embedding_id": row[0],
                         "chunk_id": row[1],
@@ -117,15 +127,15 @@ class LocalVectorAdapter(Retriever):
 
     def reason(self, entities: List[str], category: Optional[str] = None, limit: int = 10) -> List[RetrievalResult]:
         try:
-            tokens = [e.lower() for e in entities]
+            tokens = [text_normalize(e) for e in entities]
             cur = self.store.conn.cursor()
             cur.execute("SELECT embedding_id, chunk_id, vector, vector_dim, created_at, source_path, score_meta FROM entries")
             rows = cur.fetchall()
             matches = []
             for row in rows:
                 score_meta = json.loads(row[6] or "{}") if row[6] else {}
-                content = (score_meta.get("content") or "").lower()
-                if all(t in content for t in tokens):
+                content_norm = text_normalize(score_meta.get("content") or "")
+                if all(t in content_norm for t in tokens):
                     matches.append(self._normalize_row({
                         "embedding_id": row[0],
                         "chunk_id": row[1],

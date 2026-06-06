@@ -241,17 +241,34 @@ class RetrieverService:
         if trust is None:
             trust = 1.0
             raw["trust_score"] = trust
-        # Score normalization
+
+        # Normalize similarity into [0,1]. Providers may return cosine in [-1,1]
+        sim = raw.get("similarity")
+        if sim is not None:
+            try:
+                s = float(sim)
+                # if in cosine range [-1,1], convert to [0,1]
+                if -1.0 <= s <= 1.0:
+                    s = (s + 1.0) / 2.0
+                # clamp
+                s = max(0.0, min(1.0, s))
+            except Exception:
+                s = 0.0
+            raw["similarity"] = s
+        # Score normalization: prefer explicit score, fall back to normalized similarity
         score = raw.get("score")
         if score is None:
-            # fall back to similarity if present
-            sim = raw.get("similarity")
-            if sim is not None:
-                score = sim
+            sim2 = raw.get("similarity")
+            if sim2 is not None:
+                score = sim2
             else:
                 score = 0.0
-        score = float(score)
+        try:
+            score = float(score)
+        except Exception:
+            score = 0.0
         score = self.normalize_score(score)
+
         # Apply temporal decay
         if self.half_life and (raw.get("updated_at") or raw.get("created_at")):
             ts = raw.get("updated_at") or raw.get("created_at")
