@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import List, Dict, Any, Optional
 
 from plugins.memory.retriever_api import Retriever, RetrievalResult, RetrieverError
+from plugins.memory.utils.normalization import text_normalize, vector_normalize
 
 
 try:
@@ -43,16 +44,26 @@ class HolographicAdapter(Retriever):
                 return None
             r = res[0]
             r["provider"] = self.name
+            # normalize content if present
+            if r.get("content"):
+                r["content_normalized"] = text_normalize(r.get("content"))
             return r
         except Exception as e:
             raise RetrieverError(str(e))
 
     def query_vector(self, vector: List[float], top_k: int = 10, metric: str = "cosine") -> List[RetrievalResult]:
         try:
-            res = self.retriever._score_facts_by_vector(vector, limit=top_k)
+            qvec = vector_normalize(vector)
+            res = self.retriever._score_facts_by_vector(qvec, limit=top_k)
             out = []
             for r in res:
                 r["provider"] = self.name
+                # normalize content if present
+                if r.get("content"):
+                    r["content_normalized"] = text_normalize(r.get("content"))
+                # normalize embedding if present
+                if r.get("embedding"):
+                    r["embedding"] = vector_normalize(r.get("embedding"))
                 out.append(r)
             return out
         except Exception as e:
@@ -63,6 +74,8 @@ class HolographicAdapter(Retriever):
             res = self.retriever.search(query, category=category, limit=limit)
             for r in res:
                 r["provider"] = self.name
+                if r.get("content"):
+                    r["content_normalized"] = text_normalize(r.get("content"))
             return res
         except Exception as e:
             raise RetrieverError(str(e))
@@ -72,6 +85,8 @@ class HolographicAdapter(Retriever):
             res = self.retriever.probe(entity, category=category, limit=limit)
             for r in res:
                 r["provider"] = self.name
+                if r.get("content"):
+                    r["content_normalized"] = text_normalize(r.get("content"))
             return res
         except Exception as e:
             raise RetrieverError(str(e))
@@ -81,6 +96,8 @@ class HolographicAdapter(Retriever):
             res = self.retriever.related(entity, category=category, limit=limit)
             for r in res:
                 r["provider"] = self.name
+                if r.get("content"):
+                    r["content_normalized"] = text_normalize(r.get("content"))
             return res
         except Exception as e:
             raise RetrieverError(str(e))
@@ -90,6 +107,8 @@ class HolographicAdapter(Retriever):
             res = self.retriever.reason(entities, category=category, limit=limit)
             for r in res:
                 r["provider"] = self.name
+                if r.get("content"):
+                    r["content_normalized"] = text_normalize(r.get("content"))
             return res
         except Exception as e:
             raise RetrieverError(str(e))
