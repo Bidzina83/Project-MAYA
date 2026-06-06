@@ -58,7 +58,8 @@ class LocalVectorAdapter(Retriever):
         except Exception as e:
             raise RetrieverError(str(e))
 
-    def bulk_upsert(self, docs: List[Dict[str, Any]]) -> None:
+    def bulk_upsert'
+(self, docs: List[Dict[str, Any]]) -> None:
         for d in docs:
             self.upsert(d)
 
@@ -83,25 +84,25 @@ class LocalVectorAdapter(Retriever):
             for row in rows:
                 embedding_id = row[0]
                 chunk_id = row[1]
+                # columns: embedding_id, chunk_id, vector, vector_dim, created_at, source_path, score_meta [, normalized_vector]
+                vec_json = row[2] if len(row) > 2 else None
+                vector_dim = row[3] if len(row) > 3 else None
+                created_at = row[4] if len(row) > 4 else None
+                source_path = row[5] if len(row) > 5 else None
+                score_meta_json = row[6] if len(row) > 6 else None
+                normalized_json = row[7] if len(row) > 7 else None
                 # prefer precomputed normalized_vector if available (new schema)
                 nvec = []
                 try:
-                    nvec_json = None
-                    try:
-                        nvec_json = row[7]  # normalized_vector if present in the SELECT
-                    except Exception:
-                        nvec_json = None
-                except Exception:
-                    nvec_json = None
-                try:
-                    if nvec_json:
-                        nvec = json.loads(nvec_json)
+                    if normalized_json:
+                        nvec = json.loads(normalized_json)
                     else:
-                        vec = json.loads(row[2]) if row[2] else []
+                        vec = json.loads(vec_json) if vec_json else []
                         nvec = vector_normalize(vec)
                 except Exception:
+                    # fallback to empty normalized vector on parse errors
                     nvec = []
-                sim = self._cosine_similarity(qvec, nvec)
+
                 parsed.append((sim, {
                     "embedding_id": embedding_id,
                     "chunk_id": chunk_id,
