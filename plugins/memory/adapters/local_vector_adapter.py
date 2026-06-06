@@ -76,8 +76,14 @@ class LocalVectorAdapter(Retriever):
             # normalize input vector
             qvec = vector_normalize(vector)
             cur = self.store.conn.cursor()
-            cur.execute("SELECT embedding_id, chunk_id, vector, vector_dim, created_at, source_path, score_meta" \
-                        "{extra_columns} FROM entries".format(extra_columns=", normalized_vector") )
+            # detect whether normalized_vector column exists in this SQLite table at runtime
+            try:
+                cur.execute("PRAGMA table_info(entries)")
+                cols = [r[1] for r in cur.fetchall()]
+            except Exception:
+                cols = []
+            extra_columns = ", normalized_vector" if "normalized_vector" in cols else ""
+            cur.execute("SELECT embedding_id, chunk_id, vector, vector_dim, created_at, source_path, score_meta{extra} FROM entries".format(extra=extra_columns))
             rows = cur.fetchall()
             parsed = []
             for row in rows:
