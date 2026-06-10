@@ -3,7 +3,7 @@
 Status: Draft for implementation
 Last updated: 2026-06-05T21:40:00+00:00 (UTC)
 Scope: filesystem-first persistent memory for organizational intelligence (Project: Maya — Information Manager AI Employee)
-Canonical path: /opt/hermes/plugins/memory/docs/persistent-memory-subsystem-spec.md
+Canonical path: /opt/data/Project-MAYA/persistent-memory-subsystem-spec.md
 
 ---
 
@@ -73,6 +73,13 @@ Known blocker and guidance
 - `hermes_state` is not published to PyPI; installing it by name in CI will fail. Options:
   1) Remove hermes_state from the CI install list and rely on the `apply_wal_with_fallback` fallback in store.py (already committed). This avoids failing installs and keeps tests runnable in minimal runners.
   2) If `hermes_state` is required for production behavior, point CI at a concrete source (git URL or internal package index) and update the workflows to install from that source. Provide the URL if you want this option.
+
+Authentication note (recommended)
+- CI workflows that install hermes_state from a git URL should use a non-interactive token to authenticate the clone. Create a repository secret named `HERMES_STATE_TOKEN` containing a Personal Access Token (repo scope) that can read the NousResearch/hermes_state repository. The workflows should use pip with an x-access-token URL, for example:
+
+  pip install git+https://x-access-token:${{ env.HERMES_STATE_TOKEN }}@github.com/NousResearch/hermes_state.git
+
+- This avoids interactive password prompts (fatal: could not read Username) in constrained CI runners. If you prefer SSH-based clones instead, add an SSH deploy key and known_hosts setup in the workflow instead of a token.
 
 Local verification
 
@@ -290,12 +297,49 @@ Each task must follow TDD: write failing test, run to fail, implement minimal co
 
 ## 13. Appendix: canonical paths & pointers
 
-- Spec (canonical): /opt/hermes/plugins/memory/docs/persistent-memory-subsystem-spec.md
+- Spec (canonical): /opt/data/Project-MAYA/persistent-memory-subsystem-spec.md
 - Implementation plugin root: /opt/hermes/plugins/memory/
 - Ingest code: /opt/hermes/plugins/memory/ingest/
 - Tests: /opt/hermes/plugins/memory/ingest/tests/
 - Session-derived notes: /opt/data/skills/software-development/writing-plans/references/persistent-memory-subsystem-notes.md
 
 ---
+
+## 14. Recent operational events (2026-06-09)
+
+- Host and runner setup
+  - Installed GitHub CLI locally for the workspace and verified authenticated account (user: Bidzina83).
+  - Confirmed local repository at /opt/data/Project-MAYA on the host; current working branch: ci/retrieval-normalization-implementation.
+  - De-duplicated canonical path references; canonical spec now recorded as /opt/data/Project-MAYA/persistent-memory-subsystem-spec.md.
+  - Deployed and hardened a systemd unit for the self-hosted GitHub Actions runner: /etc/systemd/system/actions.runner.Project-MAYA.MyHermes.service. The runner runs as user gh-runner and is active (listening for jobs).
+
+- What this enables
+  - Durable host-local CI and integration testing against the filesystem-first STORAGE_ROOT and /opt/data/Project-MAYA.
+  - Safe, repeated job execution with controlled restart behavior and monitoring.
+
+## 15. Way‑ahead (recommended, retained)
+
+Keep the following 6-step plan (accepted and retained as the recommended path forward):
+
+1) Short sanity & CI unblock
+   - Decide hermes_state handling in CI: remove it from CI install list or provide an explicit install source (git URL or internal package index). Ensure CI image builds and tests no longer fail during install.
+
+2) Run unit tests locally on the runner
+   - Execute repository unit tests in a controlled runner environment (use the same Python/env used by CI). Fix deterministic failures (imports, missing deps, path assumptions).
+
+3) Add / run integration / smoke tests on the runner
+   - Run ingest dry-run, chunker property tests, registry writer dry-run, and small retrieval tests against STORAGE_ROOT. Verify behavior on host filesystem.
+
+4) Prepare Telegram test harness (staging)
+   - Create a small, configurable Telegram bot/session pointing at the test STORAGE_ROOT and a sandbox chat; log structured errors and redact secrets.
+
+5) Run Telegram session tests and triage
+   - Execute representative test cases; triage failures into infra, logic, integration; create small PRs to fix and re-run tests.
+
+6) Acceptance criteria
+   - Unit tests pass; integration smoke tests pass; Telegram session tests (basic flows) succeed; Runner remains healthy under test load for 24h.
+
+Notes & provenance
+- Changes on 2026-06-09: canonical-path normalization, runner systemd unit creation/hardening, health-check timer + script installed, GH CLI user-local install and authentication verified. These operational changes were performed using host-level privileges and confirmed in systemd and runner diagnostic logs.
 
 (End of spec draft)
