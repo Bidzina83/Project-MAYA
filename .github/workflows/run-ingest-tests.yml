@@ -28,10 +28,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest pytest-mock requests openai jsonschema
-          # Install hermes_state from git using a dedicated token secret that has access to the repository.
-          # Create a repo secret named HERMES_STATE_TOKEN containing a Personal Access Token (repo scope)
-          # that can read the NousResearch/hermes_state repository.
-          pip install git+https://x-access-token:${{ env.HERMES_STATE_TOKEN }}@github.com/NousResearch/hermes_state.git
+          # Attempt to install hermes_state from git using a dedicated token secret.
+          # This step is best-effort: if the install fails (token missing/insufficient
+          # permissions or repo not found), log a clear warning and continue so tests
+          # can run with the apply_wal_with_fallback fallback implemented in store.py.
+          if [ -n "${{ env.HERMES_STATE_TOKEN }}" ]; then
+            echo "Attempting authenticated install of hermes_state from git..."
+            pip install "git+https://x-access-token:${{ env.HERMES_STATE_TOKEN }}@github.com/NousResearch/hermes_state.git" || \
+              (echo "WARNING: hermes_state install failed or repo not accessible; continuing with fallback" && true)
+          else
+            echo "HERMES_STATE_TOKEN not set; skipping hermes_state install and relying on fallback"
+          fi
           pip install -e .
           # Optional (heavy): pip install sentence-transformers
 
