@@ -40,6 +40,16 @@ jobs:
             fi
           fi
 
+          # Explicit verification: print whether hermes_state.py is present and show the first 3 lines
+          if [ -f "${GITHUB_WORKSPACE}/hermes_state.py" ]; then
+            echo "VERIFICATION: hermes_state.py present in workspace"
+            echo "--- hermes_state.py (first 3 lines) ---"
+            head -n 3 "${GITHUB_WORKSPACE}/hermes_state.py" || true
+            echo "--- end ---"
+          else
+            echo "VERIFICATION: hermes_state.py MISSING"
+          fi
+
           pip install -e .
           pip install pytest jsonschema
 
