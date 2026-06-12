@@ -30,7 +30,7 @@ jobs:
           pip install "git+https://github.com/Bidzina83/hermes-agent.git#egg=hermes_state" ||             (echo "Primary install failed; attempting NousResearch mirror" && pip install "git+https://github.com/NousResearch/hermes-agent.git#egg=hermes_state") || true
 
           # Install the project editable and dev deps
-          pip install -e .
+          pip install -e ".[test]" || pip install -e .
           # Install test deps (fallback to minimal set if requirements-dev.txt is absent)
           if [ -f requirements-dev.txt ]; then
             pip install -r requirements-dev.txt || pip install pytest jsonschema
