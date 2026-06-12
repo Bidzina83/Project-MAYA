@@ -25,33 +25,18 @@ jobs:
           HERMES_STATE_TOKEN: ${{ secrets.HERMES_STATE_TOKEN }}
         run: |
           python -m pip install --upgrade pip
-          # Try to fetch a single-file hermes_state implementation from the hermes-agent repo's main branch.
-          RAW_URL="https://raw.githubusercontent.com/NousResearch/hermes-agent/main/hermes_state.py"
-          if curl -sSfL "$RAW_URL" -o "${GITHUB_WORKSPACE}/hermes_state.py"; then
-            echo "Fetched hermes_state.py into workspace"
-          else
-            echo "Failed to fetch hermes_state.py from raw URL; attempting authenticated git install as fallback"
-            if [ -n "$HERMES_STATE_TOKEN" ]; then
-              echo "Attempting authenticated git install of hermes_state..."
-              pip install "git+https://x-access-token:${HERMES_STATE_TOKEN}@github.com/NousResearch/hermes_state.git" || \
-                echo "Authenticated git install failed; continuing with fallback in code"
-            else
-              echo "HERMES_STATE_TOKEN not set; skipping authenticated git install and relying on fallback"
-            fi
-          fi
+          # Prefer installing hermes_state directly from the Project owner's repo for CI reproducibility
+          echo "Installing hermes_state from Bidzina83/hermes-agent (git)"
+          pip install "git+https://github.com/Bidzina83/hermes-agent.git#egg=hermes_state" ||             (echo "Primary install failed; attempting NousResearch mirror" && pip install "git+https://github.com/NousResearch/hermes-agent.git#egg=hermes_state") || true
 
-          # Explicit verification: print whether hermes_state.py is present and show the first 3 lines
-          if [ -f "${GITHUB_WORKSPACE}/hermes_state.py" ]; then
-            echo "VERIFICATION: hermes_state.py present in workspace"
-            echo "--- hermes_state.py (first 3 lines) ---"
-            head -n 3 "${GITHUB_WORKSPACE}/hermes_state.py" || true
-            echo "--- end ---"
+          # Install the project editable and dev deps
+          pip install -e ".[test]" || pip install -e .
+          # Install test deps (fallback to minimal set if requirements-dev.txt is absent)
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt || pip install pytest jsonschema
           else
-            echo "VERIFICATION: hermes_state.py MISSING"
+            pip install pytest jsonschema || true
           fi
-
-          pip install -e .
-          pip install pytest jsonschema
 
       - name: Prepare workspace (set PYTHONPATH)
         run: |
