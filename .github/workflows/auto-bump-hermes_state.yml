@@ -1,0 +1,89 @@
+name: auto-bump-hermes_state
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # daily at 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest hermes-agent main SHA
+        id: getsha
+        run: |
+          echo "Fetching latest commit SHA from Bidzina83/hermes-agent"
+          sha=$(git ls-remote https://github.com/Bidzina83/hermes-agent.git refs/heads/main | awk '{print $1}')
+          echo "sha=$sha" >> $GITHUB_OUTPUT
+
+      - name: Read current pinned SHA
+        id: readcurrent
+        run: |
+          file=.github/workflows/memory-ci.yml
+          cur=$(grep -oP "hermes-agent.git@\K[0-9a-f]{7,40}(?=#egg)" $file || true)
+          echo "current=$cur" >> $GITHUB_OUTPUT
+
+      - name: Compare SHAs
+        id: compare
+        run: |
+          if [ "${{ steps.getsha.outputs.sha }}" = "${{ steps.readcurrent.outputs.current }}" ]; then
+            echo "same=true" >> $GITHUB_OUTPUT
+            echo "No update needed"; exit 0
+          else
+            echo "same=false" >> $GITHUB_OUTPUT
+            echo "Need update: ${ { steps.getsha.outputs.sha } }"
+          fi
+
+      - name: Run tests against new SHA
+        if: steps.compare.outputs.same == 'false'
+        runs-on: ubuntu-latest
+        steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+
+          - name: Setup Python
+            uses: actions/setup-python@v4
+            with:
+              python-version: '3.11'
+
+          - name: Install hermes_state from candidate SHA
+            run: |
+              python -m pip install --upgrade pip
+              pip install "git+https://github.com/Bidzina83/hermes-agent.git@${{ steps.getsha.outputs.sha }}#egg=hermes_state" || exit 1
+              pip install -e ".[test]" || pip install -e .
+              if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt || true; fi
+
+          - name: Run pytest
+            run: |
+              mkdir -p $GITHUB_WORKSPACE/.pytest_tmp
+              export PYTEST_ADDOPTS="--basetemp=$GITHUB_WORKSPACE/.pytest_tmp"
+              pytest -q
+
+      - name: Create PR to update pinned SHA
+        if: steps.compare.outputs.same == 'false'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "ci: bump hermes_state pin to ${{ steps.getsha.outputs.sha }}"
+          committer: GitHub <noreply@github.com>
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          branch: auto/bump-hermes_state-${{ steps.getsha.outputs.sha }}
+          base: main
+          title: "ci: bump hermes_state pin to ${{ steps.getsha.outputs.sha }}"
+          body: |
+            This PR was opened automatically by the auto-bump workflow.
+
+            It updates the pinned hermes_state commit in .github/workflows/memory-ci.yml to the tested SHA.
+
+            If tests pass, please merge to keep CI reproducible and up-to-date.
+
+          labels: automation, infra

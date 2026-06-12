@@ -27,7 +27,11 @@ jobs:
           python -m pip install --upgrade pip
           # Prefer installing hermes_state directly from the Project owner's repo for CI reproducibility
           echo "Installing hermes_state from Bidzina83/hermes-agent (git)"
+<<<<<<< HEAD
+          pip install "git+https://github.com/Bidzina83/hermes-agent.git@955fa40062874faed1108f831864d29724a6250c#egg=hermes_state" ||             (echo "Primary install failed; attempting NousResearch mirror" && pip install "git+https://github.com/NousResearch/hermes-agent.git#egg=hermes_state") || true
+=======
           pip install "git+https://github.com/Bidzina83/hermes-agent.git#egg=hermes_state" ||             (echo "Primary install failed; attempting NousResearch mirror" && pip install "git+https://github.com/NousResearch/hermes-agent.git#egg=hermes_state") || true
+>>>>>>> origin/main
 
           # Install the project editable and dev deps
           pip install -e ".[test]" || pip install -e .
