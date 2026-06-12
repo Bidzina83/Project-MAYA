@@ -1,7 +1,7 @@
 # Persistent Memory Subsystem — Formal Implementation Spec
 
 Status: Draft for implementation
-Last updated: 2026-06-05T21:40:00+00:00 (UTC)
+Last updated: 2026-06-05T21:55:03+00:00 (UTC)
 Scope: filesystem-first persistent memory for organizational intelligence (Project: Maya — Information Manager AI Employee)
 Canonical path: /opt/data/Project-MAYA/persistent-memory-subsystem-spec.md
 
@@ -67,6 +67,8 @@ Principles:
   - Made the MemoryStore initialization tolerant to a missing `hermes_state` by providing a best-effort fallback for apply_wal_with_fallback (no-op/WAL PRAGMA). This allows unit tests to run on runners where hermes_state is not installed.
   - Added missing adapter files and package markers (plugins/memory/adapters/*) and a maya-dev/.hermes_shim to mirror CI PYTHONPATH expectations.
   - CI workflow edits (branch fix/holographic-import-fallback-20260605) attempted to install `hermes_state` in test jobs, but `hermes_state` is not available on PyPI (pip reports no matching distribution). See "Known blockers" below.
+
+Update: the most recent PR was merged by the user and CI on main ran green (verified 2026-06-05T21:55:03Z).
 
 Known blocker and guidance
 
