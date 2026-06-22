@@ -39,6 +39,11 @@ def upgrade():
         sa.Column('created_at', sa.Text(), nullable=True),
         sa.Column('source_path', sa.Text(), nullable=True),
         sa.Column('score_meta', sa.Text(), nullable=True),
+        sa.Column('normalized_vector', sa.Text(), nullable=True),
+        sa.Column('normalized_vector_dim', sa.Integer(), nullable=True),
+        sa.Column('normalized_vector_algo', sa.Text(), nullable=True),
+        sa.Column('normalized_at', sa.Text(), nullable=True),
+        sa.Column('normalized_version', sa.Integer(), nullable=True),
     )
 
 

@@ -11,7 +11,10 @@ for p in packages_src:
     if p not in packages_root:
         package_dir[p] = 'src/' + p.replace('.', '/')
 # Combine discovered packages; root packages take precedence for on-disk layout.
-packages = sorted(set(packages_root + packages_src))
+packages = sorted(
+    p for p in set(packages_root + packages_src)
+    if p != 'tests' and '.tests' not in p
+)
 
 setup(
     name='project_maya',
@@ -19,13 +22,25 @@ setup(
     description='Project MAYA - packaged for CI',
     packages=packages,
     package_dir=package_dir,
-    include_package_data=True,
+    include_package_data=False,
+    package_data={'': ['plugin.yaml']},
+    python_requires='>=3.10',
     # Optional extras for test/development workflows. Keep minimal and focused.
     extras_require={
         'test': [
             'pytest>=7.0',
             'pytest-mock',
             'jsonschema',
+        ],
+        'dev': [
+            'pytest>=7.0',
+            'pytest-mock',
+            'jsonschema',
+            'build',
+        ],
+        'migration': [
+            'alembic>=1.13',
+            'sqlalchemy>=2.0',
         ],
     },
 )
