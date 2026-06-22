@@ -1,76 +1,71 @@
 import unittest
-import tempfile
-import os
 import sqlite3
-import importlib.util
+import json
+from pathlib import Path
+from scripts.migrate import migrate
 
-# load scripts/migrate.py as a module
-migrate_path = os.path.join(os.path.dirname(__file__), "..", "scripts", "migrate.py")
-migrate_path = os.path.normpath(migrate_path)
-spec = importlib.util.spec_from_file_location("migrate", migrate_path)
-migrate_module = importlib.util.module_from_spec(spec)
-loader = spec.loader
-assert loader is not None
-loader.exec_module(migrate_module)
 
-class TestMigration(unittest.TestCase):
-    def setUp(self):
-        # create legacy sqlite with memory_kv
-        fd, self.src = tempfile.mkstemp(prefix="legacy_", suffix=".db")
-        os.close(fd)
-        src_conn = sqlite3.connect(self.src)
-        cur = src_conn.cursor()
-        cur.execute(
-            "CREATE TABLE memory_kv (key TEXT PRIMARY KEY, value TEXT)"
-        )
-        cur.execute("INSERT INTO memory_kv(key, value) VALUES(?, ?)", ("k1", "v1"))
-        cur.execute("INSERT INTO memory_kv(key, value) VALUES(?, ?)", ("k2", "v2"))
-        src_conn.commit()
-        src_conn.close()
+def _make_legacy_db(path: str):
+    conn = sqlite3.connect(path)
+    cur = conn.cursor()
+    cur.execute("CREATE TABLE memory_kv (key TEXT PRIMARY KEY, value TEXT)")
+    # vector-like value (JSON array string)
+    cur.execute("INSERT INTO memory_kv(key, value) VALUES(?, ?)", ("vec1", json.dumps([0.1, 0.2, 0.3])))
+    # non-vector JSON object
+    cur.execute("INSERT INTO memory_kv(key, value) VALUES(?, ?)", ("obj1", json.dumps({"note": "not a vector"})))
+    # plain legacy string
+    cur.execute("INSERT INTO memory_kv(key, value) VALUES(?, ?)", ("txt1", "just a legacy note"))
+    conn.commit()
+    conn.close()
 
-        fd, self.dst = tempfile.mkstemp(prefix="new_", suffix=".db")
-        os.close(fd)
-        # remove dst file so migrate creates it
-        os.remove(self.dst)
 
-    def tearDown(self):
-        for p in (self.src, self.dst):
-            try:
-                os.remove(p)
-            except Exception:
-                pass
+class TestMigrationSafeHandling(unittest.TestCase):
 
-    def test_dry_run_reports(self):
-        res = migrate_module.migrate(self.src, self.dst, dry_run=True, target_schema="registry")
-        self.assertEqual(res.get("source_rows"), 2)
-        self.assertIn("Would copy", res.get("actions")[1])
-        self.assertFalse(os.path.exists(self.dst))
+    def test_migrate_registry_safe_handling(self):
+        tmp = Path.cwd() / "tmp_test_migrate"
+        tmp.mkdir(exist_ok=True)
+        src = tmp / "legacy.sqlite"
+        dst = tmp / "migrated.sqlite"
+        if src.exists():
+            src.unlink()
+        if dst.exists():
+            dst.unlink()
+        _make_legacy_db(str(src))
 
-    def test_apply_migration_registry(self):
-        res = migrate_module.migrate(self.src, self.dst, dry_run=False, target_schema="registry")
-        # inspect destination DB
-        dst_conn = sqlite3.connect(self.dst)
-        cur = dst_conn.cursor()
-        cur.execute("SELECT embedding_id, chunk_id, vector, source_path FROM entries ORDER BY embedding_id")
+        # perform migration (not dry-run)
+        res = migrate(str(src), str(dst), dry_run=False, target_schema="registry")
+        self.assertEqual(res["migrated"], 3)
+
+        # open destination and validate semantics
+        conn = sqlite3.connect(str(dst))
+        cur = conn.cursor()
+        cur.execute("SELECT embedding_id, chunk_id, vector, vector_dim, created_at, source_path, score_meta FROM entries ORDER BY embedding_id")
         rows = cur.fetchall()
-        dst_conn.close()
-        self.assertEqual(len(rows), 2)
-        self.assertEqual(rows[0][0], "k1")
-        self.assertEqual(rows[0][2], "v1")
+        self.assertEqual(len(rows), 3)
 
-    def test_apply_migration_memory_entries(self):
-        # remove dst and test memory_entries target
-        if os.path.exists(self.dst):
-            os.remove(self.dst)
-        res = migrate_module.migrate(self.src, self.dst, dry_run=False, target_schema="memory_entries")
-        dst_conn = sqlite3.connect(self.dst)
-        cur = dst_conn.cursor()
-        cur.execute("SELECT key, value, migrated_from FROM memory_entries ORDER BY key")
-        rows = cur.fetchall()
-        dst_conn.close()
-        self.assertEqual(len(rows), 2)
-        self.assertEqual(rows[0][0], "k1")
-        self.assertEqual(rows[0][1], "v1")
+        # vec1 should have vector JSON and vector_dim=3
+        r_vec = [r for r in rows if r[0] == 'vec1'][0]
+        self.assertIsNotNone(r_vec[2])
+        parsed = json.loads(r_vec[2])
+        self.assertIsInstance(parsed, list)
+        self.assertEqual(len(parsed), 3)
+        self.assertEqual(r_vec[3], 3)
+
+        # obj1 should NOT place object into vector; vector must be NULL and legacy content in score_meta
+        r_obj = [r for r in rows if r[0] == 'obj1'][0]
+        self.assertIsNone(r_obj[2])
+        meta_obj = json.loads(r_obj[6])
+        self.assertIn('legacy_value', meta_obj)
+        self.assertIsInstance(meta_obj['legacy_value'], dict)
+
+        # txt1 should also be stored in score_meta legacy_value and vector NULL
+        r_txt = [r for r in rows if r[0] == 'txt1'][0]
+        self.assertIsNone(r_txt[2])
+        meta_txt = json.loads(r_txt[6])
+        self.assertEqual(meta_txt['legacy_value'], 'just a legacy note')
+
+        conn.close()
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -4,7 +4,7 @@ This script provides two modes:
 - If Alembic is available, it will prefer to invoke Alembic programmatically (scaffolding
   files are added under alembic/ but alembic is optional at runtime).
 - Fallback: a simple programmatic migration that reads the legacy sqlite `memory_kv`
-  table and writes to a destination that can be either the project-maya registry schema
+  table and writes to a destination that can be either the project-maya registry
   (entries + embeddings) or the simpler memory_entries table used by earlier prototypes.
 
 The migrate(from_src, to_dest, dry_run, target_schema) function is importable and unit-testable.
@@ -57,15 +57,52 @@ def _ensure_registry_schema(conn: sqlite3.Connection):
 
 
 def _insert_into_registry(conn: sqlite3.Connection, key: str, value: str, migrated_from: str):
+    """Insert a single legacy record into the entries table using safe JSON/vector handling.
+
+    Rules (user request):
+    - If the legacy value is a JSON array of numbers, store it in `vector` as a JSON array
+      string and set `vector_dim` to its length.
+    - If the legacy value is NOT a numeric vector, DO NOT place the legacy string into `vector`.
+      Instead, store the legacy content entirely inside `score_meta` under `legacy_value` and
+      record provenance under `migrated_from`.
+    - Leave `vector` NULL when the source data is not an actual vector.
+    """
     cur = conn.cursor()
     # created_at as ISO UTC
     created_at = datetime.now(timezone.utc).isoformat()
-    # score_meta: record provenance
-    score_meta = json.dumps({"migrated_from": migrated_from})
-    # Use key as embedding_id/chunk_id to preserve original key material.
+
+    provenance = {"migrated_from": migrated_from}
+
+    vector_json: Optional[str] = None
+    vector_dim: Optional[int] = None
+
+    # Try to detect a numeric vector: attempt JSON parse first.
+    if isinstance(value, (bytes, bytearray)):
+        try:
+            value = value.decode('utf-8')
+        except Exception:
+            # leave as-is and treat as non-vector
+            pass
+
+    parsed_legacy = None
+    try:
+        parsed_legacy = json.loads(value)
+    except Exception:
+        parsed_legacy = None
+
+    if isinstance(parsed_legacy, list) and all(isinstance(x, (int, float)) for x in parsed_legacy):
+        # It's a numeric vector → store in vector column as JSON text and set vector_dim
+        vector_json = json.dumps(parsed_legacy, separators=(',', ':'))
+        vector_dim = len(parsed_legacy)
+    else:
+        # Not a numeric vector: record the legacy content in provenance/score_meta
+        provenance['legacy_value'] = parsed_legacy if parsed_legacy is not None else value
+
+    score_meta = json.dumps(provenance)
+
     cur.execute(
         "INSERT OR REPLACE INTO entries(embedding_id, chunk_id, vector, vector_dim, created_at, source_path, score_meta) VALUES(?, ?, ?, ?, ?, ?, ?)",
-        (str(key), str(key), str(value), None, created_at, "legacy_kv", score_meta),
+        (str(key), str(key), vector_json, vector_dim, created_at, "legacy_kv", score_meta),
     )
 
 
@@ -124,22 +161,30 @@ def migrate(from_src: str, to_dest: str, dry_run: bool = True, target_schema: st
         )
         dst_conn.commit()
 
+    migrated = 0
     for key, value in rows:
+        # Ensure value is a text string for JSON parsing; sqlite may return str already
+        if value is None:
+            value_text = None
+        else:
+            # Keep as-is (likely TEXT column) but coerce bytes
+            value_text = value
         if target_schema == "registry":
-            _insert_into_registry(dst_conn, key, value, os.path.abspath(from_src))
+            _insert_into_registry(dst_conn, key, value_text, os.path.abspath(from_src))
+            migrated += 1
         else:
             dst_cur = dst_conn.cursor()
             dst_cur.execute(
                 "INSERT OR REPLACE INTO memory_entries(key, value, migrated_from) VALUES(?, ?, ?)",
-                (key, value, os.path.abspath(from_src)),
+                (key, value_text, os.path.abspath(from_src)),
             )
-            summary["migrated"] += 1
-        summary["migrated"] += 1 if target_schema == "registry" else 0
+            migrated += 1
 
     dst_conn.commit()
     dst_conn.close()
     src_conn.close()
-    summary["actions"].append(f"Copied {summary['migrated']} rows into {to_dest} using schema {target_schema}")
+    summary["migrated"] = migrated
+    summary["actions"].append(f"Copied {migrated} rows into {to_dest} using schema {target_schema}")
     return summary
 
 
