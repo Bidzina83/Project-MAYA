@@ -16,7 +16,7 @@ import os
 import sqlite3
 import tempfile
 import math
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional, List, Tuple
 
 
@@ -97,19 +97,74 @@ class LocalVectorStore:
                 vector_dim INTEGER,
                 created_at TEXT,
                 source_path TEXT,
-                score_meta TEXT
+                score_meta TEXT,
+                normalized_vector TEXT,
+                normalized_vector_dim INTEGER,
+                normalized_vector_algo TEXT,
+                normalized_at TEXT,
+                normalized_version INTEGER
             )"""
         )
+        cur.execute("PRAGMA table_info(entries)")
+        columns = {row[1] for row in cur.fetchall()}
+        normalized_columns = {
+            "normalized_vector": "TEXT",
+            "normalized_vector_dim": "INTEGER",
+            "normalized_vector_algo": "TEXT",
+            "normalized_at": "TEXT",
+            "normalized_version": "INTEGER",
+        }
+        for name, column_type in normalized_columns.items():
+            if name not in columns:
+                cur.execute(
+                    f"ALTER TABLE entries ADD COLUMN {name} {column_type}"
+                )
         self.conn.commit()
 
-    def add_entry(self, embedding_id: str, chunk_id: str, vector: List[float], created_at: Optional[str] = None, source_path: Optional[str] = None, score_meta: Optional[Dict[str, Any]] = None) -> None:
+    def add_entry(
+        self,
+        embedding_id: str,
+        chunk_id: str,
+        vector: List[float],
+        created_at: Optional[str] = None,
+        source_path: Optional[str] = None,
+        score_meta: Optional[Dict[str, Any]] = None,
+        normalized_vector: Optional[List[float]] = None,
+        normalized_vector_dim: Optional[int] = None,
+        normalized_vector_algo: Optional[str] = None,
+        normalized_at: Optional[str] = None,
+        normalized_version: Optional[int] = None,
+    ) -> None:
         cur = self.conn.cursor()
         vec_json = json.dumps(vector)
         score_json = json.dumps(score_meta or {})
-        created_at = created_at or datetime.utcnow().isoformat() + "Z"
+        created_at = created_at or datetime.now(timezone.utc).isoformat()
+        normalized_json = (
+            json.dumps(normalized_vector)
+            if normalized_vector is not None
+            else None
+        )
         cur.execute(
-            "INSERT INTO entries (embedding_id, chunk_id, vector, vector_dim, created_at, source_path, score_meta) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (embedding_id, chunk_id, vec_json, len(vector), created_at, source_path, score_json),
+            """INSERT INTO entries (
+                embedding_id, chunk_id, vector, vector_dim, created_at,
+                source_path, score_meta, normalized_vector,
+                normalized_vector_dim, normalized_vector_algo,
+                normalized_at, normalized_version
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                embedding_id,
+                chunk_id,
+                vec_json,
+                len(vector),
+                created_at,
+                source_path,
+                score_json,
+                normalized_json,
+                normalized_vector_dim,
+                normalized_vector_algo,
+                normalized_at,
+                normalized_version,
+            ),
         )
         self.conn.commit()
 

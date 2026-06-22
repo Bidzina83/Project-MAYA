@@ -1,71 +1,117 @@
-import unittest
-import sqlite3
+import hashlib
 import json
+import sqlite3
+import tempfile
+import unittest
+from contextlib import closing
 from pathlib import Path
+
 from scripts.migrate import migrate
 
 
-def _make_legacy_db(path: str):
-    conn = sqlite3.connect(path)
-    cur = conn.cursor()
-    cur.execute("CREATE TABLE memory_kv (key TEXT PRIMARY KEY, value TEXT)")
-    # vector-like value (JSON array string)
-    cur.execute("INSERT INTO memory_kv(key, value) VALUES(?, ?)", ("vec1", json.dumps([0.1, 0.2, 0.3])))
-    # non-vector JSON object
-    cur.execute("INSERT INTO memory_kv(key, value) VALUES(?, ?)", ("obj1", json.dumps({"note": "not a vector"})))
-    # plain legacy string
-    cur.execute("INSERT INTO memory_kv(key, value) VALUES(?, ?)", ("txt1", "just a legacy note"))
-    conn.commit()
-    conn.close()
+def _make_legacy_db(path: Path) -> None:
+    with closing(sqlite3.connect(path)) as conn:
+        conn.execute("CREATE TABLE memory_kv (key TEXT PRIMARY KEY, value TEXT)")
+        conn.executemany(
+            "INSERT INTO memory_kv(key, value) VALUES(?, ?)",
+            [
+                ("vec1", json.dumps([0.1, 0.2, 0.3])),
+                ("obj1", json.dumps({"note": "not a vector"})),
+                ("txt1", "just a legacy note"),
+            ],
+        )
+        conn.commit()
 
 
-class TestMigrationSafeHandling(unittest.TestCase):
+class TestMigrationSafetyContract(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.root = Path(self.temporary.name)
+        self.source = self.root / "legacy.sqlite"
+        self.destination = self.root / "migrated.sqlite"
+        _make_legacy_db(self.source)
 
-    def test_migrate_registry_safe_handling(self):
-        tmp = Path.cwd() / "tmp_test_migrate"
-        tmp.mkdir(exist_ok=True)
-        src = tmp / "legacy.sqlite"
-        dst = tmp / "migrated.sqlite"
-        if src.exists():
-            src.unlink()
-        if dst.exists():
-            dst.unlink()
-        _make_legacy_db(str(src))
+    def tearDown(self):
+        self.temporary.cleanup()
 
-        # perform migration (not dry-run)
-        res = migrate(str(src), str(dst), dry_run=False, target_schema="registry")
-        self.assertEqual(res["migrated"], 3)
+    def test_dry_run_is_default_and_does_not_create_destination(self):
+        result = migrate(str(self.source), str(self.destination))
 
-        # open destination and validate semantics
-        conn = sqlite3.connect(str(dst))
-        cur = conn.cursor()
-        cur.execute("SELECT embedding_id, chunk_id, vector, vector_dim, created_at, source_path, score_meta FROM entries ORDER BY embedding_id")
-        rows = cur.fetchall()
-        self.assertEqual(len(rows), 3)
+        self.assertTrue(result["dry_run"])
+        self.assertEqual(result["source_rows"], 3)
+        self.assertFalse(self.destination.exists())
 
-        # vec1 should have vector JSON and vector_dim=3
-        r_vec = [r for r in rows if r[0] == 'vec1'][0]
-        self.assertIsNotNone(r_vec[2])
-        parsed = json.loads(r_vec[2])
-        self.assertIsInstance(parsed, list)
-        self.assertEqual(len(parsed), 3)
-        self.assertEqual(r_vec[3], 3)
+    def test_apply_requires_explicit_modify_consent(self):
+        with self.assertRaisesRegex(PermissionError, "allow_modify"):
+            migrate(str(self.source), str(self.destination), dry_run=False)
 
-        # obj1 should NOT place object into vector; vector must be NULL and legacy content in score_meta
-        r_obj = [r for r in rows if r[0] == 'obj1'][0]
-        self.assertIsNone(r_obj[2])
-        meta_obj = json.loads(r_obj[6])
-        self.assertIn('legacy_value', meta_obj)
-        self.assertIsInstance(meta_obj['legacy_value'], dict)
+    def test_registry_migration_writes_vectors_provenance_and_report(self):
+        result = migrate(
+            str(self.source),
+            str(self.destination),
+            dry_run=False,
+            allow_modify=True,
+        )
 
-        # txt1 should also be stored in score_meta legacy_value and vector NULL
-        r_txt = [r for r in rows if r[0] == 'txt1'][0]
-        self.assertIsNone(r_txt[2])
-        meta_txt = json.loads(r_txt[6])
-        self.assertEqual(meta_txt['legacy_value'], 'just a legacy note')
+        self.assertEqual(result["migrated"], 3)
+        self.assertEqual(result["validation_errors"], [])
+        self.assertTrue(Path(result["report_path"]).is_file())
+        with closing(sqlite3.connect(self.destination)) as conn:
+            vector_row = conn.execute(
+                "SELECT chunk_id, vector, vector_dim, score_meta "
+                "FROM entries WHERE embedding_id='vec1'"
+            ).fetchone()
+            text_row = conn.execute(
+                "SELECT chunk_id, vector, vector_dim, score_meta "
+                "FROM entries WHERE embedding_id='txt1'"
+            ).fetchone()
+            embedding_row = conn.execute(
+                "SELECT source_hash, extractor_version FROM embeddings "
+                "WHERE chunk_id='vec1'"
+            ).fetchone()
 
-        conn.close()
+        self.assertEqual(vector_row[:3], ("vec1", "[0.1,0.2,0.3]", 3))
+        vector_meta = json.loads(vector_row[3])
+        expected_hash = hashlib.sha256(json.dumps([0.1, 0.2, 0.3]).encode()).hexdigest()
+        self.assertEqual(vector_meta["original_sha256"], expected_hash)
+        self.assertEqual(text_row[:3], (None, None, None))
+        self.assertEqual(
+            json.loads(text_row[3])["legacy_value"], "just a legacy note"
+        )
+        self.assertEqual(embedding_row, (expected_hash, "legacy-migration"))
+
+    def test_existing_destination_is_backed_up_and_conflicts_are_skipped(self):
+        migrate(
+            str(self.source),
+            str(self.destination),
+            dry_run=False,
+            allow_modify=True,
+        )
+        backup = self.root / "migrated.backup.sqlite"
+
+        result = migrate(
+            str(self.source),
+            str(self.destination),
+            dry_run=False,
+            allow_modify=True,
+            backup_path=str(backup),
+        )
+
+        self.assertTrue(backup.is_file())
+        self.assertEqual(result["migrated"], 0)
+        self.assertEqual(result["skipped_keys"], ["vec1", "obj1", "txt1"])
+
+    def test_existing_destination_without_backup_is_rejected(self):
+        self.destination.touch()
+
+        with self.assertRaisesRegex(PermissionError, "backup_path"):
+            migrate(
+                str(self.source),
+                str(self.destination),
+                dry_run=False,
+                allow_modify=True,
+            )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

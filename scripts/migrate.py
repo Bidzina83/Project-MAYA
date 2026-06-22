@@ -1,30 +1,30 @@
-"""Migration helper for legacy persistence adapters.
+"""Safely migrate legacy ``memory_kv`` records into Project MAYA storage."""
 
-This script provides two modes:
-- If Alembic is available, it will prefer to invoke Alembic programmatically (scaffolding
-  files are added under alembic/ but alembic is optional at runtime).
-- Fallback: a simple programmatic migration that reads the legacy sqlite `memory_kv`
-  table and writes to a destination that can be either the project-maya registry
-  (entries + embeddings) or the simpler memory_entries table used by earlier prototypes.
-
-The migrate(from_src, to_dest, dry_run, target_schema) function is importable and unit-testable.
-"""
 from __future__ import annotations
+
 import argparse
-import sqlite3
-import os
+from contextlib import closing
+import hashlib
 import json
-from typing import Optional
+import math
+import os
+import shutil
+import sqlite3
+import time
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Optional
 
 
-def _ensure_registry_schema(conn: sqlite3.Connection):
-    """Ensure destination has the Project-MAYA registry schema (entries + embeddings).
-    This is idempotent: it creates tables only if they don't already exist.
-    """
-    cur = conn.cursor()
-    # embeddings table (observed in live registry)
-    cur.execute(
+TARGET_SCHEMAS = {"registry", "memory_entries"}
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _ensure_registry_schema(conn: sqlite3.Connection) -> None:
+    conn.execute(
         """
         CREATE TABLE IF NOT EXISTS embeddings (
             chunk_id TEXT PRIMARY KEY,
@@ -38,8 +38,7 @@ def _ensure_registry_schema(conn: sqlite3.Connection):
         )
         """
     )
-    # entries table (observed in live registry)
-    cur.execute(
+    conn.execute(
         """
         CREATE TABLE IF NOT EXISTS entries (
             id INTEGER PRIMARY KEY,
@@ -49,160 +48,359 @@ def _ensure_registry_schema(conn: sqlite3.Connection):
             vector_dim INTEGER,
             created_at TEXT,
             source_path TEXT,
-            score_meta TEXT
+            score_meta TEXT,
+            normalized_vector TEXT,
+            normalized_vector_dim INTEGER,
+            normalized_vector_algo TEXT,
+            normalized_at TEXT,
+            normalized_version INTEGER
         )
         """
     )
-    conn.commit()
 
 
-def _insert_into_registry(conn: sqlite3.Connection, key: str, value: str, migrated_from: str):
-    """Insert a single legacy record into the entries table using safe JSON/vector handling.
+def _ensure_memory_entries_schema(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS memory_entries (
+            key TEXT PRIMARY KEY,
+            value TEXT,
+            migrated_from TEXT
+        )
+        """
+    )
 
-    Rules (user request):
-    - If the legacy value is a JSON array of numbers, store it in `vector` as a JSON array
-      string and set `vector_dim` to its length.
-    - If the legacy value is NOT a numeric vector, DO NOT place the legacy string into `vector`.
-      Instead, store the legacy content entirely inside `score_meta` under `legacy_value` and
-      record provenance under `migrated_from`.
-    - Leave `vector` NULL when the source data is not an actual vector.
-    """
-    cur = conn.cursor()
-    # created_at as ISO UTC
-    created_at = datetime.now(timezone.utc).isoformat()
 
-    provenance = {"migrated_from": migrated_from}
-
-    vector_json: Optional[str] = None
-    vector_dim: Optional[int] = None
-
-    # Try to detect a numeric vector: attempt JSON parse first.
-    if isinstance(value, (bytes, bytearray)):
-        try:
-            value = value.decode('utf-8')
-        except Exception:
-            # leave as-is and treat as non-vector
-            pass
-
-    parsed_legacy = None
-    try:
-        parsed_legacy = json.loads(value)
-    except Exception:
-        parsed_legacy = None
-
-    if isinstance(parsed_legacy, list) and all(isinstance(x, (int, float)) for x in parsed_legacy):
-        # It's a numeric vector -> store in vector column as JSON text and set vector_dim
-        vector_json = json.dumps(parsed_legacy, separators=(',', ':'))
-        vector_dim = len(parsed_legacy)
+def _decode_legacy(value: Any) -> tuple[Any, str]:
+    if isinstance(value, bytes):
+        raw = value
+        decoded: Any = value.decode("utf-8", errors="replace")
+    elif value is None:
+        raw = b""
+        decoded = None
     else:
-        # Not a numeric vector: record the legacy content in provenance/score_meta
-        provenance['legacy_value'] = parsed_legacy if parsed_legacy is not None else value
+        decoded = value
+        raw = str(value).encode("utf-8")
+    return decoded, hashlib.sha256(raw).hexdigest()
 
-    score_meta = json.dumps(provenance)
 
-    cur.execute(
-        "INSERT OR REPLACE INTO entries(embedding_id, chunk_id, vector, vector_dim, created_at, source_path, score_meta) VALUES(?, ?, ?, ?, ?, ?, ?)",
-        (str(key), str(key), vector_json, vector_dim, created_at, "legacy_kv", score_meta),
+def _numeric_vector(value: Any) -> Optional[list[int | float]]:
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return None
+    if not isinstance(parsed, list):
+        return None
+    if not all(
+        type(item) in (int, float)
+        and (not isinstance(item, float) or math.isfinite(item))
+        for item in parsed
+    ):
+        return None
+    return parsed
+
+
+def _insert_registry_row(
+    conn: sqlite3.Connection,
+    key: str,
+    value: Any,
+    migrated_from: str,
+    *,
+    overwrite: bool,
+) -> tuple[bool, dict[str, Any]]:
+    existing = conn.execute(
+        "SELECT 1 FROM entries WHERE embedding_id = ?", (str(key),)
+    ).fetchone()
+    if existing and not overwrite:
+        return False, {"key": str(key), "status": "skipped_conflict"}
+
+    decoded, original_hash = _decode_legacy(value)
+    vector = _numeric_vector(decoded)
+    created_at = _utc_now()
+    provenance: dict[str, Any] = {
+        "migrated_from": migrated_from,
+        "original_sha256": original_hash,
+        "migration": "scripts/migrate.py:v1",
+    }
+    chunk_id: str | None = None
+    vector_json: str | None = None
+    vector_dim: int | None = None
+
+    if vector is not None:
+        chunk_id = str(key)
+        vector_json = json.dumps(vector, separators=(",", ":"))
+        vector_dim = len(vector)
+    else:
+        try:
+            provenance["legacy_value"] = json.loads(decoded)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            provenance["legacy_value"] = decoded
+
+    statement = "INSERT OR REPLACE" if overwrite else "INSERT"
+    conn.execute(
+        f"""
+        {statement} INTO entries(
+            embedding_id, chunk_id, vector, vector_dim,
+            created_at, source_path, score_meta
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            str(key),
+            chunk_id,
+            vector_json,
+            vector_dim,
+            created_at,
+            "legacy_kv",
+            json.dumps(provenance, ensure_ascii=False),
+        ),
     )
 
+    if vector is not None:
+        embedding_statement = "INSERT OR REPLACE" if overwrite else "INSERT OR IGNORE"
+        conn.execute(
+            f"""
+            {embedding_statement} INTO embeddings(
+                chunk_id, source_path, source_hash, extractor_version,
+                embedding_timestamp, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(key),
+                "legacy_kv",
+                original_hash,
+                "legacy-migration",
+                created_at,
+                created_at,
+            ),
+        )
 
-def migrate(from_src: str, to_dest: str, dry_run: bool = True, target_schema: str = "registry") -> dict:
-    """Migrate data from a legacy sqlite memory_kv schema to a destination DB.
+    return True, {
+        "key": str(key),
+        "status": "overwritten" if existing else "migrated",
+        "vector_dim": vector_dim,
+    }
 
-    - from_src: path to legacy sqlite DB file
-    - to_dest: path for destination sqlite DB file (will be created unless dry_run)
-    - dry_run: if True, don't write the destination, only report what would happen
-    - target_schema: either 'registry' to target the Project-MAYA registry schema
-      (entries + embeddings) or 'memory_entries' to use the simple memory_entries table.
 
-    Returns a dict with summary information.
-    """
-    summary = {"migrated": 0, "source_rows": 0, "to_path": to_dest, "actions": [], "target_schema": target_schema}
-
-    if not os.path.exists(from_src):
-        raise FileNotFoundError(f"legacy source DB not found: {from_src}")
-
-    src_conn = sqlite3.connect(from_src)
-    src_cur = src_conn.cursor()
-
-    # Discover whether legacy table exists
-    src_cur.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='memory_kv'"
+def _insert_memory_entry(
+    conn: sqlite3.Connection,
+    key: str,
+    value: Any,
+    migrated_from: str,
+    *,
+    overwrite: bool,
+) -> tuple[bool, dict[str, Any]]:
+    existing = conn.execute(
+        "SELECT 1 FROM memory_entries WHERE key = ?", (str(key),)
+    ).fetchone()
+    if existing and not overwrite:
+        return False, {"key": str(key), "status": "skipped_conflict"}
+    statement = "INSERT OR REPLACE" if overwrite else "INSERT"
+    conn.execute(
+        f"{statement} INTO memory_entries(key, value, migrated_from) VALUES (?, ?, ?)",
+        (str(key), value, migrated_from),
     )
-    if not src_cur.fetchone():
-        raise RuntimeError("legacy table 'memory_kv' not found in source DB")
+    return True, {
+        "key": str(key),
+        "status": "overwritten" if existing else "migrated",
+    }
 
-    src_cur.execute("SELECT key, value FROM memory_kv")
-    rows = src_cur.fetchall()
-    summary["source_rows"] = len(rows)
 
-    summary["actions"].append(f"Discovered {len(rows)} rows in source {from_src}")
+def _validate_registry(
+    conn: sqlite3.Connection,
+    migrated_keys: list[str],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    samples: list[dict[str, Any]] = []
+    errors: list[str] = []
+    for key in migrated_keys[:5]:
+        row = conn.execute(
+            "SELECT vector, vector_dim, score_meta FROM entries WHERE embedding_id = ?",
+            (key,),
+        ).fetchone()
+        if row is None:
+            errors.append(f"missing migrated entry: {key}")
+            continue
+        vector_json, vector_dim, score_meta_json = row
+        try:
+            score_meta = json.loads(score_meta_json)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            errors.append(f"invalid score_meta JSON: {key}")
+            continue
+        if "migrated_from" not in score_meta or "original_sha256" not in score_meta:
+            errors.append(f"missing provenance: {key}")
+        if vector_json is not None:
+            try:
+                vector = json.loads(vector_json)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                errors.append(f"invalid vector JSON: {key}")
+            else:
+                if not isinstance(vector, list) or vector_dim != len(vector):
+                    errors.append(f"vector_dim mismatch: {key}")
+        samples.append({"key": key, "vector_dim": vector_dim})
+    return samples, errors
 
+
+def _backup_database(source: Path, backup: Path) -> None:
+    backup.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, backup)
+    if source.stat().st_size != backup.stat().st_size:
+        raise RuntimeError("database backup size verification failed")
+    with closing(sqlite3.connect(backup)) as conn:
+        result = conn.execute("PRAGMA quick_check").fetchone()
+    if not result or result[0] != "ok":
+        raise RuntimeError("database backup integrity verification failed")
+
+
+def _write_report(path: Path, report: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    with temporary.open("w", encoding="utf-8") as handle:
+        json.dump(report, handle, ensure_ascii=False, indent=2)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+
+
+def migrate(
+    from_src: str,
+    to_dest: str,
+    dry_run: bool = True,
+    target_schema: str = "registry",
+    *,
+    allow_modify: bool = False,
+    overwrite: bool = False,
+    backup_path: str | None = None,
+    report_path: str | None = None,
+) -> dict[str, Any]:
+    """Migrate legacy rows, defaulting to a non-mutating dry run."""
+    started = time.monotonic()
+    if target_schema not in TARGET_SCHEMAS:
+        raise ValueError(f"unsupported target_schema: {target_schema}")
+    if not dry_run and not allow_modify:
+        raise PermissionError("apply requires allow_modify=True")
+
+    source_path = Path(from_src).resolve()
+    destination_path = Path(to_dest).resolve()
+    if not source_path.is_file():
+        raise FileNotFoundError(f"legacy source DB not found: {source_path}")
+
+    with closing(sqlite3.connect(source_path)) as source:
+        table = source.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='memory_kv'"
+        ).fetchone()
+        if not table:
+            raise RuntimeError("legacy table 'memory_kv' not found in source DB")
+        rows = source.execute("SELECT key, value FROM memory_kv").fetchall()
+
+    summary: dict[str, Any] = {
+        "source_rows": len(rows),
+        "migrated": 0,
+        "skipped_keys": [],
+        "samples": [],
+        "validation_errors": [],
+        "to_path": str(destination_path),
+        "target_schema": target_schema,
+        "dry_run": dry_run,
+        "overwrite": overwrite,
+    }
     if dry_run:
-        summary["actions"].append(f"Would copy {len(rows)} rows from {from_src} to {to_dest} using target_schema={target_schema}")
-        src_conn.close()
+        summary["duration_seconds"] = round(time.monotonic() - started, 6)
         return summary
 
-    # Create destination DB and desired schema
-    dst_conn = sqlite3.connect(to_dest)
+    destination_existed = destination_path.exists()
+    if destination_existed:
+        if not backup_path:
+            raise PermissionError("an existing destination requires backup_path")
+        _backup_database(destination_path, Path(backup_path).resolve())
 
-    if target_schema == "registry":
-        _ensure_registry_schema(dst_conn)
-    else:
-        dst_cur = dst_conn.cursor()
-        dst_cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS memory_entries (
-                key TEXT PRIMARY KEY,
-                value TEXT,
-                migrated_from TEXT
-            )
-            """
-        )
-        dst_conn.commit()
-
-    migrated = 0
-    for key, value in rows:
-        # Ensure value is a text string for JSON parsing; sqlite may return str already
-        if value is None:
-            value_text = None
-        else:
-            # Keep as-is (likely TEXT column) but coerce bytes
-            value_text = value
+    destination_path.parent.mkdir(parents=True, exist_ok=True)
+    migrated_keys: list[str] = []
+    with closing(sqlite3.connect(destination_path)) as destination:
         if target_schema == "registry":
-            _insert_into_registry(dst_conn, key, value_text, os.path.abspath(from_src))
-            migrated += 1
+            _ensure_registry_schema(destination)
         else:
-            dst_cur = dst_conn.cursor()
-            dst_cur.execute(
-                "INSERT OR REPLACE INTO memory_entries(key, value, migrated_from) VALUES(?, ?, ?)",
-                (key, value_text, os.path.abspath(from_src)),
-            )
-            migrated += 1
+            _ensure_memory_entries_schema(destination)
 
-    dst_conn.commit()
-    dst_conn.close()
-    src_conn.close()
-    summary["migrated"] = migrated
-    summary["actions"].append(f"Copied {migrated} rows into {to_dest} using schema {target_schema}")
+        try:
+            destination.execute("BEGIN")
+            for key, value in rows:
+                if target_schema == "registry":
+                    inserted, sample = _insert_registry_row(
+                        destination,
+                        str(key),
+                        value,
+                        str(source_path),
+                        overwrite=overwrite,
+                    )
+                else:
+                    inserted, sample = _insert_memory_entry(
+                        destination,
+                        str(key),
+                        value,
+                        str(source_path),
+                        overwrite=overwrite,
+                    )
+                if inserted:
+                    migrated_keys.append(str(key))
+                    summary["migrated"] += 1
+                    if len(summary["samples"]) < 5:
+                        summary["samples"].append(sample)
+                else:
+                    summary["skipped_keys"].append(str(key))
+
+            if target_schema == "registry":
+                validation_samples, errors = _validate_registry(
+                    destination, migrated_keys
+                )
+                summary["samples"] = validation_samples
+                summary["validation_errors"] = errors
+                if errors:
+                    raise RuntimeError("migration validation failed")
+            destination.commit()
+        except Exception:
+            destination.rollback()
+            raise
+
+    summary["duration_seconds"] = round(time.monotonic() - started, 6)
+    final_report_path = Path(
+        report_path or f"{destination_path}.migration.report.json"
+    ).resolve()
+    summary["report_path"] = str(final_report_path)
+    if destination_existed and backup_path:
+        summary["backup_path"] = str(Path(backup_path).resolve())
+    _write_report(final_report_path, summary)
     return summary
 
 
-def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true", help="Show migration plan only")
-    p.add_argument("--from", dest="from_src", required=True, help="Legacy sqlite source path")
-    p.add_argument("--to", dest="to_dest", required=True, help="Destination sqlite path")
-    p.add_argument("--target-schema", dest="target_schema", choices=["registry", "memory_entries"], default="registry", help="Target schema for the migration")
-    args = p.parse_args()
-
-    try:
-        res = migrate(args.from_src, args.to_dest, dry_run=args.dry_run, target_schema=args.target_schema)
-    except Exception as e:
-        print("Migration failed:", e)
-        raise
-    else:
-        print("Migration result:", res)
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--from", dest="from_src", required=True)
+    parser.add_argument("--to", dest="to_dest", required=True)
+    parser.add_argument(
+        "--target-schema", choices=sorted(TARGET_SCHEMAS), default="registry"
+    )
+    parser.add_argument(
+        "--apply", action="store_true", help="Apply migration; default is dry-run"
+    )
+    parser.add_argument(
+        "--allow-modify",
+        action="store_true",
+        help="Required with --apply to acknowledge destination writes",
+    )
+    parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--backup", dest="backup_path")
+    parser.add_argument("--report", dest="report_path")
+    args = parser.parse_args()
+    result = migrate(
+        args.from_src,
+        args.to_dest,
+        dry_run=not args.apply,
+        target_schema=args.target_schema,
+        allow_modify=args.allow_modify,
+        overwrite=args.overwrite,
+        backup_path=args.backup_path,
+        report_path=args.report_path,
+    )
+    print(json.dumps(result, indent=2))
 
 
 if __name__ == "__main__":

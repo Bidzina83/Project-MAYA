@@ -28,7 +28,9 @@ class LocalVectorAdapter(Retriever):
             original_embedding = doc.get("embedding") or []
             # compute normalized vector but do NOT overwrite the original embedding
             normalized_vec = vector_normalize(original_embedding) if original_embedding else []
-            embedding_id = doc.get("embedding_id") or doc.get("chunk_id") or ""
+            embedding_id = (
+                doc.get("embedding_id") or doc.get("chunk_id") or doc.get("id") or ""
+            )
             chunk_id = doc.get("chunk_id") or embedding_id or ""
             score_meta = doc.get("meta") or {}
             # Keep content in score_meta for simple keyword search
@@ -37,8 +39,8 @@ class LocalVectorAdapter(Retriever):
                 score_meta.setdefault("content", doc.get("content"))
                 score_meta.setdefault("content_normalized", text_normalize(doc.get("content")))
             # normalized vector metadata
-            from datetime import datetime
-            now = datetime.utcnow().isoformat() + "Z"
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc).isoformat()
             normalized_algo = "l2-v1"
             normalized_version = 1
             # store entry: original embedding preserved, normalized vector and metadata stored as first-class fields

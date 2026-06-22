@@ -81,10 +81,10 @@ Operational commands (examples)
   python3 scripts/migrate.py --from /path/to/legacy.db --to /tmp/out.db --target-schema registry --dry-run
 
 - Apply into a new destination DB (safe, not in-place):
-  python3 scripts/migrate.py --from /path/to/legacy.db --to /tmp/new_registry.db --target-schema registry
+  python3 scripts/migrate.py --from /path/to/legacy.db --to /tmp/new_registry.db --target-schema registry --apply --allow-modify
 
 - Apply in-place (NOT recommended) with explicit allow flags (operator must confirm):
-  python3 scripts/migrate.py --from /path/to/legacy.db --to /opt/data/Project-MAYA/registry/memory_registry.sqlite --target-schema registry --allow-modify --backup /opt/data/Project-MAYA/registry/memory_registry.sqlite.bak
+  python3 scripts/migrate.py --from /path/to/legacy.db --to /opt/data/Project-MAYA/registry/memory_registry.sqlite --target-schema registry --apply --allow-modify --backup /opt/data/Project-MAYA/registry/memory_registry.sqlite.bak
 
 Reporting
 - The migration run will write a JSON report to <to_dest>.migration.report.json containing counts, lists of skipped keys, sample mappings, and validation status.

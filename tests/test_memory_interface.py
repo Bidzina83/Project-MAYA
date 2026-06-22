@@ -1,44 +1,81 @@
 import unittest
 
-class InMemoryBackend:
-    """Tiny in-memory backend used by unit tests in this workspace.
-    This is a placeholder for the project's real memory adapter; tests exercise
-    the CRUD contract and can be run with Python's standard library unittest.
-    """
+from project_maya.memory import MemoryRetriever
+
+
+class FakeRetriever:
     def __init__(self):
-        self.store = {}
+        self.documents = {}
 
-    def create(self, key, value):
-        self.store[key] = value
+    def upsert(self, doc):
+        memory_id = doc.get("id") or doc.get("chunk_id") or doc.get("embedding_id")
+        self.documents[memory_id] = dict(doc)
 
-    def read(self, key):
-        return self.store.get(key)
+    def bulk_upsert(self, docs):
+        for doc in docs:
+            self.upsert(doc)
 
-    def update(self, key, value):
-        self.store[key] = value
+    def get(self, id):
+        return self.documents.get(id)
 
-    def delete(self, key):
-        self.store.pop(key, None)
+    def query_vector(self, vector, top_k=10, metric="cosine"):
+        return list(self.documents.values())[:top_k]
+
+    def search(self, query, category=None, limit=10):
+        matches = [
+            doc
+            for doc in self.documents.values()
+            if query.lower() in doc.get("content", "").lower()
+            and (category is None or doc.get("category") == category)
+        ]
+        return matches[:limit]
+
+    def probe(self, entity, category=None, limit=10):
+        return self.search(entity, category, limit)
+
+    def related(self, entity, category=None, limit=10):
+        return self.search(entity, category, limit)
+
+    def reason(self, entities, category=None, limit=10):
+        return self.search(" ".join(entities), category, limit)
+
+    def contradict(self, category=None, threshold=0.3, limit=10):
+        return []
+
+    def stats(self):
+        return {"count": len(self.documents)}
 
 
 class TestMemoryInterface(unittest.TestCase):
-    def test_crud(self):
-        backend = InMemoryBackend()
+    def test_public_vocabulary_delegates_to_retriever_contract(self):
+        memory = MemoryRetriever(FakeRetriever())
+        document = {
+            "id": "greeting",
+            "content": "hello from persistent memory",
+            "category": "general",
+        }
 
-        # initially absent
-        self.assertIsNone(backend.read("foo"))
+        memory.remember(document)
 
-        # create + read
-        backend.create("foo", {"v": 1})
-        self.assertEqual(backend.read("foo"), {"v": 1})
+        self.assertEqual(memory.recall("greeting"), document)
+        self.assertEqual(memory.search("persistent"), [document])
 
-        # update
-        backend.update("foo", {"v": 2})
-        self.assertEqual(backend.read("foo"), {"v": 2})
+    def test_remember_requires_stable_identifier(self):
+        memory = MemoryRetriever(FakeRetriever())
 
-        # delete
-        backend.delete("foo")
-        self.assertIsNone(backend.read("foo"))
+        with self.assertRaisesRegex(ValueError, "requires id"):
+            memory.remember({"content": "not addressable"})
+
+    def test_rejects_key_value_stub_as_retriever(self):
+        class KeyValueBackend:
+            def read(self, key):
+                return None
+
+            def write(self, key, value):
+                return True
+
+        with self.assertRaisesRegex(TypeError, "Retriever contract"):
+            MemoryRetriever(KeyValueBackend())
 
 
 if __name__ == "__main__":

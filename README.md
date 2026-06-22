@@ -1,15 +1,74 @@
-This workspace contains a minimal test scaffold and CI workflow for the package.
+# Project MAYA
 
-What I added:
-- tests/test_memory_interface.py — a small unittest-based test covering a tiny in-memory backend (no external deps).
-- requirements.txt — lists pytest and coverage for CI runners.
-- .github/workflows/ci.yml — GitHub Actions workflow that installs dependencies and runs pytest + coverage.
+Project MAYA is the foundation for the IM AI Employee distribution. The target
+product combines a Hermes Agent execution runtime, persistent memory, curated
+skills, Metabase integration, and product-specific configuration behind the
+stable `project_maya` Python API.
 
-Notes and next steps:
-- The local runner in this environment does not have pip available by default; to run the pytest-based CI workflow locally you will need pip and pytest installed. I ran the stdlib unittest locally instead to avoid installing packages.
-- Consider adding integration tests that start the real Agent and plugin loading; those belong in tests/integration/ and may need docker or additional test fixtures.
+## Current architecture
 
-If you want, I can:
-- Run the unittest suite locally now (uses Python standard library) and report the output.
-- Attempt to run pytest after creating a lightweight virtualenv and installing requirements (needs pip). Ask for permission to create a venv and install packages.
-- Create an integration test stub and example plugin fixture.
+The first public API foundation is intentionally dependency-injected:
+
+```python
+from project_maya import create_agent
+
+agent = create_agent("im-employee", runtime=hermes_runtime_adapter)
+agent.attach_memory(memory_provider)
+agent.load_plugin("calendar")
+
+with agent:
+    result = agent.run("Prepare today's briefing")
+```
+
+`Agent` manages lifecycle and delegates execution, memory attachment, and
+plugin loading to an `AgentRuntime`. It does not provide a fake fallback for
+Hermes. Until a versioned Hermes construction contract is integrated, callers
+must inject a compatible runtime adapter.
+
+Persistent-memory retrieval is exposed separately through `MemoryRetriever`,
+which adapts the canonical `Retriever` contract (`upsert`, `get`, `search`,
+vector queries, and provider-specific retrieval operations). Key-value
+`read`/`write` methods are not the persistent-memory API.
+
+See [docs/architecture/public_api.md](docs/architecture/public_api.md) for the
+dependency and lifecycle decisions.
+
+## Migration safety
+
+Legacy `memory_kv` migration is dry-run by default:
+
+```bash
+python scripts/migrate.py --from legacy.sqlite --to memory.sqlite
+```
+
+Applying a migration requires explicit write consent. An existing destination
+also requires a verified backup path:
+
+```bash
+python scripts/migrate.py \
+  --from legacy.sqlite \
+  --to memory.sqlite \
+  --apply \
+  --allow-modify \
+  --backup memory.backup.sqlite
+```
+
+Applied migrations produce a JSON report containing counts, conflicts,
+validation results, provenance samples, duration, and backup location.
+
+## Development
+
+Install the package and test dependencies:
+
+```bash
+python -m pip install -e ".[test]"
+python -m pytest -q
+```
+
+Build the wheel with:
+
+```bash
+python -m build
+```
+
+Optional Alembic migration tooling is available through the `migration` extra.
