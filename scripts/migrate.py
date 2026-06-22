@@ -91,7 +91,7 @@ def _insert_into_registry(conn: sqlite3.Connection, key: str, value: str, migrat
         parsed_legacy = None
 
     if isinstance(parsed_legacy, list) and all(isinstance(x, (int, float)) for x in parsed_legacy):
-        # It's a numeric vector → store in vector column as JSON text and set vector_dim
+        # It's a numeric vector -> store in vector column as JSON text and set vector_dim
         vector_json = json.dumps(parsed_legacy, separators=(',', ':'))
         vector_dim = len(parsed_legacy)
     else:
