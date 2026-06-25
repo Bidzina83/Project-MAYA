@@ -6,9 +6,9 @@ import argparse
 import json
 from pathlib import Path
 
-from .adapters import HermesRuntimeAdapter
+from .bootstrap import build_local_product
 from .config import config_from_mapping
-from .doctor import run_doctor
+from .doctor import DoctorStatus, run_doctor
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -32,7 +32,12 @@ def main(argv: list[str] | None = None) -> int:
 
 def _doctor(config_path: Path) -> int:
     config = config_from_mapping(json.loads(config_path.read_text(encoding="utf-8")))
-    report = run_doctor(config, HermesRuntimeAdapter())
+    try:
+        product = build_local_product(config)
+    except Exception as exc:
+        print(f"{DoctorStatus.FAIL.value}\truntime.assembly\t{exc}")
+        return 1
+    report = run_doctor(config, product.runtime)
     for check in report.checks:
         print(f"{check.status.value}\t{check.name}\t{check.message}")
     return 0 if report.healthy else 1

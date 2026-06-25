@@ -56,6 +56,8 @@ class DeploymentConfig:
 class RuntimeConfig:
     hermes_compatibility: str
     enabled_profiles: tuple[ComponentProfile, ...] = (ComponentProfile.CORE,)
+    hermes_factory: str = "run_agent:AIAgent"
+    hermes_runtime_version: str | None = None
 
 
 @dataclass(frozen=True)
@@ -226,6 +228,8 @@ def config_from_mapping(data: Mapping[str, Any]) -> MayaConfig:
                     "enabled_profiles", [ComponentProfile.CORE.value]
                 )
             ),
+            hermes_factory=data["runtime"].get("hermes_factory", "run_agent:AIAgent"),
+            hermes_runtime_version=data["runtime"].get("hermes_runtime_version"),
         ),
         broker=BrokerConfig(
             mode=BrokerMode(data.get("broker", {}).get("mode", "disabled")),

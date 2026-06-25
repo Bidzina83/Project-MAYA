@@ -21,6 +21,7 @@ from .config import (
     MayaConfig,
     config_from_mapping,
 )
+from .bootstrap import LocalMayaProduct, build_local_product
 from .connectors import ConnectorCapability, ConnectorManifest
 from .doctor import DoctorCheck, DoctorReport, DoctorStatus, run_doctor
 from .governance import (
@@ -61,6 +62,7 @@ __all__ = [
     "GovernanceDecision",
     "GovernedAgentRuntime",
     "LocalJsonRetriever",
+    "LocalMayaProduct",
     "MayaConfig",
     "AgentStartError",
     "AgentState",
@@ -72,6 +74,7 @@ __all__ = [
     "SecretReferenceError",
     "SecretStore",
     "config_from_mapping",
+    "build_local_product",
     "create_agent",
     "require_authorized",
     "run_doctor",
