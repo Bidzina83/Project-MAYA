@@ -48,6 +48,18 @@ def run_doctor(
     else:
         checks.append(DoctorCheck("config", DoctorStatus.PASS, "configuration valid"))
 
+    checks.append(
+        DoctorCheck(
+            "local_api.binding",
+            DoctorStatus.PASS,
+            (
+                f"bind={config.local_api.bind}; "
+                f"remote_access={config.local_api.remote_access}; "
+                "authentication=required"
+            ),
+        )
+    )
+
     if secret_store is None:
         checks.append(
             DoctorCheck(

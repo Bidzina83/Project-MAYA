@@ -36,6 +36,14 @@ from .governance import (
     load_policy_gateway,
     require_authorized,
 )
+from .local_api import (
+    BearerTokenAuthenticator,
+    LocalAPI,
+    LocalAPIAuthenticator,
+    LocalAPIError,
+    LocalAPIRequest,
+    LocalAPIResponse,
+)
 from .memory import MemoryRetriever, Retriever
 from .memory import LocalJsonRetriever
 from .runtime import GovernedAgentRuntime
@@ -61,6 +69,7 @@ __all__ = [
     "ActionRequest",
     "AuthorizationResult",
     "BrokerMode",
+    "BearerTokenAuthenticator",
     "ComponentProfile",
     "ConfigError",
     "ConnectorCapability",
@@ -74,6 +83,11 @@ __all__ = [
     "GovernanceDecision",
     "GovernedAgentRuntime",
     "LocalJsonRetriever",
+    "LocalAPI",
+    "LocalAPIAuthenticator",
+    "LocalAPIError",
+    "LocalAPIRequest",
+    "LocalAPIResponse",
     "LocalMayaProduct",
     "MayaConfig",
     "PolicyAuthorizationGateway",

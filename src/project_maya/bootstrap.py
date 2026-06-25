@@ -12,6 +12,7 @@ from .governance import (
     DenyByDefaultGateway,
     load_policy_gateway,
 )
+from .local_api import BearerTokenAuthenticator, LocalAPI
 from .memory import LocalJsonRetriever, MemoryRetriever
 from .runtime import GovernedAgentRuntime
 from .secrets import SecretStore, build_platform_secret_store
@@ -26,6 +27,7 @@ class LocalMayaProduct:
     memory: MemoryRetriever
     runtime: GovernedAgentRuntime
     secret_store: SecretStore
+    local_api: LocalAPI
 
 
 def build_local_product(
@@ -50,12 +52,18 @@ def build_local_product(
         name=f"project_maya.{config.product.instance_id}",
         runtime=governed,
     )
+    local_api = LocalAPI(
+        agent=agent,
+        runtime=governed,
+        authenticator=BearerTokenAuthenticator(secret_store),
+    )
     return LocalMayaProduct(
         agent=agent,
         retriever=retriever,
         memory=memory,
         runtime=governed,
         secret_store=secret_store,
+        local_api=local_api,
     )
 
 
