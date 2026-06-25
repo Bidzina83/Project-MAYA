@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from .adapters import HermesRuntimeAdapter
 from .agent import Agent, create_agent
+from .agent.contracts import RuntimeHealth
 from .audit import LocalJsonlAuditSink
 from .config import MayaConfig
 from .governance import (
@@ -30,6 +32,29 @@ class LocalMayaProduct:
     secret_store: SecretStore
     local_api: LocalAPI
     audit_sink: LocalJsonlAuditSink
+
+    def start(self) -> None:
+        """Start the assembled Maya runtime through the public Agent facade."""
+        self.agent.start()
+
+    def run(self, request: str, **kwargs: Any) -> Any:
+        """Execute a request through the governed Agent lifecycle path."""
+        return self.agent.run(request, **kwargs)
+
+    def health(self) -> RuntimeHealth:
+        """Return redacted runtime health for the assembled product."""
+        return self.runtime.health()
+
+    def stop(self) -> None:
+        """Stop the assembled Maya runtime and release runtime resources."""
+        self.agent.stop()
+
+    def __enter__(self) -> "LocalMayaProduct":
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc, traceback) -> None:
+        self.stop()
 
 
 def build_local_product(
