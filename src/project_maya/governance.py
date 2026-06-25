@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Mapping, Protocol, runtime_checkable
 
 
@@ -61,6 +63,56 @@ class DenyByDefaultGateway:
         )
 
 
+@dataclass(frozen=True)
+class PolicyRule:
+    capability: str
+    target: str = "*"
+    operation: str = "*"
+    actor_id: str = "*"
+    decision: GovernanceDecision = GovernanceDecision.ALLOW
+    reason_code: str = "governance.policy_rule"
+
+    def matches(self, request: ActionRequest) -> bool:
+        return (
+            _matches(self.capability, request.capability)
+            and _matches(self.target, request.target)
+            and _matches(self.operation, request.operation)
+            and _matches(self.actor_id, request.actor_id)
+        )
+
+
+class PolicyAuthorizationGateway:
+    """File-backed allowlist policy with deny-by-default fallback."""
+
+    def __init__(self, rules: tuple[PolicyRule, ...]) -> None:
+        self._rules = rules
+
+    def authorize(self, request: ActionRequest) -> AuthorizationResult:
+        for rule in self._rules:
+            if rule.matches(request):
+                return AuthorizationResult(
+                    decision=rule.decision,
+                    reason_code=rule.reason_code,
+                )
+        return AuthorizationResult(
+            decision=GovernanceDecision.DENY,
+            reason_code="governance.no_matching_rule",
+        )
+
+
+def load_policy_gateway(path: Path | str) -> PolicyAuthorizationGateway:
+    """Load a minimal local authorization policy from JSON."""
+
+    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(raw, Mapping):
+        raise ValueError("policy must be an object")
+    rules_raw = raw.get("allow", [])
+    if not isinstance(rules_raw, list):
+        raise ValueError("policy allow must be a list")
+    rules = tuple(_rule_from_mapping(item) for item in rules_raw)
+    return PolicyAuthorizationGateway(rules)
+
+
 def require_authorized(
     gateway: ActionAuthorizationGateway,
     request: ActionRequest,
@@ -69,3 +121,24 @@ def require_authorized(
     if not result.allowed:
         raise ActionDeniedError(result.reason_code)
     return result
+
+
+def _rule_from_mapping(data: Mapping[str, object]) -> PolicyRule:
+    if not isinstance(data, Mapping):
+        raise ValueError("policy rule must be an object")
+    capability = data.get("capability")
+    if not isinstance(capability, str) or not capability.strip():
+        raise ValueError("policy rule capability is required")
+    decision = GovernanceDecision(str(data.get("decision", "allow")))
+    return PolicyRule(
+        capability=capability,
+        target=str(data.get("target", "*")),
+        operation=str(data.get("operation", "*")),
+        actor_id=str(data.get("actor_id", "*")),
+        decision=decision,
+        reason_code=str(data.get("reason_code", "governance.policy_rule")),
+    )
+
+
+def _matches(pattern: str, value: str) -> bool:
+    return pattern == "*" or pattern == value
