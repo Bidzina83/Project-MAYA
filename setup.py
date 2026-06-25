@@ -43,4 +43,9 @@ setup(
             'sqlalchemy>=2.0',
         ],
     },
+    entry_points={
+        'console_scripts': [
+            'maya=project_maya.cli:main',
+        ],
+    },
 )

@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from project_maya import (
     ActionDeniedError,
@@ -19,12 +20,13 @@ from project_maya import (
 
 
 def valid_config_mapping():
+    data_dir = Path.cwd() / "maya-data"
     return {
         "product": {"edition": "standard", "instance_id": "maya-test"},
         "deployment": {
             "class": "desktop",
             "network_policy": "standard",
-            "data_dir": "C:/maya-data",
+            "data_dir": str(data_dir),
         },
         "runtime": {
             "hermes_compatibility": ">=0.1",
@@ -56,7 +58,7 @@ def valid_config_mapping():
             "governance_enabled": True,
         },
         "governance": {
-            "policy_file": "C:/maya-data/governance/default.yaml",
+            "policy_file": str(data_dir / "governance" / "default.yaml"),
             "default_action": "deny",
             "minimum_memory_trust": 0.7,
         },
@@ -143,7 +145,7 @@ class TestPhase0Contracts(unittest.TestCase):
         request = ActionRequest(
             actor_id="operator",
             capability="file.write",
-            target="C:/maya-data/report.md",
+            target=str(Path.cwd() / "maya-data" / "report.md"),
             operation="write",
         )
         gateway = DenyByDefaultGateway()
