@@ -22,6 +22,7 @@ from project_maya import (
 def valid_config_mapping():
     data_dir = Path.cwd() / "maya-data"
     return {
+        "schema_version": 2,
         "product": {"edition": "standard", "instance_id": "maya-test"},
         "deployment": {
             "class": "desktop",
@@ -87,8 +88,23 @@ class TestPhase0Contracts(unittest.TestCase):
         config = config_from_mapping(valid_config_mapping())
 
         self.assertEqual(config.broker.mode, BrokerMode.RUNTIME)
+        self.assertEqual(config.schema_version, 2)
         self.assertIn(ComponentProfile.CORE, config.runtime.enabled_profiles)
         self.assertTrue(config.metabase.enabled)
+
+    def test_config_requires_schema_version(self):
+        data = valid_config_mapping()
+        data.pop("schema_version")
+
+        with self.assertRaisesRegex(ConfigError, "schema_version is required"):
+            config_from_mapping(data)
+
+    def test_config_rejects_unsupported_schema_version(self):
+        data = valid_config_mapping()
+        data["schema_version"] = 1
+
+        with self.assertRaisesRegex(ConfigError, "schema_version must be 2"):
+            config_from_mapping(data)
 
     def test_config_rejects_shared_telegram_broker(self):
         data = valid_config_mapping()

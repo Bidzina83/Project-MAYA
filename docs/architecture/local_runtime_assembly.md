@@ -19,6 +19,10 @@ The assembled object contains:
 
 ## Configuration Inputs
 
+Phase 1 accepts only `schema_version: 2`. Missing, malformed, or unsupported
+configuration schema versions fail before runtime assembly so migrations can be
+introduced explicitly instead of silently interpreting stale contracts.
+
 Runtime binding uses:
 
 - `runtime.hermes_factory`, defaulting to `run_agent:AIAgent`;

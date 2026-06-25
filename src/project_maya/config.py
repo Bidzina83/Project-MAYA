@@ -12,6 +12,9 @@ class ConfigError(ValueError):
     """Raised when a configuration violates the product contract."""
 
 
+SUPPORTED_SCHEMA_VERSION = 2
+
+
 class Edition(str, Enum):
     STANDARD = "standard"
     ENTERPRISE = "enterprise"
@@ -132,6 +135,7 @@ class LocalAPIConfig:
 
 @dataclass(frozen=True)
 class MayaConfig:
+    schema_version: int
     product: ProductConfig
     deployment: DeploymentConfig
     runtime: RuntimeConfig
@@ -144,6 +148,10 @@ class MayaConfig:
     local_api: LocalAPIConfig
 
     def validate(self) -> None:
+        if self.schema_version != SUPPORTED_SCHEMA_VERSION:
+            raise ConfigError(
+                f"schema_version must be {SUPPORTED_SCHEMA_VERSION}"
+            )
         if not self.product.instance_id.strip():
             raise ConfigError("product.instance_id is required")
         if self.deployment.data_dir.is_absolute() is False:
@@ -192,6 +200,13 @@ def _require_secret_ref(value: str, field_name: str) -> None:
 def config_from_mapping(data: Mapping[str, Any]) -> MayaConfig:
     """Build a typed config from a parsed JSON/YAML mapping."""
 
+    if "schema_version" not in data:
+        raise ConfigError("schema_version is required")
+    try:
+        schema_version = int(data["schema_version"])
+    except (TypeError, ValueError) as exc:
+        raise ConfigError("schema_version must be an integer") from exc
+
     integrations = {
         name: IntegrationConfig(
             enabled=bool(raw.get("enabled", False)),
@@ -211,6 +226,7 @@ def config_from_mapping(data: Mapping[str, Any]) -> MayaConfig:
         for source in metabase_raw.get("analytics_sources", ())
     )
     config = MayaConfig(
+        schema_version=schema_version,
         product=ProductConfig(
             edition=Edition(data["product"]["edition"]),
             instance_id=data["product"]["instance_id"],
