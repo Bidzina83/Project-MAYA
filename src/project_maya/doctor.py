@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass
 from enum import Enum
 
+from .agent import AgentState
 from .agent.contracts import AgentRuntime
 from .config import ConfigError, MayaConfig
 from .governance import load_policy_gateway
@@ -38,6 +39,7 @@ def run_doctor(
     config: MayaConfig,
     runtime: AgentRuntime,
     *,
+    lifecycle_state: AgentState | str | None = None,
     secret_store: SecretStore | None = None,
 ) -> DoctorReport:
     checks: list[DoctorCheck] = []
@@ -54,6 +56,7 @@ def run_doctor(
     checks.append(_memory_store_check(config))
     checks.append(_governance_policy_check(config))
     checks.append(_audit_log_check(config))
+    checks.append(_lifecycle_state_check(lifecycle_state))
 
     checks.append(
         DoctorCheck(
@@ -240,4 +243,38 @@ def _audit_log_check(config: MayaConfig) -> DoctorCheck:
         "audit.runtime",
         DoctorStatus.WARN,
         "runtime audit log will be created on first audited action",
+    )
+
+
+def _lifecycle_state_check(lifecycle_state: AgentState | str | None) -> DoctorCheck:
+    if lifecycle_state is None:
+        return DoctorCheck(
+            "lifecycle.agent",
+            DoctorStatus.WARN,
+            "agent lifecycle state was not supplied",
+        )
+    try:
+        state = AgentState(lifecycle_state)
+    except ValueError:
+        return DoctorCheck(
+            "lifecycle.agent",
+            DoctorStatus.FAIL,
+            f"unknown agent lifecycle state: {lifecycle_state}",
+        )
+    if state is AgentState.FAILED:
+        return DoctorCheck(
+            "lifecycle.agent",
+            DoctorStatus.FAIL,
+            "agent lifecycle state is failed",
+        )
+    if state in {AgentState.STARTING, AgentState.STOPPING}:
+        return DoctorCheck(
+            "lifecycle.agent",
+            DoctorStatus.WARN,
+            f"agent lifecycle state is transient: {state.value}",
+        )
+    return DoctorCheck(
+        "lifecycle.agent",
+        DoctorStatus.PASS,
+        f"agent lifecycle state is {state.value}",
     )
