@@ -60,6 +60,7 @@ def run_doctor(
     checks.append(_audit_log_check(config))
     checks.append(_lifecycle_state_check(lifecycle_state))
     checks.append(_enabled_profiles_check(config))
+    checks.append(_model_config_check(config))
 
     checks.append(
         DoctorCheck(
@@ -321,4 +322,21 @@ def _enabled_profiles_check(config: MayaConfig) -> DoctorCheck:
         "profiles.enabled",
         DoctorStatus.PASS,
         "enabled profiles: " + ", ".join(profiles),
+    )
+
+
+def _model_config_check(config: MayaConfig) -> DoctorCheck:
+    credential_state = "configured" if config.llm.credential_ref else "not_configured"
+    endpoint_state = "configured" if config.llm.endpoint else "provider_default"
+    return DoctorCheck(
+        "model.config",
+        DoctorStatus.PASS,
+        (
+            f"mode={config.llm.mode}; "
+            f"provider={config.llm.provider}; "
+            f"model={config.llm.model}; "
+            f"endpoint={endpoint_state}; "
+            f"credential_ref={credential_state}; "
+            f"timeout_seconds={config.llm.timeout_seconds}"
+        ),
     )
