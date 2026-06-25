@@ -10,8 +10,12 @@ The assembled object contains:
 - public `Agent` facade;
 - governed Hermes runtime wrapper;
 - Hermes adapter configured from `runtime.hermes_factory`;
+- governed memory retriever;
 - local persistent retriever;
-- public memory vocabulary.
+- local secret store;
+- authenticated local API handler;
+- local JSONL audit sink;
+- product-level lifecycle methods.
 
 ## Configuration Inputs
 
@@ -36,8 +40,27 @@ The assembled runtime always passes execution through
 deny-by-default. This preserves the mandatory authorization boundary while the
 real policy engine is still being implemented.
 
+## Lifecycle
+
+`LocalMayaProduct` is the Phase 1 control surface for the assembled local
+product. Its `start()`, `run()`, and `stop()` methods delegate through the
+public `Agent` facade, which preserves compatibility checks, startup ordering,
+runtime execution, rollback, shutdown, and authorization.
+
+`LocalMayaProduct.health()` returns the redacted runtime health report exposed
+by the governed runtime wrapper. Product-level health reporting must not expose
+secrets, raw prompts, memory contents, or connector tokens.
+
+`LocalMayaProduct` also supports context-manager use so callers can guarantee
+shutdown after a local run:
+
+```python
+with build_local_product(config) as maya:
+    maya.run("prepare the briefing")
+```
+
 ## Limits
 
-This assembly does not install Hermes, manage secrets, or start a local API.
-It creates the smallest governed local runtime shape that can be validated
+This assembly does not install Hermes or start a network listener for the local
+API. It creates the smallest governed local runtime shape that can be validated
 from configuration and extended in later Phase 1 slices.

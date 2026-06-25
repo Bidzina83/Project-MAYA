@@ -7,10 +7,12 @@ from unittest.mock import patch
 from project_maya import (
     ActionRequest,
     AuthorizationResult,
+    AgentState,
     GovernanceDecision,
     build_local_product,
     config_from_mapping,
 )
+from project_maya.agent.contracts import RuntimeHealthState
 from project_maya.memory import LocalJsonRetriever, MemoryRetriever
 from project_maya.cli import main as maya_cli
 from tests.test_phase0_contracts import valid_config_mapping
@@ -107,23 +109,71 @@ class TestPhase1LocalProduct(unittest.TestCase):
 
             globals()["FakeAIAgent"] = FakeAIAgent
             try:
+                gateway = AllowGateway()
+                product = build_local_product(
+                    config_from_mapping(config_data),
+                    gateway=gateway,
+                    actor_id="operator",
+                )
+                product.memory.remember({"id": "note-1", "text": "hello"})
+                self.assertEqual(product.agent.state, AgentState.CREATED)
+                product.start()
+                result = product.run("hello", idempotency_key="turn-1")
+                health = product.health()
+                product.stop()
+            finally:
+                globals().pop("FakeAIAgent", None)
+
+        self.assertEqual(result, "assembled response")
+        self.assertEqual(product.agent.state, AgentState.STOPPED)
+        self.assertEqual(health.state, RuntimeHealthState.HEALTHY)
+        self.assertEqual(product.memory.recall("note-1")["text"], "hello")
+        self.assertEqual(events[0][0], "init")
+        self.assertEqual(events[0][1]["model"], "maya-model")
+        self.assertEqual(events[0][1]["provider"], "openrouter")
+        runtime_requests = [
+            request
+            for request in gateway.requests
+            if request.capability == "runtime.execute"
+        ]
+        self.assertEqual(runtime_requests[0].idempotency_key, "turn-1")
+
+    def test_local_product_context_manager_stops_on_exit(self):
+        events = []
+
+        class FakeAIAgent:
+            def __init__(self, **kwargs):
+                events.append(("init", kwargs))
+
+            def chat(self, message):
+                events.append(("chat", message))
+                return "context response"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            module_path = "tests.test_phase1_local_product:FakeAIAgent"
+            config_data = valid_config_mapping()
+            config_data["deployment"]["data_dir"] = str(Path(tmp) / "maya-data")
+            config_data["runtime"]["enabled_profiles"] = ["maya-core"]
+            config_data["runtime"]["hermes_factory"] = module_path
+            config_data["runtime"]["hermes_runtime_version"] = "test-hermes"
+            config_data["memory"]["retriever"] = "local_json"
+
+            globals()["FakeAIAgent"] = FakeAIAgent
+            try:
                 product = build_local_product(
                     config_from_mapping(config_data),
                     gateway=AllowGateway(),
                     actor_id="operator",
                 )
-                product.memory.remember({"id": "note-1", "text": "hello"})
-                product.agent.start()
-                result = product.agent.run("hello")
-                product.agent.stop()
+                with product as running:
+                    self.assertIs(running, product)
+                    self.assertEqual(product.agent.state, AgentState.RUNNING)
+                    self.assertEqual(product.run("hello"), "context response")
             finally:
                 globals().pop("FakeAIAgent", None)
 
-        self.assertEqual(result, "assembled response")
-        self.assertEqual(product.memory.recall("note-1")["text"], "hello")
-        self.assertEqual(events[0][0], "init")
-        self.assertEqual(events[0][1]["model"], "maya-model")
-        self.assertEqual(events[0][1]["provider"], "openrouter")
+        self.assertEqual(product.agent.state, AgentState.STOPPED)
+        self.assertIn(("chat", "hello"), events)
 
 
 if __name__ == "__main__":
