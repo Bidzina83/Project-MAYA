@@ -68,6 +68,7 @@ class TestPhase1LocalProduct(unittest.TestCase):
         output = "\n".join(call.args[0] for call in printed.call_args_list)
         self.assertIn("pass\tconfig\tconfiguration valid", output)
         self.assertIn("pass\tlifecycle.agent\tagent lifecycle state is created", output)
+        self.assertIn("pass\tprofiles.enabled\tenabled profiles: maya-core", output)
         self.assertIn("fail\thermes.compatibility", output)
 
     def test_maya_doctor_cli_reports_unsupported_assembly(self):

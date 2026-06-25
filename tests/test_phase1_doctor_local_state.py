@@ -30,6 +30,8 @@ class TestPhase1DoctorLocalState(unittest.TestCase):
         checks = {check.name: check for check in report.checks}
         self.assertEqual(checks["lifecycle.agent"].status, DoctorStatus.PASS)
         self.assertIn("created", checks["lifecycle.agent"].message)
+        self.assertEqual(checks["profiles.enabled"].status, DoctorStatus.PASS)
+        self.assertIn("maya-core", checks["profiles.enabled"].message)
         self.assertEqual(checks["filesystem.data_dir"].status, DoctorStatus.WARN)
         self.assertEqual(checks["memory.store"].status, DoctorStatus.WARN)
         self.assertEqual(checks["governance.policy"].status, DoctorStatus.WARN)
@@ -77,6 +79,7 @@ class TestPhase1DoctorLocalState(unittest.TestCase):
         checks = {check.name: check for check in report.checks}
         self.assertEqual(checks["lifecycle.agent"].status, DoctorStatus.PASS)
         self.assertIn("stopped", checks["lifecycle.agent"].message)
+        self.assertIn("maya-core", checks["profiles.enabled"].message)
         self.assertEqual(checks["filesystem.data_dir"].status, DoctorStatus.PASS)
         self.assertEqual(checks["memory.store"].status, DoctorStatus.PASS)
         self.assertEqual(checks["governance.policy"].status, DoctorStatus.PASS)
