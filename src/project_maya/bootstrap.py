@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from .adapters import HermesRuntimeAdapter
 from .agent import Agent, create_agent
+from .audit import LocalJsonlAuditSink
 from .config import MayaConfig
 from .governance import (
     ActionAuthorizationGateway,
@@ -28,6 +29,7 @@ class LocalMayaProduct:
     runtime: GovernedAgentRuntime
     secret_store: SecretStore
     local_api: LocalAPI
+    audit_sink: LocalJsonlAuditSink
 
 
 def build_local_product(
@@ -43,10 +45,12 @@ def build_local_product(
     retriever = _build_retriever(config)
     memory = MemoryRetriever(retriever)
     hermes = _build_hermes_runtime(config)
+    audit_sink = _build_audit_sink(config)
     governed = GovernedAgentRuntime(
         hermes,
         gateway or _build_gateway(config),
         actor_id=actor_id,
+        audit_sink=audit_sink,
     )
     agent = create_agent(
         name=f"project_maya.{config.product.instance_id}",
@@ -64,6 +68,7 @@ def build_local_product(
         runtime=governed,
         secret_store=secret_store,
         local_api=local_api,
+        audit_sink=audit_sink,
     )
 
 
@@ -80,6 +85,12 @@ def _build_gateway(config: MayaConfig) -> ActionAuthorizationGateway:
     if config.governance.policy_file.is_file():
         return load_policy_gateway(config.governance.policy_file)
     return DenyByDefaultGateway()
+
+
+def _build_audit_sink(config: MayaConfig) -> LocalJsonlAuditSink:
+    return LocalJsonlAuditSink(
+        config.deployment.data_dir / "governance" / "audit" / "runtime.jsonl"
+    )
 
 
 def _build_hermes_runtime(config: MayaConfig) -> HermesRuntimeAdapter:
