@@ -31,6 +31,9 @@ from .governance import (
     AuthorizationResult,
     DenyByDefaultGateway,
     GovernanceDecision,
+    PolicyAuthorizationGateway,
+    PolicyRule,
+    load_policy_gateway,
     require_authorized,
 )
 from .memory import MemoryRetriever, Retriever
@@ -64,6 +67,8 @@ __all__ = [
     "LocalJsonRetriever",
     "LocalMayaProduct",
     "MayaConfig",
+    "PolicyAuthorizationGateway",
+    "PolicyRule",
     "AgentStartError",
     "AgentState",
     "MemoryRetriever",
@@ -76,6 +81,7 @@ __all__ = [
     "config_from_mapping",
     "build_local_product",
     "create_agent",
+    "load_policy_gateway",
     "require_authorized",
     "run_doctor",
 ]

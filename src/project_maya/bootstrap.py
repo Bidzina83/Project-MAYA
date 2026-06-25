@@ -7,7 +7,11 @@ from dataclasses import dataclass
 from .adapters import HermesRuntimeAdapter
 from .agent import Agent, create_agent
 from .config import MayaConfig
-from .governance import ActionAuthorizationGateway, DenyByDefaultGateway
+from .governance import (
+    ActionAuthorizationGateway,
+    DenyByDefaultGateway,
+    load_policy_gateway,
+)
 from .memory import LocalJsonRetriever, MemoryRetriever
 from .runtime import GovernedAgentRuntime
 
@@ -36,7 +40,7 @@ def build_local_product(
     hermes = _build_hermes_runtime(config)
     governed = GovernedAgentRuntime(
         hermes,
-        gateway or DenyByDefaultGateway(),
+        gateway or _build_gateway(config),
         actor_id=actor_id,
     )
     agent = create_agent(
@@ -58,6 +62,12 @@ def _build_retriever(config: MayaConfig) -> LocalJsonRetriever:
         )
     store_path = config.deployment.data_dir / "memory" / "records.json"
     return LocalJsonRetriever(store_path)
+
+
+def _build_gateway(config: MayaConfig) -> ActionAuthorizationGateway:
+    if config.governance.policy_file.is_file():
+        return load_policy_gateway(config.governance.policy_file)
+    return DenyByDefaultGateway()
 
 
 def _build_hermes_runtime(config: MayaConfig) -> HermesRuntimeAdapter:
