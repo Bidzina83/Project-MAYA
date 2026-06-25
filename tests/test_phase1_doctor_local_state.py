@@ -33,6 +33,8 @@ class TestPhase1DoctorLocalState(unittest.TestCase):
         self.assertEqual(checks["profiles.enabled"].status, DoctorStatus.PASS)
         self.assertIn("maya-core", checks["profiles.enabled"].message)
         self.assertEqual(checks["filesystem.data_dir"].status, DoctorStatus.WARN)
+        self.assertEqual(checks["filesystem.disk_space"].status, DoctorStatus.PASS)
+        self.assertIn("free=", checks["filesystem.disk_space"].message)
         self.assertEqual(checks["memory.store"].status, DoctorStatus.WARN)
         self.assertEqual(checks["governance.policy"].status, DoctorStatus.WARN)
         self.assertIn("default deny", checks["governance.policy"].message)
@@ -81,9 +83,28 @@ class TestPhase1DoctorLocalState(unittest.TestCase):
         self.assertIn("stopped", checks["lifecycle.agent"].message)
         self.assertIn("maya-core", checks["profiles.enabled"].message)
         self.assertEqual(checks["filesystem.data_dir"].status, DoctorStatus.PASS)
+        self.assertEqual(checks["filesystem.disk_space"].status, DoctorStatus.PASS)
         self.assertEqual(checks["memory.store"].status, DoctorStatus.PASS)
         self.assertEqual(checks["governance.policy"].status, DoctorStatus.PASS)
         self.assertIn("records=1", checks["memory.store"].message)
+
+    def test_doctor_fails_disk_space_when_data_dir_parent_is_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp) / "missing-parent" / "maya-data"
+            config_data = valid_config_mapping()
+            config_data["deployment"]["data_dir"] = str(data_dir)
+            config = config_from_mapping(config_data)
+
+            report = run_doctor(
+                config,
+                HermesRuntimeAdapter(factory_path="missing.hermes:factory"),
+                lifecycle_state=AgentState.CREATED,
+            )
+
+        checks = {check.name: check for check in report.checks}
+        self.assertEqual(checks["filesystem.data_dir"].status, DoctorStatus.FAIL)
+        self.assertEqual(checks["filesystem.disk_space"].status, DoctorStatus.FAIL)
+        self.assertIn("parent is missing", checks["filesystem.disk_space"].message)
 
     def test_doctor_fails_malformed_local_memory_store(self):
         with tempfile.TemporaryDirectory() as tmp:

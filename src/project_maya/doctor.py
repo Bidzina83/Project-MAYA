@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from dataclasses import dataclass
 from enum import Enum
 
@@ -53,6 +54,7 @@ def run_doctor(
         checks.append(DoctorCheck("config", DoctorStatus.PASS, "configuration valid"))
 
     checks.append(_data_dir_check(config))
+    checks.append(_disk_space_check(config))
     checks.append(_memory_store_check(config))
     checks.append(_governance_policy_check(config))
     checks.append(_audit_log_check(config))
@@ -147,6 +149,32 @@ def _data_dir_check(config: MayaConfig) -> DoctorCheck:
         "filesystem.data_dir",
         DoctorStatus.FAIL,
         "deployment.data_dir parent does not exist",
+    )
+
+
+def _disk_space_check(config: MayaConfig) -> DoctorCheck:
+    data_dir = config.deployment.data_dir
+    target = data_dir if data_dir.exists() else data_dir.parent
+    if not target.exists():
+        return DoctorCheck(
+            "filesystem.disk_space",
+            DoctorStatus.FAIL,
+            "cannot inspect disk space because deployment.data_dir parent is missing",
+        )
+    try:
+        usage = shutil.disk_usage(target)
+    except OSError as exc:
+        return DoctorCheck(
+            "filesystem.disk_space",
+            DoctorStatus.WARN,
+            f"disk space unavailable: {exc}",
+        )
+    free_mib = usage.free // (1024 * 1024)
+    total_mib = usage.total // (1024 * 1024)
+    return DoctorCheck(
+        "filesystem.disk_space",
+        DoctorStatus.PASS if usage.free > 0 else DoctorStatus.FAIL,
+        f"free={free_mib} MiB; total={total_mib} MiB",
     )
 
 
