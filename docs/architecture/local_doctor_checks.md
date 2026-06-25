@@ -13,6 +13,7 @@ The local-state checks cover:
 - `governance.policy`
 - `lifecycle.agent`
 - `profiles.enabled`
+- `model.config`
 - `local_api.binding`
 - `secrets.backend`
 - Hermes compatibility and health
@@ -33,6 +34,11 @@ The profile check reports configured component profiles only. It does not
 claim Metabase, document processing, messaging, browser automation, or local
 model services are installed until those component-specific lifecycle and
 health checks exist.
+
+The model configuration check reports the selected model mode, provider,
+model name, endpoint state, credential-reference presence, and timeout. It
+does not print the raw credential reference or prove provider reachability;
+provider-specific reachability belongs behind the model adapter contract.
 
 ## Privacy
 

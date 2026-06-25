@@ -70,6 +70,8 @@ class TestPhase1LocalProduct(unittest.TestCase):
         self.assertIn("pass\tlifecycle.agent\tagent lifecycle state is created", output)
         self.assertIn("pass\tprofiles.enabled\tenabled profiles: maya-core", output)
         self.assertIn("pass\tfilesystem.disk_space\tfree=", output)
+        self.assertIn("pass\tmodel.config\tmode=customer_owned", output)
+        self.assertNotIn("secret://llm/openai", output)
         self.assertIn("fail\thermes.compatibility", output)
 
     def test_maya_doctor_cli_reports_unsupported_assembly(self):
