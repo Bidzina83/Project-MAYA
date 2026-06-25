@@ -22,6 +22,7 @@ from .config import (
     config_from_mapping,
 )
 from .connectors import ConnectorCapability, ConnectorManifest
+from .doctor import DoctorCheck, DoctorReport, DoctorStatus, run_doctor
 from .governance import (
     ActionAuthorizationGateway,
     ActionDeniedError,
@@ -32,6 +33,8 @@ from .governance import (
     require_authorized,
 )
 from .memory import MemoryRetriever, Retriever
+from .memory import LocalJsonRetriever
+from .runtime import GovernedAgentRuntime
 from .secrets import SecretRef, SecretReferenceError, SecretStore
 
 __all__ = [
@@ -51,8 +54,13 @@ __all__ = [
     "ConnectorManifest",
     "CredentialMode",
     "DenyByDefaultGateway",
+    "DoctorCheck",
+    "DoctorReport",
+    "DoctorStatus",
     "Edition",
     "GovernanceDecision",
+    "GovernedAgentRuntime",
+    "LocalJsonRetriever",
     "MayaConfig",
     "AgentStartError",
     "AgentState",
@@ -66,4 +74,5 @@ __all__ = [
     "config_from_mapping",
     "create_agent",
     "require_authorized",
+    "run_doctor",
 ]
