@@ -14,6 +14,7 @@ from .governance import (
 )
 from .memory import LocalJsonRetriever, MemoryRetriever
 from .runtime import GovernedAgentRuntime
+from .secrets import SecretStore, build_platform_secret_store
 
 
 @dataclass(frozen=True)
@@ -24,6 +25,7 @@ class LocalMayaProduct:
     retriever: LocalJsonRetriever
     memory: MemoryRetriever
     runtime: GovernedAgentRuntime
+    secret_store: SecretStore
 
 
 def build_local_product(
@@ -35,6 +37,7 @@ def build_local_product(
     """Assemble the minimal governed local Maya runtime from configuration."""
 
     config.validate()
+    secret_store = build_platform_secret_store(config.deployment.data_dir)
     retriever = _build_retriever(config)
     memory = MemoryRetriever(retriever)
     hermes = _build_hermes_runtime(config)
@@ -52,6 +55,7 @@ def build_local_product(
         retriever=retriever,
         memory=memory,
         runtime=governed,
+        secret_store=secret_store,
     )
 
 

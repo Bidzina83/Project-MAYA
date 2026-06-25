@@ -7,6 +7,7 @@ from enum import Enum
 
 from .agent.contracts import AgentRuntime
 from .config import ConfigError, MayaConfig
+from .secrets import SecretStore, SecretStoreStatus
 
 
 class DoctorStatus(str, Enum):
@@ -31,7 +32,12 @@ class DoctorReport:
         return all(check.status is not DoctorStatus.FAIL for check in self.checks)
 
 
-def run_doctor(config: MayaConfig, runtime: AgentRuntime) -> DoctorReport:
+def run_doctor(
+    config: MayaConfig,
+    runtime: AgentRuntime,
+    *,
+    secret_store: SecretStore | None = None,
+) -> DoctorReport:
     checks: list[DoctorCheck] = []
     try:
         config.validate()
@@ -41,6 +47,28 @@ def run_doctor(config: MayaConfig, runtime: AgentRuntime) -> DoctorReport:
         )
     else:
         checks.append(DoctorCheck("config", DoctorStatus.PASS, "configuration valid"))
+
+    if secret_store is None:
+        checks.append(
+            DoctorCheck(
+                "secrets.backend",
+                DoctorStatus.WARN,
+                "secret store was not assembled",
+            )
+        )
+    else:
+        secret_health = secret_store.health()
+        checks.append(
+            DoctorCheck(
+                "secrets.backend",
+                (
+                    DoctorStatus.PASS
+                    if secret_health.status is SecretStoreStatus.HEALTHY
+                    else DoctorStatus.WARN
+                ),
+                f"{secret_health.backend}: {secret_health.status.value}",
+            )
+        )
 
     compatibility = runtime.compatibility()
     if compatibility.compatible:
