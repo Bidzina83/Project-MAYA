@@ -53,6 +53,7 @@ def run_doctor(
     checks.append(_data_dir_check(config))
     checks.append(_memory_store_check(config))
     checks.append(_governance_policy_check(config))
+    checks.append(_audit_log_check(config))
 
     checks.append(
         DoctorCheck(
@@ -200,4 +201,43 @@ def _governance_policy_check(config: MayaConfig) -> DoctorCheck:
         "governance.policy",
         DoctorStatus.PASS,
         "policy file valid",
+    )
+
+
+def _audit_log_check(config: MayaConfig) -> DoctorCheck:
+    audit_path = config.deployment.data_dir / "governance" / "audit" / "runtime.jsonl"
+    if audit_path.exists() and not audit_path.is_file():
+        return DoctorCheck(
+            "audit.runtime",
+            DoctorStatus.FAIL,
+            "runtime audit path exists but is not a file",
+        )
+    if audit_path.exists():
+        try:
+            with audit_path.open("r", encoding="utf-8") as handle:
+                for line in handle:
+                    if line.strip():
+                        json.loads(line)
+        except (OSError, json.JSONDecodeError) as exc:
+            return DoctorCheck(
+                "audit.runtime",
+                DoctorStatus.FAIL,
+                f"runtime audit log is unreadable: {exc}",
+            )
+        return DoctorCheck(
+            "audit.runtime",
+            DoctorStatus.PASS,
+            "runtime audit log valid",
+        )
+    parent = audit_path.parent
+    if parent.exists() and not parent.is_dir():
+        return DoctorCheck(
+            "audit.runtime",
+            DoctorStatus.FAIL,
+            "runtime audit directory path is not a directory",
+        )
+    return DoctorCheck(
+        "audit.runtime",
+        DoctorStatus.WARN,
+        "runtime audit log will be created on first audited action",
     )

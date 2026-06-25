@@ -1,0 +1,33 @@
+# Local Runtime Audit
+
+## Decision
+
+Phase 1 records runtime authorization decisions to a local JSON Lines audit
+sink:
+
+```text
+<MAYA_DATA_DIR>/governance/audit/runtime.jsonl
+```
+
+The first audited event type is:
+
+```text
+authorization.runtime
+```
+
+The record includes decision metadata such as actor, capability, target,
+operation, data classification, idempotency key, decision, reason code, and
+timestamp.
+
+## Privacy
+
+Runtime audit records must not include prompt text, completion text, secret
+values, connector payloads, raw files, memory record bodies, or model request
+bodies. Those may be governed elsewhere, but the Phase 1 runtime audit only
+records authorization facts.
+
+## Limits
+
+This is not the final audit subsystem. Future work should add retention
+policy, tamper evidence, rotation, export, and richer event families while
+preserving the redaction rule.

@@ -12,6 +12,7 @@ from .agent import (
     RuntimeNotConfiguredError,
     create_agent,
 )
+from .audit import AuditRecord, AuditSink, LocalJsonlAuditSink, NullAuditSink
 from .config import (
     BrokerMode,
     ComponentProfile,
@@ -68,6 +69,8 @@ __all__ = [
     "ActionDeniedError",
     "ActionRequest",
     "AuthorizationResult",
+    "AuditRecord",
+    "AuditSink",
     "BrokerMode",
     "BearerTokenAuthenticator",
     "ComponentProfile",
@@ -88,6 +91,7 @@ __all__ = [
     "LocalAPIError",
     "LocalAPIRequest",
     "LocalAPIResponse",
+    "LocalJsonlAuditSink",
     "LocalMayaProduct",
     "MayaConfig",
     "PolicyAuthorizationGateway",
@@ -95,6 +99,7 @@ __all__ = [
     "AgentStartError",
     "AgentState",
     "MemoryRetriever",
+    "NullAuditSink",
     "Retriever",
     "RuntimeCompatibilityError",
     "RuntimeNotConfiguredError",
