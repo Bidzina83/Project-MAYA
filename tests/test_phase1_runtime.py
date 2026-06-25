@@ -1,4 +1,6 @@
 import unittest
+import sys
+import types
 
 from project_maya import (
     ActionRequest,
@@ -83,6 +85,40 @@ class TestPhase1Runtime(unittest.TestCase):
                 ("stop",),
             ],
         )
+
+    def test_hermes_adapter_binds_run_agent_aiagent_shape(self):
+        module = types.ModuleType("run_agent")
+        events = []
+
+        class FakeAIAgent:
+            def __init__(self, **kwargs):
+                if "agent_name" in kwargs:
+                    raise TypeError("unexpected agent_name")
+                events.append(("init", kwargs))
+
+            def chat(self, message):
+                events.append(("chat", message))
+                return f"response: {message}"
+
+        module.AIAgent = FakeAIAgent
+        previous = sys.modules.get("run_agent")
+        sys.modules["run_agent"] = module
+        try:
+            adapter = HermesRuntimeAdapter(factory_kwargs={"model": "maya-test"})
+            compatibility = adapter.compatibility()
+            adapter.start(agent_name="maya")
+            result = adapter.run("hello maya")
+            adapter.stop()
+        finally:
+            if previous is None:
+                sys.modules.pop("run_agent", None)
+            else:
+                sys.modules["run_agent"] = previous
+
+        self.assertTrue(compatibility.compatible)
+        self.assertEqual(result, "response: hello maya")
+        self.assertEqual(events[0], ("init", {"model": "maya-test"}))
+        self.assertEqual(events[1], ("chat", "hello maya"))
 
     def test_public_agent_executes_through_governed_hermes_adapter(self):
         runtime = RuntimeDouble()

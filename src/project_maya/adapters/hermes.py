@@ -30,7 +30,7 @@ class HermesRuntimeAdapter:
         self,
         *,
         factory: Callable[..., Any] | None = None,
-        factory_path: str = "hermes.agent.factory:create_agent",
+        factory_path: str = "run_agent:AIAgent",
         runtime_version: str | None = None,
         supported_contract: str | None = None,
         factory_kwargs: dict[str, Any] | None = None,
@@ -173,10 +173,11 @@ class HermesRuntimeAdapter:
         kwargs = dict(self._factory_kwargs)
         kwargs.setdefault("agent_name", agent_name)
         try:
-            return factory(**kwargs)
+            runtime = factory(**kwargs)
         except TypeError:
             kwargs.pop("agent_name", None)
-            return factory(**kwargs)
+            runtime = factory(**kwargs)
+        return _normalize_hermes_runtime(runtime)
 
     def _resolve_factory(self) -> Callable[..., Any]:
         if self._factory is not None:
@@ -199,3 +200,45 @@ class HermesRuntimeAdapter:
         if self._runtime is None:
             self._runtime = self._build_runtime(agent_name="project_maya.agent")
         return self._runtime
+
+
+class HermesAIAgentRuntime:
+    """Lifecycle shim for Hermes `run_agent.AIAgent` instances.
+
+    Hermes' current public construction seam is chat-oriented: `AIAgent`
+    exposes `chat()` / `run_conversation()` rather than an explicit
+    start/stop lifecycle. This wrapper gives Maya a lifecycle boundary without
+    inventing execution behavior.
+    """
+
+    def __init__(self, agent: Any) -> None:
+        self._agent = agent
+        self._started = False
+
+    def start(self, *, agent_name: str) -> None:
+        self._started = True
+
+    def run(self, request: str, **kwargs: Any) -> Any:
+        if not self._started:
+            raise HermesRuntimeUnavailableError("Hermes AIAgent is not started")
+        if hasattr(self._agent, "chat"):
+            return self._agent.chat(request)
+        result = self._agent.run_conversation(request, **kwargs)
+        if isinstance(result, dict) and "final_response" in result:
+            return result["final_response"]
+        return result
+
+    def stop(self) -> None:
+        if hasattr(self._agent, "stop"):
+            self._agent.stop()
+        elif hasattr(self._agent, "close"):
+            self._agent.close()
+        self._started = False
+
+
+def _normalize_hermes_runtime(runtime: Any) -> Any:
+    if all(hasattr(runtime, name) for name in ("start", "run", "stop")):
+        return runtime
+    if hasattr(runtime, "chat") or hasattr(runtime, "run_conversation"):
+        return HermesAIAgentRuntime(runtime)
+    return runtime
