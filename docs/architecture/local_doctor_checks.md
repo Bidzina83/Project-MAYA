@@ -10,12 +10,18 @@ The local-state checks cover:
 - `filesystem.data_dir`
 - `memory.store`
 - `governance.policy`
+- `lifecycle.agent`
 - `local_api.binding`
 - `secrets.backend`
 - Hermes compatibility and health
 
 First-run missing local state is reported as a warning when Maya can safely
 create it later. Malformed local state is reported as a failure.
+
+The lifecycle check is observational. `maya doctor` reports the assembled
+Agent state but does not start or stop Maya as a side effect. Stable states
+such as `created`, `running`, and `stopped` pass; `failed` fails; transient
+startup or shutdown states warn.
 
 ## Privacy
 

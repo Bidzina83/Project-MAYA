@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from project_maya import DoctorStatus, config_from_mapping, run_doctor
+from project_maya import AgentState, DoctorStatus, config_from_mapping, run_doctor
 from project_maya.adapters import HermesRuntimeAdapter
 from tests.test_phase0_contracts import valid_config_mapping
 
@@ -24,9 +24,12 @@ class TestPhase1DoctorLocalState(unittest.TestCase):
             report = run_doctor(
                 config,
                 HermesRuntimeAdapter(factory_path="missing.hermes:factory"),
+                lifecycle_state=AgentState.CREATED,
             )
 
         checks = {check.name: check for check in report.checks}
+        self.assertEqual(checks["lifecycle.agent"].status, DoctorStatus.PASS)
+        self.assertIn("created", checks["lifecycle.agent"].message)
         self.assertEqual(checks["filesystem.data_dir"].status, DoctorStatus.WARN)
         self.assertEqual(checks["memory.store"].status, DoctorStatus.WARN)
         self.assertEqual(checks["governance.policy"].status, DoctorStatus.WARN)
@@ -68,9 +71,12 @@ class TestPhase1DoctorLocalState(unittest.TestCase):
             report = run_doctor(
                 config,
                 HermesRuntimeAdapter(factory_path="missing.hermes:factory"),
+                lifecycle_state=AgentState.STOPPED,
             )
 
         checks = {check.name: check for check in report.checks}
+        self.assertEqual(checks["lifecycle.agent"].status, DoctorStatus.PASS)
+        self.assertIn("stopped", checks["lifecycle.agent"].message)
         self.assertEqual(checks["filesystem.data_dir"].status, DoctorStatus.PASS)
         self.assertEqual(checks["memory.store"].status, DoctorStatus.PASS)
         self.assertEqual(checks["governance.policy"].status, DoctorStatus.PASS)
@@ -117,6 +123,19 @@ class TestPhase1DoctorLocalState(unittest.TestCase):
         checks = {check.name: check for check in report.checks}
         self.assertEqual(checks["governance.policy"].status, DoctorStatus.FAIL)
         self.assertIn("policy file invalid", checks["governance.policy"].message)
+
+    def test_doctor_reports_failed_agent_lifecycle_as_failure(self):
+        config = config_from_mapping(valid_config_mapping())
+
+        report = run_doctor(
+            config,
+            HermesRuntimeAdapter(factory_path="missing.hermes:factory"),
+            lifecycle_state=AgentState.FAILED,
+        )
+
+        checks = {check.name: check for check in report.checks}
+        self.assertEqual(checks["lifecycle.agent"].status, DoctorStatus.FAIL)
+        self.assertIn("failed", checks["lifecycle.agent"].message)
 
 
 if __name__ == "__main__":

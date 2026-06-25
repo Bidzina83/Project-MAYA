@@ -37,7 +37,12 @@ def _doctor(config_path: Path) -> int:
     except Exception as exc:
         print(f"{DoctorStatus.FAIL.value}\truntime.assembly\t{exc}")
         return 1
-    report = run_doctor(config, product.runtime, secret_store=product.secret_store)
+    report = run_doctor(
+        config,
+        product.runtime,
+        lifecycle_state=product.agent.state,
+        secret_store=product.secret_store,
+    )
     for check in report.checks:
         print(f"{check.status.value}\t{check.name}\t{check.message}")
     return 0 if report.healthy else 1
