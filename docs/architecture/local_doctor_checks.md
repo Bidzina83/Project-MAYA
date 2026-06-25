@@ -14,6 +14,7 @@ The local-state checks cover:
 - `lifecycle.agent`
 - `profiles.enabled`
 - `model.config`
+- `connectors.config`
 - `local_api.binding`
 - `secrets.backend`
 - Hermes compatibility and health
@@ -39,6 +40,11 @@ The model configuration check reports the selected model mode, provider,
 model name, endpoint state, credential-reference presence, and timeout. It
 does not print the raw credential reference or prove provider reachability;
 provider-specific reachability belongs behind the model adapter contract.
+
+The connector configuration check reports configured connector names, enabled
+state, credential mode, and credential-reference presence. It does not print
+raw secret references or claim live connector health, scopes, webhooks, or
+revocation behavior until connector adapters expose those checks.
 
 ## Privacy
 

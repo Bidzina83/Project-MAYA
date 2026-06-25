@@ -61,6 +61,7 @@ def run_doctor(
     checks.append(_lifecycle_state_check(lifecycle_state))
     checks.append(_enabled_profiles_check(config))
     checks.append(_model_config_check(config))
+    checks.append(_connector_config_check(config))
 
     checks.append(
         DoctorCheck(
@@ -339,4 +340,32 @@ def _model_config_check(config: MayaConfig) -> DoctorCheck:
             f"credential_ref={credential_state}; "
             f"timeout_seconds={config.llm.timeout_seconds}"
         ),
+    )
+
+
+def _connector_config_check(config: MayaConfig) -> DoctorCheck:
+    if not config.integrations:
+        return DoctorCheck(
+            "connectors.config",
+            DoctorStatus.WARN,
+            "no connectors configured",
+        )
+    entries: list[str] = []
+    for name in sorted(config.integrations):
+        integration = config.integrations[name]
+        enabled_state = "enabled" if integration.enabled else "disabled"
+        credential_state = (
+            "configured" if integration.credential_ref else "not_configured"
+        )
+        entries.append(
+            (
+                f"{name}:{enabled_state},"
+                f"credential_mode={integration.credential_mode.value},"
+                f"credential_ref={credential_state}"
+            )
+        )
+    return DoctorCheck(
+        "connectors.config",
+        DoctorStatus.PASS,
+        "; ".join(entries),
     )
