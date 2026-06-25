@@ -39,7 +39,16 @@ from .governance import (
 from .memory import MemoryRetriever, Retriever
 from .memory import LocalJsonRetriever
 from .runtime import GovernedAgentRuntime
-from .secrets import SecretRef, SecretReferenceError, SecretStore
+from .secrets import (
+    SecretRef,
+    SecretReferenceError,
+    SecretStore,
+    SecretStoreError,
+    SecretStoreHealth,
+    SecretStoreStatus,
+    WindowsDPAPISecretStore,
+    build_platform_secret_store,
+)
 
 __all__ = [
     "Agent",
@@ -78,6 +87,11 @@ __all__ = [
     "SecretRef",
     "SecretReferenceError",
     "SecretStore",
+    "SecretStoreError",
+    "SecretStoreHealth",
+    "SecretStoreStatus",
+    "WindowsDPAPISecretStore",
+    "build_platform_secret_store",
     "config_from_mapping",
     "build_local_product",
     "create_agent",
