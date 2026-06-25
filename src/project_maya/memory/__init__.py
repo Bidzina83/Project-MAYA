@@ -1,6 +1,11 @@
 """Provider-agnostic memory retrieval API."""
 
 from .local import LocalJsonRetriever
-from .retriever import MemoryRetriever, Retriever
+from .retriever import GovernedMemoryRetriever, MemoryRetriever, Retriever
 
-__all__ = ["LocalJsonRetriever", "MemoryRetriever", "Retriever"]
+__all__ = [
+    "GovernedMemoryRetriever",
+    "LocalJsonRetriever",
+    "MemoryRetriever",
+    "Retriever",
+]
