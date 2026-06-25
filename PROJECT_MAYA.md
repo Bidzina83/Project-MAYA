@@ -14,6 +14,11 @@ auditability, recoverability, portability, and long-term organizational memory.
 The authoritative product requirements are defined in
 `docs/product/project-maya-product-specification-v2.md`.
 
+The repository protects this source-of-truth relationship with
+`scripts/validate_project_maya_context.py` and the Project context guard CI
+workflow. If product guidance is changed, update `AGENTS.md`, this file, and
+the V2 specification together.
+
 ## Product Model
 
 Project MAYA has one core runtime and two editions.

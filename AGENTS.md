@@ -16,6 +16,19 @@ If implementation instructions conflict with the product specification, stop
 and report the conflict. Do not satisfy a narrow task by inventing a parallel
 architecture.
 
+## Source-Of-Truth Guard
+
+`AGENTS.md`, `PROJECT_MAYA.md`, and
+`docs/product/project-maya-product-specification-v2.md` are coupled product
+context files. Changes that alter product architecture, implementation order,
+runtime boundaries, governance, connectors, secrets, packaging, or deployment
+policy must keep all three aligned.
+
+Run `python scripts/validate_project_maya_context.py` before merging such
+changes. The same check runs in CI and fails when the V2 product specification
+is missing or when required V2 guidance anchors disappear from the context
+files.
+
 ## Product Identity
 
 Project MAYA is the foundation of Maya the Info Manager, an installable and
