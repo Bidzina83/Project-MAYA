@@ -8,6 +8,7 @@ state before Maya is treated as operational.
 The local-state checks cover:
 
 - `filesystem.data_dir`
+- `filesystem.disk_space`
 - `memory.store`
 - `governance.policy`
 - `lifecycle.agent`
@@ -18,6 +19,10 @@ The local-state checks cover:
 
 First-run missing local state is reported as a warning when Maya can safely
 create it later. Malformed local state is reported as a failure.
+
+The disk-space check inspects the configured data directory or its existing
+parent without creating directories. It reports coarse free and total space,
+not file names, customer data, or storage contents.
 
 The lifecycle check is observational. `maya doctor` reports the assembled
 Agent state but does not start or stop Maya as a side effect. Stable states
