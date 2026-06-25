@@ -19,6 +19,10 @@ class RuntimeNotConfiguredError(AgentError):
     """Raised when execution is requested without a runtime adapter."""
 
 
+class RuntimeCompatibilityError(AgentError):
+    """Raised when the configured runtime cannot satisfy Maya's contract."""
+
+
 class AgentLifecycleError(AgentError):
     """Raised when an operation is invalid for the current lifecycle state."""
 
@@ -112,6 +116,12 @@ class Agent:
             self._state = AgentState.STARTING
             loaded_during_start: list[str] = []
             try:
+                compatibility = runtime.compatibility()
+                if not compatibility.compatible:
+                    raise RuntimeCompatibilityError(
+                        compatibility.reason
+                        or f"incompatible runtime: {compatibility.runtime_name}"
+                    )
                 if self._memory_provider is not None:
                     runtime.attach_memory(self._memory_provider)
                 for name, plugin in self._pending_plugins.items():
