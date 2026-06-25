@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from enum import Enum
 
 from .agent.contracts import AgentRuntime
 from .config import ConfigError, MayaConfig
+from .governance import load_policy_gateway
 from .secrets import SecretStore, SecretStoreStatus
 
 
@@ -47,6 +49,10 @@ def run_doctor(
         )
     else:
         checks.append(DoctorCheck("config", DoctorStatus.PASS, "configuration valid"))
+
+    checks.append(_data_dir_check(config))
+    checks.append(_memory_store_check(config))
+    checks.append(_governance_policy_check(config))
 
     checks.append(
         DoctorCheck(
@@ -109,3 +115,89 @@ def run_doctor(
         )
     )
     return DoctorReport(tuple(checks))
+
+
+def _data_dir_check(config: MayaConfig) -> DoctorCheck:
+    data_dir = config.deployment.data_dir
+    if data_dir.exists() and not data_dir.is_dir():
+        return DoctorCheck(
+            "filesystem.data_dir",
+            DoctorStatus.FAIL,
+            "deployment.data_dir exists but is not a directory",
+        )
+    if data_dir.exists():
+        return DoctorCheck(
+            "filesystem.data_dir",
+            DoctorStatus.PASS,
+            "deployment.data_dir exists",
+        )
+    parent = data_dir.parent
+    if parent.exists() and parent.is_dir():
+        return DoctorCheck(
+            "filesystem.data_dir",
+            DoctorStatus.WARN,
+            "deployment.data_dir will be created on first write",
+        )
+    return DoctorCheck(
+        "filesystem.data_dir",
+        DoctorStatus.FAIL,
+        "deployment.data_dir parent does not exist",
+    )
+
+
+def _memory_store_check(config: MayaConfig) -> DoctorCheck:
+    if config.memory.retriever != "local_json":
+        return DoctorCheck(
+            "memory.store",
+            DoctorStatus.WARN,
+            f"doctor has no local check for memory.retriever={config.memory.retriever}",
+        )
+    store_path = config.deployment.data_dir / "memory" / "records.json"
+    if not store_path.exists():
+        return DoctorCheck(
+            "memory.store",
+            DoctorStatus.WARN,
+            "local_json memory store will be created on first write",
+        )
+    try:
+        raw = json.loads(store_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return DoctorCheck(
+            "memory.store",
+            DoctorStatus.FAIL,
+            f"local_json memory store is unreadable: {exc}",
+        )
+    if not isinstance(raw, list):
+        return DoctorCheck(
+            "memory.store",
+            DoctorStatus.FAIL,
+            "local_json memory store must contain a JSON list",
+        )
+    return DoctorCheck(
+        "memory.store",
+        DoctorStatus.PASS,
+        f"local_json memory store valid; records={len(raw)}",
+    )
+
+
+def _governance_policy_check(config: MayaConfig) -> DoctorCheck:
+    policy_file = config.governance.policy_file
+    if not policy_file.exists():
+        return DoctorCheck(
+            "governance.policy",
+            DoctorStatus.WARN,
+            "policy file missing; default deny gateway will be used",
+        )
+    try:
+        load_policy_gateway(policy_file)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        return DoctorCheck(
+            "governance.policy",
+            DoctorStatus.FAIL,
+            f"policy file invalid: {exc}",
+        )
+    return DoctorCheck(
+        "governance.policy",
+        DoctorStatus.PASS,
+        "policy file valid",
+    )
