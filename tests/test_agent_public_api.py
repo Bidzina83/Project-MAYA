@@ -2,17 +2,34 @@ import unittest
 
 from project_maya import (
     AgentNotRunningError,
+    RuntimeCompatibilityError,
     AgentStartError,
     AgentState,
     RuntimeNotConfiguredError,
     create_agent,
 )
+from project_maya.agent.contracts import (
+    RuntimeCompatibility,
+    RuntimeHealth,
+    RuntimeHealthState,
+)
 
 
 class FakeRuntime:
-    def __init__(self, *, fail_plugin=None):
+    def __init__(self, *, fail_plugin=None, compatible=True):
         self.events = []
         self.fail_plugin = fail_plugin
+        self.compatible = compatible
+
+    def compatibility(self):
+        self.events.append(("compatibility",))
+        return RuntimeCompatibility(
+            runtime_name="fake-hermes",
+            runtime_version="test",
+            supported_contract="phase-0",
+            compatible=self.compatible,
+            reason=None if self.compatible else "unsupported runtime contract",
+        )
 
     def attach_memory(self, memory_provider):
         self.events.append(("memory", memory_provider))
@@ -28,6 +45,12 @@ class FakeRuntime:
     def run(self, request, **kwargs):
         self.events.append(("run", request, kwargs))
         return {"request": request, "kwargs": kwargs}
+
+    def health(self):
+        return RuntimeHealth(
+            state=RuntimeHealthState.HEALTHY,
+            components={"runtime": RuntimeHealthState.HEALTHY},
+        )
 
     def stop(self):
         self.events.append(("stop",))
@@ -59,6 +82,7 @@ class TestAgentPublicAPI(unittest.TestCase):
         self.assertEqual(
             runtime.events,
             [
+                ("compatibility",),
                 ("memory", memory),
                 ("plugin", "calendar", plugin),
                 ("start", "employee"),
@@ -86,6 +110,17 @@ class TestAgentPublicAPI(unittest.TestCase):
 
         with self.assertRaises(AgentNotRunningError):
             agent.run("too early")
+
+    def test_incompatible_runtime_rolls_back_and_fails_start(self):
+        runtime = FakeRuntime(compatible=False)
+        agent = create_agent(runtime=runtime)
+
+        with self.assertRaises(AgentStartError) as raised:
+            agent.start()
+
+        self.assertIsInstance(raised.exception.__cause__, RuntimeCompatibilityError)
+        self.assertEqual(agent.state, AgentState.FAILED)
+        self.assertEqual(runtime.events, [("compatibility",), ("stop",)])
 
 
 if __name__ == "__main__":
