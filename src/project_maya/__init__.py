@@ -45,7 +45,7 @@ from .local_api import (
     LocalAPIRequest,
     LocalAPIResponse,
 )
-from .memory import MemoryRetriever, Retriever
+from .memory import GovernedMemoryRetriever, MemoryRetriever, Retriever
 from .memory import LocalJsonRetriever
 from .runtime import GovernedAgentRuntime
 from .secrets import (
@@ -85,6 +85,7 @@ __all__ = [
     "Edition",
     "GovernanceDecision",
     "GovernedAgentRuntime",
+    "GovernedMemoryRetriever",
     "LocalJsonRetriever",
     "LocalAPI",
     "LocalAPIAuthenticator",
