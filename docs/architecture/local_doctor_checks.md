@@ -11,6 +11,7 @@ The local-state checks cover:
 - `memory.store`
 - `governance.policy`
 - `lifecycle.agent`
+- `profiles.enabled`
 - `local_api.binding`
 - `secrets.backend`
 - Hermes compatibility and health
@@ -22,6 +23,11 @@ The lifecycle check is observational. `maya doctor` reports the assembled
 Agent state but does not start or stop Maya as a side effect. Stable states
 such as `created`, `running`, and `stopped` pass; `failed` fails; transient
 startup or shutdown states warn.
+
+The profile check reports configured component profiles only. It does not
+claim Metabase, document processing, messaging, browser automation, or local
+model services are installed until those component-specific lifecycle and
+health checks exist.
 
 ## Privacy
 

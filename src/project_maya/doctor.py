@@ -57,6 +57,7 @@ def run_doctor(
     checks.append(_governance_policy_check(config))
     checks.append(_audit_log_check(config))
     checks.append(_lifecycle_state_check(lifecycle_state))
+    checks.append(_enabled_profiles_check(config))
 
     checks.append(
         DoctorCheck(
@@ -277,4 +278,19 @@ def _lifecycle_state_check(lifecycle_state: AgentState | str | None) -> DoctorCh
         "lifecycle.agent",
         DoctorStatus.PASS,
         f"agent lifecycle state is {state.value}",
+    )
+
+
+def _enabled_profiles_check(config: MayaConfig) -> DoctorCheck:
+    profiles = tuple(profile.value for profile in config.runtime.enabled_profiles)
+    if not profiles:
+        return DoctorCheck(
+            "profiles.enabled",
+            DoctorStatus.FAIL,
+            "no component profiles are enabled",
+        )
+    return DoctorCheck(
+        "profiles.enabled",
+        DoctorStatus.PASS,
+        "enabled profiles: " + ", ".join(profiles),
     )
