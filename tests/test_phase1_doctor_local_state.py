@@ -39,6 +39,19 @@ class TestPhase1DoctorLocalState(unittest.TestCase):
         self.assertIn("provider=openai", checks["model.config"].message)
         self.assertIn("credential_ref=configured", checks["model.config"].message)
         self.assertNotIn("secret://llm/openai", checks["model.config"].message)
+        self.assertEqual(checks["connectors.config"].status, DoctorStatus.PASS)
+        self.assertIn(
+            "google:enabled,credential_mode=broker,credential_ref=configured",
+            checks["connectors.config"].message,
+        )
+        self.assertIn(
+            "telegram:disabled,credential_mode=customer_owned,credential_ref=configured",
+            checks["connectors.config"].message,
+        )
+        self.assertNotIn(
+            "secret://integrations/google",
+            checks["connectors.config"].message,
+        )
         self.assertEqual(checks["memory.store"].status, DoctorStatus.WARN)
         self.assertEqual(checks["governance.policy"].status, DoctorStatus.WARN)
         self.assertIn("default deny", checks["governance.policy"].message)
