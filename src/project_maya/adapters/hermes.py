@@ -213,7 +213,13 @@ class HermesAIAgentRuntime:
 
     def __init__(self, agent: Any) -> None:
         self._agent = agent
+        self._memory_provider: Any | None = None
         self._started = False
+
+    def attach_memory(self, memory_provider: Any) -> None:
+        self._memory_provider = memory_provider
+        if hasattr(self._agent, "attach_memory"):
+            self._agent.attach_memory(memory_provider)
 
     def start(self, *, agent_name: str) -> None:
         self._started = True

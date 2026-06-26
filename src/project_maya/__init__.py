@@ -45,7 +45,12 @@ from .local_api import (
     LocalAPIRequest,
     LocalAPIResponse,
 )
-from .memory import GovernedMemoryRetriever, MemoryRetriever, Retriever
+from .memory import (
+    GovernedMemoryRetriever,
+    HermesMemoryProvider,
+    MemoryRetriever,
+    Retriever,
+)
 from .memory import LocalJsonRetriever
 from .runtime import GovernedAgentRuntime, ModelEgressPolicy
 from .secrets import (
@@ -86,6 +91,7 @@ __all__ = [
     "GovernanceDecision",
     "GovernedAgentRuntime",
     "GovernedMemoryRetriever",
+    "HermesMemoryProvider",
     "LocalJsonRetriever",
     "LocalAPI",
     "LocalAPIAuthenticator",

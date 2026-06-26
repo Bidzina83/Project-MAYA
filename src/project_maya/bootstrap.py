@@ -16,7 +16,12 @@ from .governance import (
     load_policy_gateway,
 )
 from .local_api import BearerTokenAuthenticator, LocalAPI
-from .memory import GovernedMemoryRetriever, LocalJsonRetriever, MemoryRetriever
+from .memory import (
+    GovernedMemoryRetriever,
+    HermesMemoryProvider,
+    LocalJsonRetriever,
+    MemoryRetriever,
+)
 from .runtime import GovernedAgentRuntime, ModelEgressPolicy
 from .secrets import SecretStore, build_platform_secret_store
 
@@ -28,6 +33,7 @@ class LocalMayaProduct:
     agent: Agent
     retriever: LocalJsonRetriever
     memory: GovernedMemoryRetriever
+    memory_provider: HermesMemoryProvider
     runtime: GovernedAgentRuntime
     secret_store: SecretStore
     local_api: LocalAPI
@@ -78,6 +84,7 @@ def build_local_product(
         actor_id=actor_id,
         audit_sink=audit_sink,
     )
+    memory_provider = HermesMemoryProvider(memory)
     governed = GovernedAgentRuntime(
         hermes,
         authorization_gateway,
@@ -89,6 +96,7 @@ def build_local_product(
         name=f"project_maya.{config.product.instance_id}",
         runtime=governed,
     )
+    agent.attach_memory(memory_provider)
     local_api = LocalAPI(
         agent=agent,
         runtime=governed,
@@ -98,6 +106,7 @@ def build_local_product(
         agent=agent,
         retriever=retriever,
         memory=memory,
+        memory_provider=memory_provider,
         runtime=governed,
         secret_store=secret_store,
         local_api=local_api,
