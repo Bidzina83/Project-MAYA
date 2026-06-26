@@ -194,7 +194,13 @@ def main(argv: list[str] | None = None) -> int:
         default="registry",
         help="Destination schema shape.",
     )
-    migrate_parser.add_argument(
+    migrate_mode = migrate_parser.add_mutually_exclusive_group()
+    migrate_mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate migration without writing. This is the default.",
+    )
+    migrate_mode.add_argument(
         "--apply",
         action="store_true",
         help="Apply migration. Default is dry-run.",
@@ -261,7 +267,7 @@ def main(argv: list[str] | None = None) -> int:
             args.from_src,
             args.to_dest,
             target_schema=args.target_schema,
-            apply=args.apply,
+            dry_run=args.dry_run or not args.apply,
             allow_modify=args.allow_modify,
             overwrite=args.overwrite,
             backup_path=args.backup_path,
@@ -550,7 +556,7 @@ def _migrate(
     to_dest: Path,
     *,
     target_schema: str = "registry",
-    apply: bool = False,
+    dry_run: bool = True,
     allow_modify: bool = False,
     overwrite: bool = False,
     backup_path: Path | None = None,
@@ -562,7 +568,7 @@ def _migrate(
         result = migrate(
             str(from_src),
             str(to_dest),
-            dry_run=not apply,
+            dry_run=dry_run,
             target_schema=target_schema,
             allow_modify=allow_modify,
             overwrite=overwrite,

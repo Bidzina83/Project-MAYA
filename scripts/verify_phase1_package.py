@@ -176,6 +176,7 @@ def _verify_installed_migration_cli(python: Path, work_dir: Path) -> None:
             str(legacy_db),
             "--to",
             str(destination_db),
+            "--dry-run",
         ],
         cwd=work_dir,
         env=_clean_env(),
