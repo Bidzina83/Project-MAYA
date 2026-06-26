@@ -24,6 +24,10 @@ timestamp.
 facts before external inference is delegated to Hermes. It records whether an
 endpoint is configured, not the endpoint secret or model request body.
 
+Phase 1 configuration rejects `governance.audit_enabled: false`. Audit
+controls may become policy-tunable later, but the minimal local product cannot
+disable runtime, model-egress, and memory decision records.
+
 ## Privacy
 
 Runtime audit records must not include prompt text, completion text, secret

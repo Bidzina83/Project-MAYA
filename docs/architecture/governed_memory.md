@@ -28,6 +28,10 @@ Memory authorization decisions are written to the local runtime audit sink as:
 authorization.memory
 ```
 
+Phase 1 configuration rejects `memory.governance_enabled: false`. The flag is
+reserved for future policy design and is not an escape hatch around governed
+retrieval in the minimal local product.
+
 ## Privacy
 
 Memory audit records include decision metadata such as actor, capability,
