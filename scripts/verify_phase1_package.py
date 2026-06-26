@@ -92,7 +92,7 @@ def main(argv: list[str] | None = None) -> int:
             cwd=work_dir,
             env=_clean_env(),
         )
-        required_commands = ("doctor", "run", "serve-local-api")
+        required_commands = ("doctor", "run", "serve-local-api", "rotate-secret")
         missing_commands = [
             command
             for command in required_commands

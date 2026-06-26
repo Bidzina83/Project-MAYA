@@ -21,7 +21,8 @@ It performs these checks in a temporary workspace:
 - imports the canonical `project_maya` package;
 - verifies the packaged `maya` console entry point metadata;
 - verifies the installed CLI module responds to `--help` and exposes the
-  Phase 1 `doctor`, one-shot `run`, and local API serve commands.
+  Phase 1 `doctor`, one-shot `run`, local API serve, and secret rotation
+  commands.
 
 ## Scope
 

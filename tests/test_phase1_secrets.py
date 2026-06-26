@@ -1,7 +1,10 @@
+import json
 import os
 import tempfile
 import unittest
+from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 from project_maya import (
     SecretRef,
@@ -15,6 +18,7 @@ from project_maya import (
     run_doctor,
 )
 from project_maya.adapters import HermesRuntimeAdapter
+from project_maya.cli import main as maya_cli
 from tests.test_phase0_contracts import valid_config_mapping
 
 
@@ -98,6 +102,68 @@ class TestPhase1Secrets(unittest.TestCase):
         self.assertIn("secrets.backend", checks)
         self.assertNotIn("secret://llm/openai", checks["secrets.backend"].message)
         self.assertNotIn("super-secret-token", checks["secrets.backend"].message)
+
+    def test_rotate_secret_cli_writes_platform_store_without_echoing_value(self):
+        class FakeSecretStore:
+            def __init__(self):
+                self.writes = []
+
+            def write(self, ref, value):
+                self.writes.append((ref, value))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config_data = valid_config_mapping()
+            config_data["deployment"]["data_dir"] = str(Path(tmp) / "maya-data")
+            config_path = Path(tmp) / "maya.json"
+            config_path.write_text(json.dumps(config_data), encoding="utf-8")
+            store = FakeSecretStore()
+
+            with patch(
+                "project_maya.cli.build_platform_secret_store",
+                return_value=store,
+            ), patch("sys.stdin", StringIO("new-token\n")), patch(
+                "builtins.print"
+            ) as printed:
+                exit_code = maya_cli(
+                    [
+                        "rotate-secret",
+                        "local-api/token",
+                        "--config",
+                        str(config_path),
+                        "--value-stdin",
+                    ]
+                )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(str(store.writes[0][0]), "secret://local-api/token")
+        self.assertEqual(store.writes[0][1], "new-token")
+        output = printed.call_args.args[0]
+        self.assertIn('"status": "rotated"', output)
+        self.assertNotIn("new-token", output)
+
+    def test_rotate_secret_cli_reports_secret_safe_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_data = valid_config_mapping()
+            config_data["deployment"]["data_dir"] = str(Path(tmp) / "maya-data")
+            config_path = Path(tmp) / "maya.json"
+            config_path.write_text(json.dumps(config_data), encoding="utf-8")
+
+            with patch("sys.stdin", StringIO("")), patch("builtins.print") as printed:
+                exit_code = maya_cli(
+                    [
+                        "rotate-secret",
+                        "../escape",
+                        "--config",
+                        str(config_path),
+                        "--value-stdin",
+                    ]
+                )
+
+        self.assertEqual(exit_code, 1)
+        output = printed.call_args.args[0]
+        self.assertIn('"code": "secret_rotation_failed"', output)
+        self.assertNotIn("../escape", output)
+        self.assertNotIn("secret://", output)
 
 
 if __name__ == "__main__":

@@ -19,6 +19,13 @@ On platforms where no approved backend is implemented yet, Maya assembles an
 `UnavailableSecretStore` and `maya doctor` reports the backend as unavailable
 without claiming secret support.
 
+The installed `maya rotate-secret <name> --config <path> --value-stdin`
+command stores or rotates a referenced secret in the configured platform
+backend. The secret value is read from standard input so it is not passed as a
+command-line argument, and command output never echoes the value. Names may be
+provided either as `local-api/token` or as a full `secret://local-api/token`
+reference.
+
 ## Limits
 
 This is not a cross-platform secret strategy. macOS Keychain, Linux Secret
