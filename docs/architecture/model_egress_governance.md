@@ -42,3 +42,8 @@ does not yet implement provider-specific redaction, residency enforcement,
 model fallback, or customer consent UX. Those belong to later model-adapter and
 setup work, but must preserve this local authorization point.
 
+Callers can provide the request data classification through both `/v1/run` and
+`maya run --data-classification`. If omitted, Phase 1 treats the request as
+`internal`. The label is used for authorization and audit metadata only; prompt
+contents remain excluded from local API errors and audit records.
+
