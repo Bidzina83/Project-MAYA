@@ -143,7 +143,14 @@ class TestPhase1LocalProduct(unittest.TestCase):
             for request in gateway.requests
             if request.capability == "runtime.execute"
         ]
+        egress_requests = [
+            request
+            for request in gateway.requests
+            if request.capability == "model.egress"
+        ]
         self.assertEqual(runtime_requests[0].idempotency_key, "turn-1")
+        self.assertEqual(egress_requests[0].target, "model:openrouter")
+        self.assertEqual(egress_requests[0].metadata["mode"], "customer_owned")
 
     def test_local_product_context_manager_stops_on_exit(self):
         events = []

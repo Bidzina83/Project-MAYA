@@ -30,6 +30,12 @@ Runtime binding uses:
 - `runtime.hermes_compatibility`, used as the supported adapter contract;
 - `llm.model`, `llm.provider`, `llm.endpoint`, and `llm.timeout_seconds`.
 
+For non-local model modes, assembly also derives a redacted model-egress
+authorization policy from `llm.mode`, `llm.provider`, and whether
+`llm.endpoint` is configured. This preserves the Product Specification V2
+requirement that external model inference is governed and audited without
+logging prompts or credential references.
+
 Memory binding currently supports `memory.retriever: local_json`, which stores
 records under:
 
@@ -41,8 +47,11 @@ records under:
 
 The assembled runtime always passes execution through
 `GovernedAgentRuntime`. If no policy engine is supplied, the default gateway is
-deny-by-default. This preserves the mandatory authorization boundary while the
-real policy engine is still being implemented.
+deny-by-default. Runtime execution and non-local model egress are separate
+authorization decisions, so an allow rule for `runtime.execute` does not
+implicitly allow external inference. This preserves the mandatory
+authorization boundary while the real policy engine is still being
+implemented.
 
 ## Lifecycle
 

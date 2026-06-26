@@ -99,6 +99,12 @@ class TestPhase1Policy(unittest.TestCase):
                                 "capability": "runtime.execute",
                                 "target": "hermes-agent",
                                 "operation": "run",
+                            },
+                            {
+                                "actor_id": "operator",
+                                "capability": "model.egress",
+                                "target": "model:openai",
+                                "operation": "infer",
                             }
                         ]
                     }

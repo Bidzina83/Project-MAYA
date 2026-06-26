@@ -17,7 +17,7 @@ from .governance import (
 )
 from .local_api import BearerTokenAuthenticator, LocalAPI
 from .memory import GovernedMemoryRetriever, LocalJsonRetriever, MemoryRetriever
-from .runtime import GovernedAgentRuntime
+from .runtime import GovernedAgentRuntime, ModelEgressPolicy
 from .secrets import SecretStore, build_platform_secret_store
 
 
@@ -83,6 +83,7 @@ def build_local_product(
         authorization_gateway,
         actor_id=actor_id,
         audit_sink=audit_sink,
+        model_egress=_build_model_egress(config),
     )
     agent = create_agent(
         name=f"project_maya.{config.product.instance_id}",
@@ -122,6 +123,16 @@ def _build_gateway(config: MayaConfig) -> ActionAuthorizationGateway:
 def _build_audit_sink(config: MayaConfig) -> LocalJsonlAuditSink:
     return LocalJsonlAuditSink(
         config.deployment.data_dir / "governance" / "audit" / "runtime.jsonl"
+    )
+
+
+def _build_model_egress(config: MayaConfig) -> ModelEgressPolicy | None:
+    if config.llm.mode == "local":
+        return None
+    return ModelEgressPolicy(
+        mode=config.llm.mode,
+        provider=config.llm.provider,
+        endpoint=config.llm.endpoint,
     )
 
 
