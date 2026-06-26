@@ -20,7 +20,8 @@ It performs these checks in a temporary workspace:
 - installs the wheel with `--no-deps`;
 - imports the canonical `project_maya` package;
 - verifies the packaged `maya` console entry point metadata;
-- verifies the installed CLI module responds to `--help`.
+- verifies the installed CLI module responds to `--help` and exposes the
+  Phase 1 `doctor` and one-shot `run` commands.
 
 ## Scope
 

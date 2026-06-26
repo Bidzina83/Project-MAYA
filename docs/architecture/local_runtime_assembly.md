@@ -77,6 +77,12 @@ with build_local_product(config) as maya:
     maya.run("prepare the briefing")
 ```
 
+The installed `maya run --config <path> --input <text>` command uses this same
+assembly path for a single request. It starts the local product, executes
+through the public Agent facade, prints a JSON result, and stops the runtime
+before exiting. Failures are reported with secret-safe generic errors rather
+than prompt text, secrets, or connector payloads.
+
 ## Limits
 
 This assembly does not install Hermes or start a network listener for the local

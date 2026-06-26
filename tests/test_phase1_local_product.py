@@ -90,6 +90,103 @@ class TestPhase1LocalProduct(unittest.TestCase):
         output = "\n".join(call.args[0] for call in printed.call_args_list)
         self.assertIn("fail\truntime.assembly", output)
 
+    def test_maya_run_cli_executes_and_stops_local_product(self):
+        events = []
+
+        class FakeAIAgent:
+            def __init__(self, **kwargs):
+                events.append(("init", kwargs))
+
+            def chat(self, message):
+                events.append(("chat", message))
+                return {"reply": message.upper()}
+
+            def stop(self):
+                events.append(("stop",))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp) / "maya-data"
+            policy_path = data_dir / "governance" / "policy.json"
+            policy_path.parent.mkdir(parents=True)
+            policy_path.write_text(
+                json.dumps(
+                    {
+                        "allow": [
+                            {
+                                "actor_id": "local-user",
+                                "capability": "runtime.execute",
+                                "target": "hermes-agent",
+                                "operation": "run",
+                            },
+                            {
+                                "actor_id": "local-user",
+                                "capability": "model.egress",
+                                "target": "model:openai",
+                                "operation": "infer",
+                            },
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            config = valid_config_mapping()
+            config["deployment"]["data_dir"] = str(data_dir)
+            config["runtime"]["enabled_profiles"] = ["maya-core"]
+            config["runtime"][
+                "hermes_factory"
+            ] = "tests.test_phase1_local_product:FakeAIAgent"
+            config["memory"]["retriever"] = "local_json"
+            config["governance"]["policy_file"] = str(policy_path)
+            config_path = Path(tmp) / "maya.json"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+
+            globals()["FakeAIAgent"] = FakeAIAgent
+            try:
+                with patch("builtins.print") as printed:
+                    exit_code = maya_cli(
+                        [
+                            "run",
+                            "--config",
+                            str(config_path),
+                            "--input",
+                            "briefing",
+                            "--idempotency-key",
+                            "turn-1",
+                        ]
+                    )
+            finally:
+                globals().pop("FakeAIAgent", None)
+
+        self.assertEqual(exit_code, 0)
+        output = json.loads(printed.call_args.args[0])
+        self.assertEqual(output, {"result": {"reply": "BRIEFING"}})
+        self.assertIn(("chat", "briefing"), events)
+        self.assertIn(("stop",), events)
+
+    def test_maya_run_cli_reports_secret_safe_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = valid_config_mapping()
+            config["runtime"]["enabled_profiles"] = ["maya-core"]
+            config_path = Path(tmp) / "maya.json"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+
+            with patch("builtins.print") as printed:
+                exit_code = maya_cli(
+                    [
+                        "run",
+                        "--config",
+                        str(config_path),
+                        "--input",
+                        "do not log this",
+                    ]
+                )
+
+        self.assertEqual(exit_code, 1)
+        output = printed.call_args.args[0]
+        self.assertIn('"code": "runtime_failed"', output)
+        self.assertNotIn("do not log this", output)
+        self.assertNotIn("secret://", output)
+
     def test_build_local_product_uses_configured_runtime_and_memory(self):
         events = []
 

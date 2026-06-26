@@ -87,11 +87,13 @@ def main(argv: list[str] | None = None) -> int:
             cwd=work_dir,
             env=_clean_env(),
         )
-        _run(
+        help_result = _run(
             [str(python), "-m", "project_maya.cli", "--help"],
             cwd=work_dir,
             env=_clean_env(),
         )
+        if "run" not in help_result.stdout or "doctor" not in help_result.stdout:
+            raise RuntimeError("installed CLI help does not expose doctor and run")
     return 0
 
 
