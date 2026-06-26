@@ -13,6 +13,7 @@ from .agent import (
     create_agent,
 )
 from .audit import AuditRecord, AuditSink, LocalJsonlAuditSink, NullAuditSink
+from .backup import BackupError, BackupResult, create_local_backup
 from .config import (
     BrokerMode,
     ComponentProfile,
@@ -78,6 +79,8 @@ __all__ = [
     "AuthorizationResult",
     "AuditRecord",
     "AuditSink",
+    "BackupError",
+    "BackupResult",
     "BrokerMode",
     "BearerTokenAuthenticator",
     "ComponentProfile",
@@ -121,6 +124,7 @@ __all__ = [
     "SecretStoreStatus",
     "WindowsDPAPISecretStore",
     "build_platform_secret_store",
+    "create_local_backup",
     "config_from_mapping",
     "config_to_mapping",
     "build_local_product",

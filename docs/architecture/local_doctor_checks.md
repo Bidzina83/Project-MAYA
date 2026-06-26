@@ -50,8 +50,9 @@ revocation behavior until connector adapters expose those checks.
 
 The backup and migration checks verify that the configured local data root is
 not blocked by files at `backups/` or `migrations/`. Missing directories warn
-on first run because Maya can create them later. These checks do not create
-backups, restore state, apply migrations, or validate signed updates.
+on first run because Maya can create them later. Doctor does not create
+backups, restore state, apply migrations, or validate signed updates; the
+minimal Phase 1 backup artifact is created through `maya backup`.
 
 ## Privacy
 
