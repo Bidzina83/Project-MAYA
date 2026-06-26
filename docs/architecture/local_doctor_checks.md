@@ -11,6 +11,8 @@ The local-state checks cover:
 - `filesystem.disk_space`
 - `memory.store`
 - `governance.policy`
+- `backup.state`
+- `migration.state`
 - `lifecycle.agent`
 - `profiles.enabled`
 - `model.config`
@@ -45,6 +47,11 @@ The connector configuration check reports configured connector names, enabled
 state, credential mode, and credential-reference presence. It does not print
 raw secret references or claim live connector health, scopes, webhooks, or
 revocation behavior until connector adapters expose those checks.
+
+The backup and migration checks verify that the configured local data root is
+not blocked by files at `backups/` or `migrations/`. Missing directories warn
+on first run because Maya can create them later. These checks do not create
+backups, restore state, apply migrations, or validate signed updates.
 
 ## Privacy
 

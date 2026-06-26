@@ -55,14 +55,20 @@ class TestPhase1DoctorLocalState(unittest.TestCase):
         self.assertEqual(checks["memory.store"].status, DoctorStatus.WARN)
         self.assertEqual(checks["governance.policy"].status, DoctorStatus.WARN)
         self.assertIn("default deny", checks["governance.policy"].message)
+        self.assertEqual(checks["backup.state"].status, DoctorStatus.WARN)
+        self.assertEqual(checks["migration.state"].status, DoctorStatus.WARN)
 
     def test_doctor_reports_valid_local_memory_and_policy(self):
         with tempfile.TemporaryDirectory() as tmp:
             data_dir = Path(tmp) / "maya-data"
             memory_path = data_dir / "memory" / "records.json"
             policy_path = data_dir / "governance" / "policy.json"
+            backup_path = data_dir / "backups"
+            migration_path = data_dir / "migrations"
             memory_path.parent.mkdir(parents=True)
             policy_path.parent.mkdir(parents=True)
+            backup_path.mkdir(parents=True)
+            migration_path.mkdir(parents=True)
             memory_path.write_text(
                 json.dumps([{"id": "note-1", "text": "hello"}]),
                 encoding="utf-8",
@@ -103,6 +109,8 @@ class TestPhase1DoctorLocalState(unittest.TestCase):
         self.assertEqual(checks["filesystem.disk_space"].status, DoctorStatus.PASS)
         self.assertEqual(checks["memory.store"].status, DoctorStatus.PASS)
         self.assertEqual(checks["governance.policy"].status, DoctorStatus.PASS)
+        self.assertEqual(checks["backup.state"].status, DoctorStatus.PASS)
+        self.assertEqual(checks["migration.state"].status, DoctorStatus.PASS)
         self.assertIn("records=1", checks["memory.store"].message)
 
     def test_doctor_fails_disk_space_when_data_dir_parent_is_missing(self):
@@ -164,6 +172,32 @@ class TestPhase1DoctorLocalState(unittest.TestCase):
         checks = {check.name: check for check in report.checks}
         self.assertEqual(checks["governance.policy"].status, DoctorStatus.FAIL)
         self.assertIn("policy file invalid", checks["governance.policy"].message)
+
+    def test_doctor_fails_blocked_backup_or_migration_paths(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp) / "maya-data"
+            data_dir.mkdir()
+            (data_dir / "backups").write_text("not a directory", encoding="utf-8")
+            (data_dir / "migrations").write_text(
+                "not a directory",
+                encoding="utf-8",
+            )
+            config_data = valid_config_mapping()
+            config_data["deployment"]["data_dir"] = str(data_dir)
+            config_data["runtime"]["enabled_profiles"] = ["maya-core"]
+            config_data["memory"]["retriever"] = "local_json"
+            config = config_from_mapping(config_data)
+
+            report = run_doctor(
+                config,
+                HermesRuntimeAdapter(factory_path="missing.hermes:factory"),
+            )
+
+        checks = {check.name: check for check in report.checks}
+        self.assertEqual(checks["backup.state"].status, DoctorStatus.FAIL)
+        self.assertEqual(checks["migration.state"].status, DoctorStatus.FAIL)
+        self.assertIn("not a directory", checks["backup.state"].message)
+        self.assertIn("not a directory", checks["migration.state"].message)
 
     def test_doctor_reports_failed_agent_lifecycle_as_failure(self):
         config = config_from_mapping(valid_config_mapping())
