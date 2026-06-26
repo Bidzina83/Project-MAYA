@@ -100,6 +100,7 @@ def main(argv: list[str] | None = None) -> int:
             "export-config",
             "import-config",
             "backup",
+            "restore",
         )
         missing_commands = [
             command

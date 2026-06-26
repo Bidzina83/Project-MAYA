@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .backup import BackupError, create_local_backup
+from .backup import BackupError, RestoreError, create_local_backup, restore_local_backup
 from .bootstrap import build_local_product
 from .config import config_from_mapping, config_to_mapping
 from .doctor import DoctorStatus, run_doctor
@@ -142,6 +142,34 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Optional explicit backup archive path.",
     )
+    restore_parser = subparsers.add_parser(
+        "restore",
+        help="Validate and optionally restore a local Maya backup archive.",
+    )
+    restore_parser.add_argument(
+        "--from",
+        dest="archive_path",
+        type=Path,
+        required=True,
+        help="Backup archive to restore.",
+    )
+    restore_parser.add_argument(
+        "--to",
+        dest="destination",
+        type=Path,
+        required=True,
+        help="Destination Maya data directory.",
+    )
+    restore_parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Write restored files. Default is dry-run.",
+    )
+    restore_parser.add_argument(
+        "--allow-overwrite",
+        action="store_true",
+        help="Allow replacing existing destination files when used with --apply.",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -168,6 +196,13 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.command == "backup":
         return _backup(args.config, args.destination)
+    if args.command == "restore":
+        return _restore(
+            args.archive_path,
+            args.destination,
+            apply=args.apply,
+            allow_overwrite=args.allow_overwrite,
+        )
     parser.error(f"unknown command: {args.command}")
     return 2
 
@@ -397,6 +432,47 @@ def _backup(config_path: Path, destination: Path | None = None) -> int:
             {
                 "status": "backed_up",
                 "archive": str(result.archive_path),
+                "files": result.files,
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _restore(
+    archive_path: Path,
+    destination: Path,
+    *,
+    apply: bool = False,
+    allow_overwrite: bool = False,
+) -> int:
+    try:
+        result = restore_local_backup(
+            archive_path,
+            destination,
+            apply=apply,
+            allow_overwrite=allow_overwrite,
+        )
+    except (RestoreError, OSError, ValueError):
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "restore_failed",
+                        "message": "restore failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+    print(
+        json.dumps(
+            {
+                "status": "dry_run" if result.dry_run else "restored",
+                "archive": str(result.archive_path),
+                "destination": str(result.destination),
                 "files": result.files,
             },
             sort_keys=True,
