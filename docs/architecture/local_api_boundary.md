@@ -27,6 +27,16 @@ plugins, connectors, or tools directly. This preserves the mandatory path:
 local API -> Agent facade -> governed runtime -> authorization gateway -> Hermes
 ```
 
+The request body accepts:
+
+- `input`: required input text;
+- `idempotency_key`: optional replay/idempotency label;
+- `data_classification`: optional governance label, defaulting to `internal`.
+
+The data-classification label is passed to the governed runtime so runtime
+authorization, model-egress authorization, and audit records classify the
+request without logging prompt contents.
+
 ## Limits
 
 The Phase 1 HTTP adapter only permits loopback binding. Non-loopback and

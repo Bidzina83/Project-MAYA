@@ -131,8 +131,22 @@ class LocalAPI:
         idempotency_key = payload.get("idempotency_key")
         if idempotency_key is not None and not isinstance(idempotency_key, str):
             return _json_response(400, "invalid_request", "idempotency_key must be a string")
+        data_classification = payload.get("data_classification", "internal")
+        if (
+            not isinstance(data_classification, str)
+            or not data_classification.strip()
+        ):
+            return _json_response(
+                400,
+                "invalid_request",
+                "data_classification must be a string",
+            )
         try:
-            result = self._agent.run(message, idempotency_key=idempotency_key)
+            result = self._agent.run(
+                message,
+                idempotency_key=idempotency_key,
+                data_classification=data_classification,
+            )
         except ActionDeniedError:
             return _json_response(403, "action_denied", "action denied")
         except AgentError:

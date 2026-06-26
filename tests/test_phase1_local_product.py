@@ -152,6 +152,8 @@ class TestPhase1LocalProduct(unittest.TestCase):
                             "briefing",
                             "--idempotency-key",
                             "turn-1",
+                            "--data-classification",
+                            "confidential",
                         ]
                     )
             finally:

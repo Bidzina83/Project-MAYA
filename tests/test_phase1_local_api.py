@@ -129,7 +129,11 @@ class TestPhase1LocalAPI(unittest.TestCase):
                     path="/v1/run",
                     headers={"Authorization": "Bearer local-token"},
                     body=json.dumps(
-                        {"input": "prepare briefing", "idempotency_key": "turn-1"}
+                        {
+                            "input": "prepare briefing",
+                            "idempotency_key": "turn-1",
+                            "data_classification": "confidential",
+                        }
                     ).encode("utf-8"),
                 )
             )
@@ -139,7 +143,29 @@ class TestPhase1LocalAPI(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.body["result"], "runtime response")
         self.assertEqual(gateway.requests[0].capability, "runtime.execute")
+        self.assertEqual(gateway.requests[0].data_classification, "confidential")
         self.assertEqual(runtime.events[-2], ("run", "prepare briefing", {}))
+
+    def test_run_rejects_invalid_data_classification(self):
+        api = self._api()[0]
+
+        response = api.handle(
+            LocalAPIRequest(
+                method="POST",
+                path="/v1/run",
+                headers={"authorization": "Bearer local-token"},
+                body=json.dumps(
+                    {"input": "prepare briefing", "data_classification": ""}
+                ).encode("utf-8"),
+            )
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.body["error"]["code"], "invalid_request")
+        self.assertEqual(
+            response.body["error"]["message"],
+            "data_classification must be a string",
+        )
 
     def test_run_rejects_invalid_json(self):
         api = self._api()[0]
@@ -216,7 +242,11 @@ class TestPhase1LocalAPI(unittest.TestCase):
             run_request = urllib.request.Request(
                 base_url + "/v1/run",
                 data=json.dumps(
-                    {"input": "prepare briefing", "idempotency_key": "turn-http"}
+                    {
+                        "input": "prepare briefing",
+                        "idempotency_key": "turn-http",
+                        "data_classification": "restricted",
+                    }
                 ).encode("utf-8"),
                 headers={
                     "Authorization": "Bearer local-token",
@@ -235,6 +265,7 @@ class TestPhase1LocalAPI(unittest.TestCase):
         self.assertEqual(payload["runtime"], "healthy")
         self.assertEqual(run_payload["result"], "runtime response")
         self.assertEqual(gateway.requests[-1].capability, "runtime.execute")
+        self.assertEqual(gateway.requests[-1].data_classification, "restricted")
         self.assertEqual(runtime.events[-2], ("run", "prepare briefing", {}))
 
     def test_http_server_rejects_non_loopback_phase1_binding(self):

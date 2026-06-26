@@ -43,12 +43,22 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Optional idempotency key for the governed runtime request.",
     )
+    run_parser.add_argument(
+        "--data-classification",
+        default="internal",
+        help="Data classification label for governance and model-egress audit.",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
         return _doctor(args.config)
     if args.command == "run":
-        return _run(args.config, args.input, args.idempotency_key)
+        return _run(
+            args.config,
+            args.input,
+            args.idempotency_key,
+            args.data_classification,
+        )
     parser.error(f"unknown command: {args.command}")
     return 2
 
@@ -75,11 +85,16 @@ def _run(
     config_path: Path,
     input_text: str,
     idempotency_key: str | None = None,
+    data_classification: str = "internal",
 ) -> int:
     config = _load_config(config_path)
     try:
         with build_local_product(config) as product:
-            result = product.run(input_text, idempotency_key=idempotency_key)
+            result = product.run(
+                input_text,
+                idempotency_key=idempotency_key,
+                data_classification=data_classification,
+            )
     except Exception:
         print(
             json.dumps(

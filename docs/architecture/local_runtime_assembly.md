@@ -78,10 +78,11 @@ with build_local_product(config) as maya:
 ```
 
 The installed `maya run --config <path> --input <text>` command uses this same
-assembly path for a single request. It starts the local product, executes
-through the public Agent facade, prints a JSON result, and stops the runtime
-before exiting. Failures are reported with secret-safe generic errors rather
-than prompt text, secrets, or connector payloads.
+assembly path for a single request. It accepts optional `--idempotency-key` and
+`--data-classification` values, starts the local product, executes through the
+public Agent facade, prints a JSON result, and stops the runtime before
+exiting. Failures are reported with secret-safe generic errors rather than
+prompt text, secrets, or connector payloads.
 
 ## Limits
 
