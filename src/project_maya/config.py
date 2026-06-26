@@ -294,3 +294,89 @@ def config_from_mapping(data: Mapping[str, Any]) -> MayaConfig:
     )
     config.validate()
     return config
+
+
+def config_to_mapping(config: MayaConfig) -> dict[str, Any]:
+    """Return a normalized JSON-safe mapping for a validated config."""
+
+    config.validate()
+    return {
+        "schema_version": config.schema_version,
+        "product": {
+            "edition": config.product.edition.value,
+            "instance_id": config.product.instance_id,
+        },
+        "deployment": {
+            "class": config.deployment.deployment_class,
+            "network_policy": config.deployment.network_policy,
+            "data_dir": str(config.deployment.data_dir),
+        },
+        "runtime": {
+            "hermes_compatibility": config.runtime.hermes_compatibility,
+            "enabled_profiles": [
+                profile.value for profile in config.runtime.enabled_profiles
+            ],
+            "hermes_factory": config.runtime.hermes_factory,
+            "hermes_runtime_version": config.runtime.hermes_runtime_version,
+        },
+        "broker": {
+            "mode": config.broker.mode.value,
+            "endpoint": config.broker.endpoint,
+        },
+        "llm": {
+            "mode": config.llm.mode,
+            "provider": config.llm.provider,
+            "model": config.llm.model,
+            "credential_ref": config.llm.credential_ref,
+            "endpoint": config.llm.endpoint,
+            "timeout_seconds": config.llm.timeout_seconds,
+        },
+        "integrations": {
+            name: {
+                "enabled": integration.enabled,
+                "credential_mode": integration.credential_mode.value,
+                "credential_ref": integration.credential_ref,
+            }
+            for name, integration in sorted(config.integrations.items())
+        },
+        "memory": {
+            "hermes_provider": config.memory.hermes_provider,
+            "retriever": config.memory.retriever,
+            "registry": config.memory.registry,
+            "governance_enabled": config.memory.governance_enabled,
+        },
+        "governance": {
+            "policy_file": str(config.governance.policy_file),
+            "audit_enabled": config.governance.audit_enabled,
+            "default_action": config.governance.default_action,
+            "minimum_memory_trust": config.governance.minimum_memory_trust,
+        },
+        "metabase": {
+            "enabled": config.metabase.enabled,
+            "deployment": config.metabase.deployment,
+            "endpoint": config.metabase.endpoint,
+            "application_database": (
+                {
+                    "engine": config.metabase.application_database.engine,
+                    "credential_ref": (
+                        config.metabase.application_database.credential_ref
+                    ),
+                }
+                if config.metabase.application_database is not None
+                else None
+            ),
+            "analytics_sources": [
+                {
+                    "name": source.name,
+                    "engine": source.engine,
+                    "credential_ref": source.credential_ref,
+                }
+                for source in config.metabase.analytics_sources
+            ],
+        },
+        "local_api": {
+            "bind": config.local_api.bind,
+            "port": config.local_api.port,
+            "remote_access": config.local_api.remote_access,
+        },
+    }
