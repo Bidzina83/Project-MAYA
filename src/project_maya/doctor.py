@@ -58,6 +58,8 @@ def run_doctor(
     checks.append(_memory_store_check(config))
     checks.append(_governance_policy_check(config))
     checks.append(_audit_log_check(config))
+    checks.append(_managed_directory_check(config, "backup.state", "backups"))
+    checks.append(_managed_directory_check(config, "migration.state", "migrations"))
     checks.append(_lifecycle_state_check(lifecycle_state))
     checks.append(_enabled_profiles_check(config))
     checks.append(_model_config_check(config))
@@ -274,6 +276,41 @@ def _audit_log_check(config: MayaConfig) -> DoctorCheck:
         "audit.runtime",
         DoctorStatus.WARN,
         "runtime audit log will be created on first audited action",
+    )
+
+
+def _managed_directory_check(
+    config: MayaConfig,
+    check_name: str,
+    relative_name: str,
+) -> DoctorCheck:
+    path = config.deployment.data_dir / relative_name
+    if path.exists() and not path.is_dir():
+        return DoctorCheck(
+            check_name,
+            DoctorStatus.FAIL,
+            f"{relative_name} path exists but is not a directory",
+        )
+    if path.exists():
+        return DoctorCheck(
+            check_name,
+            DoctorStatus.PASS,
+            f"{relative_name} directory exists",
+        )
+    data_dir = config.deployment.data_dir
+    if (
+        (data_dir.exists() and data_dir.is_dir())
+        or (not data_dir.exists() and data_dir.parent.exists())
+    ):
+        return DoctorCheck(
+            check_name,
+            DoctorStatus.WARN,
+            f"{relative_name} directory will be created when needed",
+        )
+    return DoctorCheck(
+        check_name,
+        DoctorStatus.FAIL,
+        f"{relative_name} directory parent does not exist",
     )
 
 
