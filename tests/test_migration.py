@@ -132,6 +132,25 @@ class TestMigrationSafetyContract(unittest.TestCase):
         self.assertEqual(result["source_rows"], 3)
         self.assertFalse(self.destination.exists())
 
+    def test_maya_migrate_cli_accepts_explicit_dry_run(self):
+        with patch("builtins.print") as printed:
+            exit_code = maya_cli(
+                [
+                    "migrate",
+                    "--from",
+                    str(self.source),
+                    "--to",
+                    str(self.destination),
+                    "--dry-run",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        result = json.loads(printed.call_args.args[0])
+        self.assertTrue(result["dry_run"])
+        self.assertEqual(result["source_rows"], 3)
+        self.assertFalse(self.destination.exists())
+
     def test_maya_migrate_cli_apply_requires_modify_consent(self):
         with patch("builtins.print") as printed:
             exit_code = maya_cli(

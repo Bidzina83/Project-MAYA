@@ -6,13 +6,13 @@ Phase 1 exposes the legacy memory migration safety contract through the
 installed product CLI:
 
 ```text
-maya migrate --from <legacy.sqlite> --to <destination.sqlite>
+maya migrate --from <legacy.sqlite> --to <destination.sqlite> --dry-run
 ```
 
 The command delegates to the packaged migration implementation and preserves
 the existing safety defaults:
 
-- dry-run is the default;
+- `--dry-run` is accepted explicitly and is also the default;
 - `--apply` is required before any destination write;
 - `--allow-modify` is required with `--apply`;
 - applying to an existing destination requires `--backup`;

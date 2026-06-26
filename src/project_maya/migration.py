@@ -378,7 +378,13 @@ def main() -> None:
     parser.add_argument(
         "--target-schema", choices=sorted(TARGET_SCHEMAS), default="registry"
     )
-    parser.add_argument(
+    migration_mode = parser.add_mutually_exclusive_group()
+    migration_mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate migration without writing. This is the default.",
+    )
+    migration_mode.add_argument(
         "--apply", action="store_true", help="Apply migration; default is dry-run"
     )
     parser.add_argument(
@@ -393,7 +399,7 @@ def main() -> None:
     result = migrate(
         args.from_src,
         args.to_dest,
-        dry_run=not args.apply,
+        dry_run=args.dry_run or not args.apply,
         target_schema=args.target_schema,
         allow_modify=args.allow_modify,
         overwrite=args.overwrite,
