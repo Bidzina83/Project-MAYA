@@ -5,8 +5,10 @@ import tempfile
 import unittest
 from contextlib import closing
 from pathlib import Path
+from unittest.mock import patch
 
-from scripts.migrate import migrate
+from project_maya.cli import main as maya_cli
+from project_maya.migration import migrate
 
 
 def _make_legacy_db(path: Path) -> None:
@@ -111,6 +113,68 @@ class TestMigrationSafetyContract(unittest.TestCase):
                 dry_run=False,
                 allow_modify=True,
             )
+
+    def test_maya_migrate_cli_defaults_to_dry_run(self):
+        with patch("builtins.print") as printed:
+            exit_code = maya_cli(
+                [
+                    "migrate",
+                    "--from",
+                    str(self.source),
+                    "--to",
+                    str(self.destination),
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        result = json.loads(printed.call_args.args[0])
+        self.assertTrue(result["dry_run"])
+        self.assertEqual(result["source_rows"], 3)
+        self.assertFalse(self.destination.exists())
+
+    def test_maya_migrate_cli_apply_requires_modify_consent(self):
+        with patch("builtins.print") as printed:
+            exit_code = maya_cli(
+                [
+                    "migrate",
+                    "--from",
+                    str(self.source),
+                    "--to",
+                    str(self.destination),
+                    "--apply",
+                ]
+            )
+
+        self.assertEqual(exit_code, 1)
+        output = printed.call_args.args[0]
+        self.assertIn('"code": "migration_failed"', output)
+        self.assertNotIn(str(self.source), output)
+        self.assertFalse(self.destination.exists())
+
+    def test_maya_migrate_cli_applies_with_explicit_consent(self):
+        report = self.root / "report.json"
+
+        with patch("builtins.print") as printed:
+            exit_code = maya_cli(
+                [
+                    "migrate",
+                    "--from",
+                    str(self.source),
+                    "--to",
+                    str(self.destination),
+                    "--apply",
+                    "--allow-modify",
+                    "--report",
+                    str(report),
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        result = json.loads(printed.call_args.args[0])
+        self.assertFalse(result["dry_run"])
+        self.assertEqual(result["migrated"], 3)
+        self.assertTrue(self.destination.is_file())
+        self.assertTrue(report.is_file())
 
 
 if __name__ == "__main__":

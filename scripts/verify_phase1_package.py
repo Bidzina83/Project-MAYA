@@ -8,12 +8,15 @@ metadata, and runs the installed CLI module.
 
 from __future__ import annotations
 
+import json
 import os
+import sqlite3
 import subprocess
 import sys
 import tempfile
 import venv
 import zipfile
+from contextlib import closing
 from pathlib import Path
 
 
@@ -101,6 +104,7 @@ def main(argv: list[str] | None = None) -> int:
             "import-config",
             "backup",
             "restore",
+            "migrate",
         )
         missing_commands = [
             command
@@ -111,6 +115,7 @@ def main(argv: list[str] | None = None) -> int:
             raise RuntimeError(
                 "installed CLI help is missing: " + ", ".join(missing_commands)
             )
+        _verify_installed_migration_cli(python, work_dir)
     return 0
 
 
@@ -148,6 +153,40 @@ def _verify_wheel_contents(wheel_path: Path) -> None:
         raise RuntimeError(
             "wheel contains non-product files: " + ", ".join(sorted(leaked)[:10])
         )
+
+
+def _verify_installed_migration_cli(python: Path, work_dir: Path) -> None:
+    legacy_db = work_dir / "legacy-memory.sqlite"
+    destination_db = work_dir / "migrated-memory.sqlite"
+    with closing(sqlite3.connect(legacy_db)) as conn:
+        conn.execute("CREATE TABLE memory_kv (key TEXT PRIMARY KEY, value TEXT)")
+        conn.execute(
+            "INSERT INTO memory_kv(key, value) VALUES (?, ?)",
+            ("sample", "value"),
+        )
+        conn.commit()
+
+    result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "migrate",
+            "--from",
+            str(legacy_db),
+            "--to",
+            str(destination_db),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    payload = json.loads(result.stdout)
+    if not payload.get("dry_run"):
+        raise RuntimeError("installed migration CLI did not default to dry-run")
+    if payload.get("source_rows") != 1:
+        raise RuntimeError("installed migration CLI reported wrong source count")
+    if destination_db.exists():
+        raise RuntimeError("installed migration dry-run created destination database")
 
 
 def _clean_env() -> dict[str, str]:

@@ -170,6 +170,59 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Allow replacing existing destination files when used with --apply.",
     )
+    migrate_parser = subparsers.add_parser(
+        "migrate",
+        help="Migrate legacy memory storage with dry-run safety defaults.",
+    )
+    migrate_parser.add_argument(
+        "--from",
+        dest="from_src",
+        type=Path,
+        required=True,
+        help="Legacy SQLite database containing memory_kv.",
+    )
+    migrate_parser.add_argument(
+        "--to",
+        dest="to_dest",
+        type=Path,
+        required=True,
+        help="Destination SQLite database.",
+    )
+    migrate_parser.add_argument(
+        "--target-schema",
+        choices=("memory_entries", "registry"),
+        default="registry",
+        help="Destination schema shape.",
+    )
+    migrate_parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Apply migration. Default is dry-run.",
+    )
+    migrate_parser.add_argument(
+        "--allow-modify",
+        action="store_true",
+        help="Required with --apply to acknowledge destination writes.",
+    )
+    migrate_parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace existing destination rows. Requires explicit backup handling.",
+    )
+    migrate_parser.add_argument(
+        "--backup",
+        dest="backup_path",
+        type=Path,
+        default=None,
+        help="Backup path required when applying to an existing destination.",
+    )
+    migrate_parser.add_argument(
+        "--report",
+        dest="report_path",
+        type=Path,
+        default=None,
+        help="Optional migration report path.",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -202,6 +255,17 @@ def main(argv: list[str] | None = None) -> int:
             args.destination,
             apply=args.apply,
             allow_overwrite=args.allow_overwrite,
+        )
+    if args.command == "migrate":
+        return _migrate(
+            args.from_src,
+            args.to_dest,
+            target_schema=args.target_schema,
+            apply=args.apply,
+            allow_modify=args.allow_modify,
+            overwrite=args.overwrite,
+            backup_path=args.backup_path,
+            report_path=args.report_path,
         )
     parser.error(f"unknown command: {args.command}")
     return 2
@@ -478,6 +542,47 @@ def _restore(
             sort_keys=True,
         )
     )
+    return 0
+
+
+def _migrate(
+    from_src: Path,
+    to_dest: Path,
+    *,
+    target_schema: str = "registry",
+    apply: bool = False,
+    allow_modify: bool = False,
+    overwrite: bool = False,
+    backup_path: Path | None = None,
+    report_path: Path | None = None,
+) -> int:
+    try:
+        from .migration import migrate
+
+        result = migrate(
+            str(from_src),
+            str(to_dest),
+            dry_run=not apply,
+            target_schema=target_schema,
+            allow_modify=allow_modify,
+            overwrite=overwrite,
+            backup_path=str(backup_path) if backup_path is not None else None,
+            report_path=str(report_path) if report_path is not None else None,
+        )
+    except Exception:
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "migration_failed",
+                        "message": "migration failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+    print(json.dumps(_jsonable(result), sort_keys=True))
     return 0
 
 
