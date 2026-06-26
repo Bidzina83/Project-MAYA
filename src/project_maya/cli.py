@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .bootstrap import build_local_product
-from .config import config_from_mapping
+from .config import config_from_mapping, config_to_mapping
 from .doctor import DoctorStatus, run_doctor
 from .local_api import build_local_api_http_server
 from .secrets import (
@@ -86,6 +86,44 @@ def main(argv: list[str] | None = None) -> int:
         required=True,
         help="Read the new secret value from standard input.",
     )
+    export_parser = subparsers.add_parser(
+        "export-config",
+        help="Validate and print a normalized Maya configuration.",
+    )
+    export_parser.add_argument(
+        "--config",
+        type=Path,
+        required=True,
+        help="Path to a JSON Maya configuration file.",
+    )
+    import_parser = subparsers.add_parser(
+        "import-config",
+        help="Validate and optionally write a normalized Maya configuration.",
+    )
+    import_parser.add_argument(
+        "--from",
+        dest="from_path",
+        type=Path,
+        required=True,
+        help="Source JSON Maya configuration file.",
+    )
+    import_parser.add_argument(
+        "--to",
+        dest="to_path",
+        type=Path,
+        required=True,
+        help="Destination JSON Maya configuration file.",
+    )
+    import_parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Write the normalized config. Default is dry-run.",
+    )
+    import_parser.add_argument(
+        "--allow-overwrite",
+        action="store_true",
+        help="Allow replacing an existing destination when used with --apply.",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -101,6 +139,15 @@ def main(argv: list[str] | None = None) -> int:
         return _serve_local_api(args.config)
     if args.command == "rotate-secret":
         return _rotate_secret(args.config, args.name)
+    if args.command == "export-config":
+        return _export_config(args.config)
+    if args.command == "import-config":
+        return _import_config(
+            args.from_path,
+            args.to_path,
+            apply=args.apply,
+            allow_overwrite=args.allow_overwrite,
+        )
     parser.error(f"unknown command: {args.command}")
     return 2
 
@@ -235,8 +282,85 @@ def _secret_ref_from_name(name: str) -> SecretRef:
     return SecretRef.parse(value)
 
 
+def _export_config(config_path: Path) -> int:
+    try:
+        config = _load_config(config_path)
+        print(_config_json(config))
+    except Exception:
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "config_export_failed",
+                        "message": "config export failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+    return 0
+
+
+def _import_config(
+    from_path: Path,
+    to_path: Path,
+    *,
+    apply: bool = False,
+    allow_overwrite: bool = False,
+) -> int:
+    try:
+        config = _load_config(from_path)
+        normalized = _config_json(config)
+        if not apply:
+            print(
+                json.dumps(
+                    {
+                        "status": "dry_run",
+                        "valid": True,
+                        "to": str(to_path),
+                    },
+                    sort_keys=True,
+                )
+            )
+            return 0
+        if to_path.exists() and not allow_overwrite:
+            raise FileExistsError("destination exists")
+        to_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = to_path.with_suffix(to_path.suffix + ".tmp")
+        temporary.write_text(normalized + "\n", encoding="utf-8")
+        temporary.replace(to_path)
+    except Exception:
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "config_import_failed",
+                        "message": "config import failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+    print(
+        json.dumps(
+            {
+                "status": "imported",
+                "to": str(to_path),
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
 def _load_config(config_path: Path):
     return config_from_mapping(json.loads(config_path.read_text(encoding="utf-8")))
+
+
+def _config_json(config) -> str:
+    return json.dumps(config_to_mapping(config), indent=2, sort_keys=True)
 
 
 def _jsonable(value: Any) -> Any:

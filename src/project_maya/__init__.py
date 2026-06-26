@@ -21,6 +21,7 @@ from .config import (
     Edition,
     MayaConfig,
     config_from_mapping,
+    config_to_mapping,
 )
 from .bootstrap import LocalMayaProduct, build_local_product
 from .connectors import ConnectorCapability, ConnectorManifest
@@ -121,6 +122,7 @@ __all__ = [
     "WindowsDPAPISecretStore",
     "build_platform_secret_store",
     "config_from_mapping",
+    "config_to_mapping",
     "build_local_product",
     "build_local_api_http_server",
     "create_agent",
