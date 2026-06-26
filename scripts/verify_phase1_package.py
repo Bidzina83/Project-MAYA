@@ -92,8 +92,16 @@ def main(argv: list[str] | None = None) -> int:
             cwd=work_dir,
             env=_clean_env(),
         )
-        if "run" not in help_result.stdout or "doctor" not in help_result.stdout:
-            raise RuntimeError("installed CLI help does not expose doctor and run")
+        required_commands = ("doctor", "run", "serve-local-api")
+        missing_commands = [
+            command
+            for command in required_commands
+            if command not in help_result.stdout
+        ]
+        if missing_commands:
+            raise RuntimeError(
+                "installed CLI help is missing: " + ", ".join(missing_commands)
+            )
     return 0
 
 

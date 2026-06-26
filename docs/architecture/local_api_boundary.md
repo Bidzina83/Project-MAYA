@@ -8,8 +8,10 @@ Phase 1 introduces a minimal authenticated local API handler:
 The handler is versioned under `/v1/` and requires bearer authentication for
 all handled routes, including health checks. A small standard-library HTTP
 server adapter, `build_local_api_http_server()`, can expose the handler on
-loopback for local clients. The bearer token is resolved through the
-configured secret store using:
+loopback for local clients. The installed `maya serve-local-api --config
+<path>` command starts the assembled local product, binds this server to the
+validated local API configuration, and shuts the runtime down when the server
+stops. The bearer token is resolved through the configured secret store using:
 
 ```text
 secret://local-api/token

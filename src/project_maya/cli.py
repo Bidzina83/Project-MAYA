@@ -10,6 +10,7 @@ from typing import Any
 from .bootstrap import build_local_product
 from .config import config_from_mapping
 from .doctor import DoctorStatus, run_doctor
+from .local_api import build_local_api_http_server
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -48,6 +49,16 @@ def main(argv: list[str] | None = None) -> int:
         default="internal",
         help="Data classification label for governance and model-egress audit.",
     )
+    serve_parser = subparsers.add_parser(
+        "serve-local-api",
+        help="Serve the authenticated local Maya API on configured loopback.",
+    )
+    serve_parser.add_argument(
+        "--config",
+        type=Path,
+        required=True,
+        help="Path to a JSON Maya configuration file.",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -59,6 +70,8 @@ def main(argv: list[str] | None = None) -> int:
             args.idempotency_key,
             args.data_classification,
         )
+    if args.command == "serve-local-api":
+        return _serve_local_api(args.config)
     parser.error(f"unknown command: {args.command}")
     return 2
 
@@ -109,6 +122,48 @@ def _run(
         )
         return 1
     print(json.dumps({"result": _jsonable(result)}, sort_keys=True))
+    return 0
+
+
+def _serve_local_api(config_path: Path) -> int:
+    config = _load_config(config_path)
+    try:
+        with build_local_product(config) as product:
+            server = build_local_api_http_server(
+                product.local_api,
+                bind=config.local_api.bind,
+                port=config.local_api.port or 0,
+                remote_access=config.local_api.remote_access,
+            )
+            try:
+                print(
+                    json.dumps(
+                        {
+                            "status": "listening",
+                            "bind": config.local_api.bind,
+                            "port": server.server_port,
+                        },
+                        sort_keys=True,
+                    )
+                )
+                server.serve_forever()
+            except KeyboardInterrupt:
+                return 0
+            finally:
+                server.server_close()
+    except Exception:
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "local_api_failed",
+                        "message": "local API failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
     return 0
 
 

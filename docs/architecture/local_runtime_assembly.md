@@ -84,8 +84,13 @@ public Agent facade, prints a JSON result, and stops the runtime before
 exiting. Failures are reported with secret-safe generic errors rather than
 prompt text, secrets, or connector payloads.
 
+The installed `maya serve-local-api --config <path>` command uses the same
+assembly path for local clients. It starts the product, serves the
+authenticated `/v1/` API on the validated loopback binding, prints the bound
+address as secret-safe JSON, and stops the runtime when the server exits.
+
 ## Limits
 
-This assembly does not install Hermes or start a network listener for the local
-API. It creates the smallest governed local runtime shape that can be validated
-from configuration and extended in later Phase 1 slices.
+This assembly does not install Hermes or allow remote local API binding. It
+creates the smallest governed local runtime shape that can be validated from
+configuration and extended in later Phase 1 slices.

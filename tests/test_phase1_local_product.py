@@ -189,6 +189,70 @@ class TestPhase1LocalProduct(unittest.TestCase):
         self.assertNotIn("do not log this", output)
         self.assertNotIn("secret://", output)
 
+    def test_maya_serve_local_api_starts_and_stops_product(self):
+        events = []
+
+        class FakeProduct:
+            local_api = object()
+
+            def __enter__(self):
+                events.append(("product", "start"))
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                events.append(("product", "stop"))
+
+        class FakeServer:
+            server_port = 9123
+
+            def serve_forever(self):
+                events.append(("server", "serve"))
+                raise KeyboardInterrupt()
+
+            def server_close(self):
+                events.append(("server", "close"))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            config = valid_config_mapping()
+            config["local_api"]["bind"] = "127.0.0.1"
+            config["local_api"]["port"] = 8123
+            config_path = Path(tmp) / "maya.json"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+
+            product = FakeProduct()
+            server = FakeServer()
+            with patch(
+                "project_maya.cli.build_local_product",
+                return_value=product,
+            ) as build_product, patch(
+                "project_maya.cli.build_local_api_http_server",
+                return_value=server,
+            ) as build_server, patch("builtins.print") as printed:
+                exit_code = maya_cli(
+                    ["serve-local-api", "--config", str(config_path)]
+                )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(events, [
+            ("product", "start"),
+            ("server", "serve"),
+            ("server", "close"),
+            ("product", "stop"),
+        ])
+        build_product.assert_called_once()
+        build_server.assert_called_once_with(
+            product.local_api,
+            bind="127.0.0.1",
+            port=8123,
+            remote_access=False,
+        )
+        output = json.loads(printed.call_args.args[0])
+        self.assertEqual(
+            output,
+            {"status": "listening", "bind": "127.0.0.1", "port": 9123},
+        )
+        self.assertNotIn("secret://", printed.call_args.args[0])
+
     def test_build_local_product_uses_configured_runtime_and_memory(self):
         events = []
 
