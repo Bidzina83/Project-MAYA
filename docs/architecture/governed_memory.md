@@ -12,6 +12,11 @@ Governance is applied by the product-facing memory facade before:
 - `recall`
 - `search`
 
+Hermes receives a `HermesMemoryProvider` adapter during local product startup.
+That adapter does not create a second memory store; it delegates session
+prefetch, recall, remember, and turn synchronization to
+`GovernedMemoryRetriever`.
+
 The first capabilities are:
 
 - `memory.write`

@@ -43,6 +43,11 @@ records under:
 <deployment.data_dir>/memory/records.json
 ```
 
+Assembly wraps the governed memory facade in `HermesMemoryProvider` and
+attaches it to the public `Agent` before startup. Hermes sees the runtime
+memory provider, while product code still uses the governed Maya memory facade
+directly.
+
 ## Governance
 
 The assembled runtime always passes execution through
