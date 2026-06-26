@@ -5,6 +5,7 @@ from __future__ import annotations
 import hmac
 import json
 from dataclasses import dataclass, field
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Mapping, Protocol, runtime_checkable
 
 from .agent import Agent, AgentError
@@ -141,6 +142,59 @@ class LocalAPI:
         return LocalAPIResponse(status_code=200, body={"result": result})
 
 
+def build_local_api_http_server(
+    api: LocalAPI,
+    *,
+    bind: str = "127.0.0.1",
+    port: int = 0,
+    remote_access: bool = False,
+) -> ThreadingHTTPServer:
+    """Create a loopback HTTP server that delegates to LocalAPI."""
+
+    if remote_access or not _is_loopback(bind):
+        raise LocalAPIError("Phase 1 local API HTTP server only supports loopback")
+
+    class MayaLocalAPIRequestHandler(BaseHTTPRequestHandler):
+        server_version = "ProjectMayaLocalAPI/1"
+
+        def do_GET(self) -> None:
+            self._handle()
+
+        def do_POST(self) -> None:
+            self._handle()
+
+        def do_OPTIONS(self) -> None:
+            self._handle()
+
+        def log_message(self, format: str, *args: object) -> None:
+            return
+
+        def _handle(self) -> None:
+            length = self.headers.get("content-length", "0")
+            try:
+                body_length = int(length)
+            except ValueError:
+                body_length = 0
+            body = self.rfile.read(max(body_length, 0)) if body_length else b""
+            response = api.handle(
+                LocalAPIRequest(
+                    method=self.command,
+                    path=self.path,
+                    headers=dict(self.headers.items()),
+                    body=body,
+                )
+            )
+            payload = response.json_bytes()
+            self.send_response(response.status_code)
+            for name, value in response.headers.items():
+                self.send_header(name, value)
+            self.send_header("content-length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+    return ThreadingHTTPServer((bind, port), MayaLocalAPIRequestHandler)
+
+
 def _json_response(status_code: int, code: str, message: str) -> LocalAPIResponse:
     return LocalAPIResponse(
         status_code=status_code,
@@ -154,3 +208,7 @@ def _header(headers: Mapping[str, str], name: str) -> str:
         if key.lower() == lowered:
             return value
     return ""
+
+
+def _is_loopback(bind: str) -> bool:
+    return bind == "localhost" or bind.startswith("127.") or bind == "::1"

@@ -6,8 +6,10 @@ Phase 1 introduces a minimal authenticated local API handler:
 `project_maya.local_api.LocalAPI`.
 
 The handler is versioned under `/v1/` and requires bearer authentication for
-all handled routes, including health checks. The bearer token is resolved
-through the configured secret store using:
+all handled routes, including health checks. A small standard-library HTTP
+server adapter, `build_local_api_http_server()`, can expose the handler on
+loopback for local clients. The bearer token is resolved through the
+configured secret store using:
 
 ```text
 secret://local-api/token
@@ -27,9 +29,9 @@ local API -> Agent facade -> governed runtime -> authorization gateway -> Hermes
 
 ## Limits
 
-This is not yet a network server. A future HTTP listener must bind to loopback
-by default and delegate to this handler rather than implementing a parallel
-execution path.
+The Phase 1 HTTP adapter only permits loopback binding. Non-loopback and
+remote access require later TLS, CORS/CSRF, privilege separation, and explicit
+policy work before they can be enabled.
 
 The handler intentionally returns secret-safe error messages and does not
 include tokens, secret references, prompts from failed requests, or raw

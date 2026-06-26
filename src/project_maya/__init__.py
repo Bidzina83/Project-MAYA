@@ -44,6 +44,7 @@ from .local_api import (
     LocalAPIError,
     LocalAPIRequest,
     LocalAPIResponse,
+    build_local_api_http_server,
 )
 from .memory import (
     GovernedMemoryRetriever,
@@ -121,6 +122,7 @@ __all__ = [
     "build_platform_secret_store",
     "config_from_mapping",
     "build_local_product",
+    "build_local_api_http_server",
     "create_agent",
     "load_policy_gateway",
     "require_authorized",

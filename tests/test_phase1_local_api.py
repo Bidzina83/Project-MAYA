@@ -1,6 +1,9 @@
 import json
 import tempfile
+import threading
 import unittest
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 from project_maya import (
@@ -10,10 +13,12 @@ from project_maya import (
     GovernanceDecision,
     GovernedAgentRuntime,
     LocalAPI,
+    LocalAPIError,
     LocalAPIRequest,
     SecretRef,
     SecretStoreHealth,
     SecretStoreStatus,
+    build_local_api_http_server,
     build_local_product,
     config_from_mapping,
     create_agent,
@@ -188,6 +193,55 @@ class TestPhase1LocalAPI(unittest.TestCase):
         checks = {check.name: check for check in report.checks}
         self.assertIn("local_api.binding", checks)
         self.assertIn("authentication=required", checks["local_api.binding"].message)
+
+    def test_http_server_requires_auth_and_serves_routes_on_loopback(self):
+        api, runtime, gateway, agent = self._api()
+        agent.start()
+        server = build_local_api_http_server(api, bind="127.0.0.1", port=0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_port}"
+        try:
+            with self.assertRaises(urllib.error.HTTPError) as denied:
+                urllib.request.urlopen(base_url + "/v1/health", timeout=5)
+            self.assertEqual(denied.exception.code, 401)
+
+            request = urllib.request.Request(
+                base_url + "/v1/health",
+                headers={"Authorization": "Bearer local-token"},
+            )
+            with urllib.request.urlopen(request, timeout=5) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+
+            run_request = urllib.request.Request(
+                base_url + "/v1/run",
+                data=json.dumps(
+                    {"input": "prepare briefing", "idempotency_key": "turn-http"}
+                ).encode("utf-8"),
+                headers={
+                    "Authorization": "Bearer local-token",
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(run_request, timeout=5) as response:
+                run_payload = json.loads(response.read().decode("utf-8"))
+        finally:
+            server.shutdown()
+            server.server_close()
+            agent.stop()
+            thread.join(timeout=5)
+
+        self.assertEqual(payload["runtime"], "healthy")
+        self.assertEqual(run_payload["result"], "runtime response")
+        self.assertEqual(gateway.requests[-1].capability, "runtime.execute")
+        self.assertEqual(runtime.events[-2], ("run", "prepare briefing", {}))
+
+    def test_http_server_rejects_non_loopback_phase1_binding(self):
+        api = self._api()[0]
+
+        with self.assertRaises(LocalAPIError):
+            build_local_api_http_server(api, bind="0.0.0.0", port=0)
 
     def _api(self, max_body_bytes=65536):
         runtime = RuntimeDouble()
