@@ -31,7 +31,9 @@ local API -> Agent facade -> governed runtime -> authorization gateway -> Hermes
 
 The Phase 1 HTTP adapter only permits loopback binding. Non-loopback and
 remote access require later TLS, CORS/CSRF, privilege separation, and explicit
-policy work before they can be enabled.
+policy work before they can be enabled. Phase 1 configuration therefore
+rejects `local_api.remote_access: true` and non-loopback `local_api.bind`
+values instead of accepting settings the runtime will not honor.
 
 The handler intentionally returns secret-safe error messages and does not
 include tokens, secret references, prompts from failed requests, or raw

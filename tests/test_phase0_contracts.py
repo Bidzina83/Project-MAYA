@@ -123,6 +123,35 @@ class TestPhase0Contracts(unittest.TestCase):
         with self.assertRaisesRegex(ConfigError, "secret://"):
             config_from_mapping(data)
 
+    def test_config_rejects_remote_local_api_in_phase1(self):
+        data = valid_config_mapping()
+        data["local_api"]["bind"] = "0.0.0.0"
+        data["local_api"]["remote_access"] = True
+
+        with self.assertRaisesRegex(ConfigError, "remote_access"):
+            config_from_mapping(data)
+
+    def test_config_requires_loopback_local_api_bind(self):
+        data = valid_config_mapping()
+        data["local_api"]["bind"] = "0.0.0.0"
+
+        with self.assertRaisesRegex(ConfigError, "loopback"):
+            config_from_mapping(data)
+
+    def test_config_requires_memory_governance(self):
+        data = valid_config_mapping()
+        data["memory"]["governance_enabled"] = False
+
+        with self.assertRaisesRegex(ConfigError, "memory.governance_enabled"):
+            config_from_mapping(data)
+
+    def test_config_requires_runtime_audit(self):
+        data = valid_config_mapping()
+        data["governance"]["audit_enabled"] = False
+
+        with self.assertRaisesRegex(ConfigError, "governance.audit_enabled"):
+            config_from_mapping(data)
+
     def test_secret_refs_parse_without_exposing_values(self):
         ref = SecretRef.parse("secret://integrations/google")
 

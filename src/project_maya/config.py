@@ -164,8 +164,14 @@ class MayaConfig:
             raise ConfigError("llm.timeout_seconds must be positive")
         if not 0 <= self.governance.minimum_memory_trust <= 1:
             raise ConfigError("governance.minimum_memory_trust must be 0..1")
-        if self.local_api.remote_access and self.local_api.bind.startswith("127."):
-            raise ConfigError("remote_access requires a non-loopback bind address")
+        if self.local_api.remote_access:
+            raise ConfigError("local_api.remote_access is not supported in Phase 1")
+        if not _is_loopback(self.local_api.bind):
+            raise ConfigError("local_api.bind must be loopback in Phase 1")
+        if not self.memory.governance_enabled:
+            raise ConfigError("memory.governance_enabled must be true")
+        if not self.governance.audit_enabled:
+            raise ConfigError("governance.audit_enabled must be true")
         for name, integration in self.integrations.items():
             self._validate_integration(name, integration)
         if self.metabase.enabled:
@@ -195,6 +201,10 @@ class MayaConfig:
 def _require_secret_ref(value: str, field_name: str) -> None:
     if not value.startswith("secret://"):
         raise ConfigError(f"{field_name} must be a secret:// reference")
+
+
+def _is_loopback(bind: str) -> bool:
+    return bind == "localhost" or bind == "::1" or bind.startswith("127.")
 
 
 def config_from_mapping(data: Mapping[str, Any]) -> MayaConfig:
