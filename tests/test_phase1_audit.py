@@ -10,6 +10,7 @@ from project_maya import (
     GovernanceDecision,
     GovernedAgentRuntime,
     LocalJsonlAuditSink,
+    ModelEgressPolicy,
     config_from_mapping,
     run_doctor,
 )
@@ -41,8 +42,10 @@ class RuntimeDouble:
 class Gateway:
     def __init__(self, decision):
         self.decision = decision
+        self.requests = []
 
     def authorize(self, request: ActionRequest):
+        self.requests.append(request)
         return AuthorizationResult(
             decision=self.decision,
             reason_code=f"test.{self.decision.value}",
@@ -101,7 +104,10 @@ class TestPhase1Audit(unittest.TestCase):
             governed.run("sensitive prompt body", idempotency_key="turn-1")
             governed.stop()
             audit_text = path.read_text(encoding="utf-8")
-            record = json.loads(audit_text)
+            records = [
+                json.loads(line) for line in audit_text.splitlines()
+            ]
+            record = records[0]
 
         self.assertEqual(record["decision"], "allow")
         self.assertEqual(record["reason_code"], "test.allow")
@@ -122,11 +128,99 @@ class TestPhase1Audit(unittest.TestCase):
                 governed.run("do not log this")
 
             audit_text = path.read_text(encoding="utf-8")
-            record = json.loads(audit_text)
+            records = [
+                json.loads(line) for line in audit_text.splitlines()
+            ]
+            record = records[0]
 
         self.assertEqual(record["decision"], "deny")
         self.assertEqual(record["reason_code"], "test.deny")
         self.assertNotIn("do not log this", audit_text)
+
+    def test_governed_runtime_audits_model_egress_without_prompt_or_secret(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "runtime.jsonl"
+            gateway = Gateway(GovernanceDecision.ALLOW)
+            governed = GovernedAgentRuntime(
+                HermesRuntimeAdapter(factory=lambda **kwargs: RuntimeDouble()),
+                gateway,
+                actor_id="operator",
+                audit_sink=LocalJsonlAuditSink(path),
+                model_egress=ModelEgressPolicy(
+                    mode="customer_owned",
+                    provider="openai",
+                    endpoint="https://api.openai.example/v1",
+                    redaction="applied",
+                    consent="policy",
+                ),
+            )
+
+            governed.run(
+                "secret prompt body",
+                data_classification="confidential",
+                idempotency_key="turn-2",
+                credential_ref="secret://llm/openai",
+            )
+
+            audit_text = path.read_text(encoding="utf-8")
+            records = [
+                json.loads(line) for line in audit_text.splitlines()
+            ]
+            egress = records[1]
+
+        self.assertEqual(
+            [request.capability for request in gateway.requests],
+            ["runtime.execute", "model.egress"],
+        )
+        self.assertEqual(egress["event_type"], "authorization.model_egress")
+        self.assertEqual(egress["capability"], "model.egress")
+        self.assertEqual(egress["target"], "model:openai")
+        self.assertEqual(egress["operation"], "infer")
+        self.assertEqual(egress["data_classification"], "confidential")
+        self.assertEqual(egress["metadata"]["endpoint_configured"], "true")
+        self.assertEqual(egress["metadata"]["redaction"], "applied")
+        self.assertNotIn("secret prompt body", audit_text)
+        self.assertNotIn("secret://llm/openai", audit_text)
+
+    def test_governed_runtime_denies_model_egress_before_runtime_call(self):
+        class EgressDenyGateway:
+            def authorize(self, request: ActionRequest):
+                decision = (
+                    GovernanceDecision.DENY
+                    if request.capability == "model.egress"
+                    else GovernanceDecision.ALLOW
+                )
+                return AuthorizationResult(
+                    decision=decision,
+                    reason_code=f"test.{request.capability}",
+                )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "runtime.jsonl"
+            runtime = RuntimeDouble()
+            governed = GovernedAgentRuntime(
+                HermesRuntimeAdapter(factory=lambda **kwargs: runtime),
+                EgressDenyGateway(),
+                actor_id="operator",
+                audit_sink=LocalJsonlAuditSink(path),
+                model_egress=ModelEgressPolicy(
+                    mode="customer_owned",
+                    provider="openai",
+                ),
+            )
+
+            with self.assertRaises(PermissionError):
+                governed.run("do not send")
+
+            audit_text = path.read_text(encoding="utf-8")
+            records = [
+                json.loads(line) for line in audit_text.splitlines()
+            ]
+
+        self.assertEqual(records[1]["decision"], "deny")
+        self.assertEqual(records[1]["capability"], "model.egress")
+        self.assertEqual(runtime.events, [])
+        self.assertNotIn("do not send", audit_text)
 
     def test_doctor_reports_audit_log_state(self):
         with tempfile.TemporaryDirectory() as tmp:

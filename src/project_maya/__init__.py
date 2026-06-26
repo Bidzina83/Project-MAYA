@@ -47,7 +47,7 @@ from .local_api import (
 )
 from .memory import GovernedMemoryRetriever, MemoryRetriever, Retriever
 from .memory import LocalJsonRetriever
-from .runtime import GovernedAgentRuntime
+from .runtime import GovernedAgentRuntime, ModelEgressPolicy
 from .secrets import (
     SecretRef,
     SecretReferenceError,
@@ -100,6 +100,7 @@ __all__ = [
     "AgentStartError",
     "AgentState",
     "MemoryRetriever",
+    "ModelEgressPolicy",
     "NullAuditSink",
     "Retriever",
     "RuntimeCompatibilityError",
