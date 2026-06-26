@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,12 @@ from .bootstrap import build_local_product
 from .config import config_from_mapping
 from .doctor import DoctorStatus, run_doctor
 from .local_api import build_local_api_http_server
+from .secrets import (
+    SecretRef,
+    SecretReferenceError,
+    SecretStoreError,
+    build_platform_secret_store,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -59,6 +66,26 @@ def main(argv: list[str] | None = None) -> int:
         required=True,
         help="Path to a JSON Maya configuration file.",
     )
+    rotate_parser = subparsers.add_parser(
+        "rotate-secret",
+        help="Store or rotate a secret value in the configured platform store.",
+    )
+    rotate_parser.add_argument(
+        "name",
+        help="Secret name, for example local-api/token or secret://local-api/token.",
+    )
+    rotate_parser.add_argument(
+        "--config",
+        type=Path,
+        required=True,
+        help="Path to a JSON Maya configuration file.",
+    )
+    rotate_parser.add_argument(
+        "--value-stdin",
+        action="store_true",
+        required=True,
+        help="Read the new secret value from standard input.",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -72,6 +99,8 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.command == "serve-local-api":
         return _serve_local_api(args.config)
+    if args.command == "rotate-secret":
+        return _rotate_secret(args.config, args.name)
     parser.error(f"unknown command: {args.command}")
     return 2
 
@@ -165,6 +194,45 @@ def _serve_local_api(config_path: Path) -> int:
         )
         return 1
     return 0
+
+
+def _rotate_secret(config_path: Path, name: str) -> int:
+    try:
+        config = _load_config(config_path)
+        ref = _secret_ref_from_name(name)
+        value = sys.stdin.read().rstrip("\r\n")
+        if not value:
+            raise ValueError("secret value is required")
+        store = build_platform_secret_store(config.deployment.data_dir)
+        store.write(ref, value)
+    except (SecretReferenceError, SecretStoreError, ValueError, OSError):
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "secret_rotation_failed",
+                        "message": "secret rotation failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+    print(
+        json.dumps(
+            {
+                "status": "rotated",
+                "secret": str(ref),
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _secret_ref_from_name(name: str) -> SecretRef:
+    value = name if name.startswith("secret://") else f"secret://{name}"
+    return SecretRef.parse(value)
 
 
 def _load_config(config_path: Path):
