@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .backup import BackupError, create_local_backup
 from .bootstrap import build_local_product
 from .config import config_from_mapping, config_to_mapping
 from .doctor import DoctorStatus, run_doctor
@@ -124,6 +125,23 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Allow replacing an existing destination when used with --apply.",
     )
+    backup_parser = subparsers.add_parser(
+        "backup",
+        help="Create a local backup archive of Maya state.",
+    )
+    backup_parser.add_argument(
+        "--config",
+        type=Path,
+        required=True,
+        help="Path to a JSON Maya configuration file.",
+    )
+    backup_parser.add_argument(
+        "--to",
+        dest="destination",
+        type=Path,
+        default=None,
+        help="Optional explicit backup archive path.",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -148,6 +166,8 @@ def main(argv: list[str] | None = None) -> int:
             apply=args.apply,
             allow_overwrite=args.allow_overwrite,
         )
+    if args.command == "backup":
+        return _backup(args.config, args.destination)
     parser.error(f"unknown command: {args.command}")
     return 2
 
@@ -348,6 +368,36 @@ def _import_config(
             {
                 "status": "imported",
                 "to": str(to_path),
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _backup(config_path: Path, destination: Path | None = None) -> int:
+    try:
+        config = _load_config(config_path)
+        result = create_local_backup(config, destination=destination)
+    except (BackupError, OSError, ValueError):
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "backup_failed",
+                        "message": "backup failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+    print(
+        json.dumps(
+            {
+                "status": "backed_up",
+                "archive": str(result.archive_path),
+                "files": result.files,
             },
             sort_keys=True,
         )
