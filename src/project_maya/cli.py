@@ -13,6 +13,7 @@ from .bootstrap import build_local_product
 from .config import config_from_mapping, config_to_mapping
 from .doctor import DoctorStatus, run_doctor
 from .local_api import build_local_api_http_server
+from .repair import RepairError, repair_local_state
 from .secrets import (
     SecretRef,
     SecretReferenceError,
@@ -31,6 +32,21 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         required=True,
         help="Path to a JSON Maya configuration file.",
+    )
+    repair_parser = subparsers.add_parser(
+        "repair",
+        help="Plan or apply safe local Maya state repairs.",
+    )
+    repair_parser.add_argument(
+        "--config",
+        type=Path,
+        required=True,
+        help="Path to a JSON Maya configuration file.",
+    )
+    repair_parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Create missing local state directories. Default is dry-run.",
     )
     run_parser = subparsers.add_parser(
         "run",
@@ -233,6 +249,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == "doctor":
         return _doctor(args.config)
+    if args.command == "repair":
+        return _repair(args.config, apply=args.apply)
     if args.command == "run":
         return _run(
             args.config,
@@ -293,6 +311,42 @@ def _doctor(config_path: Path) -> int:
     for check in report.checks:
         print(f"{check.status.value}\t{check.name}\t{check.message}")
     return 0 if report.healthy else 1
+
+
+def _repair(config_path: Path, *, apply: bool = False) -> int:
+    try:
+        config = _load_config(config_path)
+        result = repair_local_state(config, apply=apply)
+    except (RepairError, OSError, ValueError):
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "repair_failed",
+                        "message": "repair failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+    print(
+        json.dumps(
+            {
+                "status": "dry_run" if result.dry_run else "repaired",
+                "actions": [
+                    {
+                        "action": action.action,
+                        "path": str(action.path),
+                        "status": action.status,
+                    }
+                    for action in result.actions
+                ],
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
 
 
 def _run(

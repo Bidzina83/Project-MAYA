@@ -97,6 +97,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         required_commands = (
             "doctor",
+            "repair",
             "run",
             "serve-local-api",
             "rotate-secret",
@@ -115,6 +116,7 @@ def main(argv: list[str] | None = None) -> int:
             raise RuntimeError(
                 "installed CLI help is missing: " + ", ".join(missing_commands)
             )
+        _verify_installed_repair_cli(python, work_dir)
         _verify_installed_migration_cli(python, work_dir)
     return 0
 
@@ -153,6 +155,81 @@ def _verify_wheel_contents(wheel_path: Path) -> None:
         raise RuntimeError(
             "wheel contains non-product files: " + ", ".join(sorted(leaked)[:10])
         )
+
+
+def _verify_installed_repair_cli(python: Path, work_dir: Path) -> None:
+    data_dir = work_dir / "maya-data"
+    config_path = work_dir / "maya-config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "product": {"edition": "standard", "instance_id": "verify"},
+                "deployment": {
+                    "class": "desktop",
+                    "network_policy": "standard",
+                    "data_dir": str(data_dir),
+                },
+                "runtime": {
+                    "hermes_compatibility": "phase1-test",
+                    "enabled_profiles": ["maya-core"],
+                },
+                "broker": {"mode": "disabled", "endpoint": None},
+                "llm": {
+                    "mode": "customer_owned",
+                    "provider": "openai",
+                    "model": "gpt-test",
+                    "fallback_model": None,
+                    "credential_ref": "secret://llm/openai",
+                    "endpoint": None,
+                    "timeout_seconds": 60,
+                },
+                "integrations": {},
+                "memory": {
+                    "hermes_provider": "local",
+                    "retriever": "local_json",
+                    "registry": "sqlite",
+                    "governance_enabled": True,
+                },
+                "governance": {
+                    "policy_file": str(data_dir / "governance" / "policy.json"),
+                    "audit_enabled": True,
+                    "default_action": "deny",
+                    "minimum_memory_trust": 0.7,
+                },
+                "metabase": {
+                    "enabled": False,
+                    "deployment": "disabled",
+                    "endpoint": None,
+                    "application_database": None,
+                    "analytics_sources": [],
+                },
+                "local_api": {
+                    "bind": "127.0.0.1",
+                    "port": None,
+                    "remote_access": False,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "repair",
+            "--config",
+            str(config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    payload = json.loads(result.stdout)
+    if payload.get("status") != "dry_run":
+        raise RuntimeError("installed repair CLI did not default to dry-run")
+    if data_dir.exists():
+        raise RuntimeError("installed repair dry-run created data directory")
 
 
 def _verify_installed_migration_cli(python: Path, work_dir: Path) -> None:

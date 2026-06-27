@@ -55,6 +55,12 @@ from .local_api import (
     LocalAPIResponse,
     build_local_api_http_server,
 )
+from .repair import (
+    RepairAction,
+    RepairError,
+    RepairResult,
+    repair_local_state,
+)
 from .memory import (
     GovernedMemoryRetriever,
     HermesMemoryProvider,
@@ -121,6 +127,9 @@ __all__ = [
     "ModelEgressPolicy",
     "NullAuditSink",
     "Retriever",
+    "RepairAction",
+    "RepairError",
+    "RepairResult",
     "RuntimeCompatibilityError",
     "RuntimeNotConfiguredError",
     "RestoreError",
@@ -135,6 +144,7 @@ __all__ = [
     "build_platform_secret_store",
     "create_local_backup",
     "restore_local_backup",
+    "repair_local_state",
     "config_from_mapping",
     "config_to_mapping",
     "build_local_product",
