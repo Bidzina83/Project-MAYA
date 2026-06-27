@@ -20,6 +20,22 @@ from contextlib import closing
 from pathlib import Path
 
 
+REQUIRED_COMMANDS = (
+    "doctor",
+    "repair",
+    "reset-integration",
+    "run",
+    "serve-local-api",
+    "rotate-secret",
+    "export-config",
+    "import-config",
+    "backup",
+    "restore",
+    "migrate",
+    "update",
+)
+
+
 def main(argv: list[str] | None = None) -> int:
     repo_root = Path(__file__).resolve().parents[1]
     with tempfile.TemporaryDirectory(prefix="maya-package-verify-") as tmp:
@@ -95,23 +111,9 @@ def main(argv: list[str] | None = None) -> int:
             cwd=work_dir,
             env=_clean_env(),
         )
-        required_commands = (
-            "doctor",
-            "repair",
-            "reset-integration",
-            "run",
-            "serve-local-api",
-            "rotate-secret",
-            "export-config",
-            "import-config",
-            "backup",
-            "restore",
-            "migrate",
-            "update",
-        )
         missing_commands = [
             command
-            for command in required_commands
+            for command in REQUIRED_COMMANDS
             if command not in help_result.stdout
         ]
         if missing_commands:
