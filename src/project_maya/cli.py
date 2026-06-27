@@ -12,6 +12,7 @@ from .backup import BackupError, RestoreError, create_local_backup, restore_loca
 from .bootstrap import build_local_product
 from .config import config_from_mapping, config_to_mapping
 from .doctor import DoctorStatus, run_doctor
+from .integrations import IntegrationResetError, reset_integration_state
 from .local_api import build_local_api_http_server
 from .repair import RepairError, repair_local_state
 from .secrets import (
@@ -47,6 +48,31 @@ def main(argv: list[str] | None = None) -> int:
         "--apply",
         action="store_true",
         help="Create missing local state directories. Default is dry-run.",
+    )
+    reset_integration_parser = subparsers.add_parser(
+        "reset-integration",
+        help="Plan or apply a local integration state reset.",
+    )
+    reset_integration_parser.add_argument(
+        "name",
+        help="Configured integration name to reset, for example google.",
+    )
+    reset_integration_parser.add_argument(
+        "--config",
+        type=Path,
+        required=True,
+        help="Path to a JSON Maya configuration file.",
+    )
+    reset_mode = reset_integration_parser.add_mutually_exclusive_group()
+    reset_mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Plan the reset without deleting local state. This is the default.",
+    )
+    reset_mode.add_argument(
+        "--apply",
+        action="store_true",
+        help="Delete local integration state. External tokens are not revoked in Phase 1.",
     )
     run_parser = subparsers.add_parser(
         "run",
@@ -251,6 +277,12 @@ def main(argv: list[str] | None = None) -> int:
         return _doctor(args.config)
     if args.command == "repair":
         return _repair(args.config, apply=args.apply)
+    if args.command == "reset-integration":
+        return _reset_integration(
+            args.config,
+            args.name,
+            apply=args.apply,
+        )
     if args.command == "run":
         return _run(
             args.config,
@@ -342,6 +374,42 @@ def _repair(config_path: Path, *, apply: bool = False) -> int:
                     }
                     for action in result.actions
                 ],
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _reset_integration(config_path: Path, name: str, *, apply: bool = False) -> int:
+    try:
+        config = _load_config(config_path)
+        result = reset_integration_state(config, name, apply=apply)
+    except (IntegrationResetError, OSError, ValueError):
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "integration_reset_failed",
+                        "message": "integration reset failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+    print(
+        json.dumps(
+            {
+                "status": "dry_run" if result.dry_run else "reset",
+                "integration": result.name,
+                "local_state_path": str(result.local_state_path),
+                "local_state_exists": result.local_state_exists,
+                "files": result.files,
+                "credential_ref_present": result.credential_ref_present,
+                "external_revocation_performed": (
+                    result.external_revocation_performed
+                ),
             },
             sort_keys=True,
         )

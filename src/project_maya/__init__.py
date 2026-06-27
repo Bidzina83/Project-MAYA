@@ -46,6 +46,11 @@ from .governance import (
     load_policy_gateway,
     require_authorized,
 )
+from .integrations import (
+    IntegrationResetError,
+    IntegrationResetResult,
+    reset_integration_state,
+)
 from .local_api import (
     BearerTokenAuthenticator,
     LocalAPI,
@@ -110,6 +115,8 @@ __all__ = [
     "GovernedAgentRuntime",
     "GovernedMemoryRetriever",
     "HermesMemoryProvider",
+    "IntegrationResetError",
+    "IntegrationResetResult",
     "LocalJsonRetriever",
     "LocalAPI",
     "LocalAPIAuthenticator",
@@ -145,6 +152,7 @@ __all__ = [
     "create_local_backup",
     "restore_local_backup",
     "repair_local_state",
+    "reset_integration_state",
     "config_from_mapping",
     "config_to_mapping",
     "build_local_product",
