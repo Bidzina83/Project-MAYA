@@ -98,6 +98,7 @@ def main(argv: list[str] | None = None) -> int:
         required_commands = (
             "doctor",
             "repair",
+            "reset-integration",
             "run",
             "serve-local-api",
             "rotate-secret",
@@ -117,6 +118,7 @@ def main(argv: list[str] | None = None) -> int:
                 "installed CLI help is missing: " + ", ".join(missing_commands)
             )
         _verify_installed_repair_cli(python, work_dir)
+        _verify_installed_reset_integration_cli(python, work_dir)
         _verify_installed_migration_cli(python, work_dir)
     return 0
 
@@ -160,6 +162,69 @@ def _verify_wheel_contents(wheel_path: Path) -> None:
 def _verify_installed_repair_cli(python: Path, work_dir: Path) -> None:
     data_dir = work_dir / "maya-data"
     config_path = work_dir / "maya-config.json"
+    _write_minimal_config(config_path, data_dir)
+    result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "repair",
+            "--config",
+            str(config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    payload = json.loads(result.stdout)
+    if payload.get("status") != "dry_run":
+        raise RuntimeError("installed repair CLI did not default to dry-run")
+    if data_dir.exists():
+        raise RuntimeError("installed repair dry-run created data directory")
+
+
+def _verify_installed_reset_integration_cli(python: Path, work_dir: Path) -> None:
+    data_dir = work_dir / "reset-maya-data"
+    state_dir = data_dir / "integrations" / "google"
+    state_dir.mkdir(parents=True)
+    (state_dir / "state.json").write_text("{}", encoding="utf-8")
+    config_path = work_dir / "reset-maya-config.json"
+    _write_minimal_config(config_path, data_dir, include_google=True)
+    result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "reset-integration",
+            "google",
+            "--config",
+            str(config_path),
+            "--dry-run",
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    payload = json.loads(result.stdout)
+    if payload.get("status") != "dry_run":
+        raise RuntimeError("installed reset-integration CLI did not dry-run")
+    if "secret://" in result.stdout:
+        raise RuntimeError("installed reset-integration CLI printed a secret ref")
+    if not state_dir.exists():
+        raise RuntimeError("installed reset-integration dry-run removed local state")
+
+
+def _write_minimal_config(
+    config_path: Path,
+    data_dir: Path,
+    *,
+    include_google: bool = False,
+) -> None:
+    integrations = {}
+    if include_google:
+        integrations["google"] = {
+            "enabled": True,
+            "credential_mode": "broker",
+            "credential_ref": "secret://integrations/google",
+        }
     config_path.write_text(
         json.dumps(
             {
@@ -184,7 +249,7 @@ def _verify_installed_repair_cli(python: Path, work_dir: Path) -> None:
                     "endpoint": None,
                     "timeout_seconds": 60,
                 },
-                "integrations": {},
+                "integrations": integrations,
                 "memory": {
                     "hermes_provider": "local",
                     "retriever": "local_json",
@@ -213,23 +278,6 @@ def _verify_installed_repair_cli(python: Path, work_dir: Path) -> None:
         ),
         encoding="utf-8",
     )
-    result = _run(
-        [
-            str(python),
-            "-m",
-            "project_maya.cli",
-            "repair",
-            "--config",
-            str(config_path),
-        ],
-        cwd=work_dir,
-        env=_clean_env(),
-    )
-    payload = json.loads(result.stdout)
-    if payload.get("status") != "dry_run":
-        raise RuntimeError("installed repair CLI did not default to dry-run")
-    if data_dir.exists():
-        raise RuntimeError("installed repair dry-run created data directory")
 
 
 def _verify_installed_migration_cli(python: Path, work_dir: Path) -> None:
