@@ -21,6 +21,7 @@ from .secrets import (
     SecretStoreError,
     build_platform_secret_store,
 )
+from .update import UpdateError, check_updates, rollback_update
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -271,6 +272,27 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Optional migration report path.",
     )
+    update_parser = subparsers.add_parser(
+        "update",
+        help="Inspect local update and rollback readiness.",
+    )
+    update_parser.add_argument(
+        "--config",
+        type=Path,
+        required=True,
+        help="Path to a JSON Maya configuration file.",
+    )
+    update_mode = update_parser.add_mutually_exclusive_group(required=True)
+    update_mode.add_argument(
+        "--check",
+        action="store_true",
+        help="Check local signed update metadata without network access.",
+    )
+    update_mode.add_argument(
+        "--rollback",
+        action="store_true",
+        help="Check local signed rollback metadata without changing files.",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -323,6 +345,8 @@ def main(argv: list[str] | None = None) -> int:
             backup_path=args.backup_path,
             report_path=args.report_path,
         )
+    if args.command == "update":
+        return _update(args.config, rollback=args.rollback)
     parser.error(f"unknown command: {args.command}")
     return 2
 
@@ -711,6 +735,43 @@ def _migrate(
         )
         return 1
     print(json.dumps(_jsonable(result), sort_keys=True))
+    return 0
+
+
+def _update(config_path: Path, *, rollback: bool = False) -> int:
+    try:
+        config = _load_config(config_path)
+        result = rollback_update(config) if rollback else check_updates(config)
+    except (UpdateError, OSError, ValueError):
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "update_status_failed",
+                        "message": "update status failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+    print(
+        json.dumps(
+            {
+                "operation": result.operation,
+                "supported": result.supported,
+                "status": result.status,
+                "metadata_path": str(result.metadata_path),
+                "current_version": result.current_version,
+                "available_version": result.available_version,
+                "rollback_version": result.rollback_version,
+                "signed_manifest": result.signed_manifest,
+                "network_used": result.network_used,
+                "action_required": result.action_required,
+            },
+            sort_keys=True,
+        )
+    )
     return 0
 
 

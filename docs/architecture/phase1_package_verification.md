@@ -22,8 +22,8 @@ It performs these checks in a temporary workspace:
 - verifies the packaged `maya` console entry point metadata;
 - verifies the installed CLI module responds to `--help` and exposes the
   Phase 1 `doctor`, repair, integration reset, one-shot `run`, local API
-  serve, secret rotation, config import/export, backup, restore, and migration
-  commands.
+  serve, secret rotation, config import/export, backup, restore, migration, and
+  update status commands.
 
 ## Scope
 

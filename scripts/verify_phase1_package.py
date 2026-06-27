@@ -107,6 +107,7 @@ def main(argv: list[str] | None = None) -> int:
             "backup",
             "restore",
             "migrate",
+            "update",
         )
         missing_commands = [
             command
@@ -119,6 +120,7 @@ def main(argv: list[str] | None = None) -> int:
             )
         _verify_installed_repair_cli(python, work_dir)
         _verify_installed_reset_integration_cli(python, work_dir)
+        _verify_installed_update_cli(python, work_dir)
         _verify_installed_migration_cli(python, work_dir)
     return 0
 
@@ -210,6 +212,30 @@ def _verify_installed_reset_integration_cli(python: Path, work_dir: Path) -> Non
         raise RuntimeError("installed reset-integration CLI printed a secret ref")
     if not state_dir.exists():
         raise RuntimeError("installed reset-integration dry-run removed local state")
+
+
+def _verify_installed_update_cli(python: Path, work_dir: Path) -> None:
+    data_dir = work_dir / "update-maya-data"
+    config_path = work_dir / "update-maya-config.json"
+    _write_minimal_config(config_path, data_dir)
+    result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "update",
+            "--config",
+            str(config_path),
+            "--check",
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    payload = json.loads(result.stdout)
+    if payload.get("operation") != "check":
+        raise RuntimeError("installed update CLI did not run check")
+    if payload.get("network_used"):
+        raise RuntimeError("installed update CLI used network")
 
 
 def _write_minimal_config(
