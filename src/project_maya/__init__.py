@@ -84,6 +84,7 @@ from .secrets import (
     WindowsDPAPISecretStore,
     build_platform_secret_store,
 )
+from .update import UpdateError, UpdateStatus, check_updates, rollback_update
 
 __all__ = [
     "Agent",
@@ -147,6 +148,8 @@ __all__ = [
     "SecretStoreError",
     "SecretStoreHealth",
     "SecretStoreStatus",
+    "UpdateError",
+    "UpdateStatus",
     "WindowsDPAPISecretStore",
     "build_platform_secret_store",
     "create_local_backup",
@@ -157,8 +160,10 @@ __all__ = [
     "config_to_mapping",
     "build_local_product",
     "build_local_api_http_server",
+    "check_updates",
     "create_agent",
     "load_policy_gateway",
     "require_authorized",
+    "rollback_update",
     "run_doctor",
 ]
