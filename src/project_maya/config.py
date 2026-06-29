@@ -190,8 +190,15 @@ class MayaConfig:
     def _validate_integration(
         self, name: str, integration: IntegrationConfig
     ) -> None:
-        if name == "telegram" and integration.credential_mode is CredentialMode.BROKER:
-            raise ConfigError("telegram must use a customer-owned credential")
+        from .connectors import build_connector_manifest
+
+        if name in {"google", "slack", "telegram"}:
+            build_connector_manifest(
+                name,
+                integration,
+                broker_mode=self.broker.mode,
+            )
+            return
         if integration.enabled and integration.credential_mode is CredentialMode.DISABLED:
             raise ConfigError(f"{name} is enabled with disabled credentials")
         if integration.credential_ref is not None:

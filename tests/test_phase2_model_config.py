@@ -14,11 +14,33 @@ from project_maya.adapters import HermesRuntimeAdapter
 from tests.test_phase0_contracts import valid_config_mapping
 
 
+def enterprise_broker_disabled_mapping():
+    config_data = valid_config_mapping()
+    config_data["product"]["edition"] = "enterprise"
+    config_data["broker"] = {"mode": "disabled", "endpoint": None}
+    config_data["integrations"] = {
+        "google": {
+            "enabled": True,
+            "credential_mode": "customer_owned",
+            "credential_ref": "secret://integrations/google",
+        },
+        "slack": {
+            "enabled": True,
+            "credential_mode": "customer_owned",
+            "credential_ref": "secret://integrations/slack",
+        },
+        "telegram": {
+            "enabled": True,
+            "credential_mode": "customer_owned",
+            "credential_ref": "secret://integrations/telegram",
+        },
+    }
+    return config_data
+
+
 class TestPhase2ModelConfig(unittest.TestCase):
     def test_customer_owned_model_credential_ref_validates_redacted(self):
-        config_data = valid_config_mapping()
-        config_data["product"]["edition"] = "enterprise"
-        config_data["broker"] = {"mode": "disabled", "endpoint": None}
+        config_data = enterprise_broker_disabled_mapping()
 
         validation = validate_model_config(config_from_mapping(config_data))
 
@@ -28,9 +50,7 @@ class TestPhase2ModelConfig(unittest.TestCase):
         self.assertNotIn("secret://llm/openai", validation.redacted_summary())
 
     def test_customer_owned_model_requires_secret_reference(self):
-        config_data = valid_config_mapping()
-        config_data["product"]["edition"] = "enterprise"
-        config_data["broker"] = {"mode": "disabled", "endpoint": None}
+        config_data = enterprise_broker_disabled_mapping()
         config_data["llm"].pop("credential_ref")
 
         validation = validate_model_config(config_from_mapping(config_data))
@@ -39,9 +59,7 @@ class TestPhase2ModelConfig(unittest.TestCase):
         self.assertIn("requires llm.credential_ref", validation.message)
 
     def test_local_model_endpoint_validates_without_credential(self):
-        config_data = valid_config_mapping()
-        config_data["product"]["edition"] = "enterprise"
-        config_data["broker"] = {"mode": "disabled", "endpoint": None}
+        config_data = enterprise_broker_disabled_mapping()
         config_data["llm"] = {
             "mode": "local",
             "provider": "openai-compatible",
@@ -57,9 +75,7 @@ class TestPhase2ModelConfig(unittest.TestCase):
         self.assertFalse(validation.network_used)
 
     def test_enterprise_broker_disabled_rejects_maya_managed_model_mode(self):
-        config_data = valid_config_mapping()
-        config_data["product"]["edition"] = "enterprise"
-        config_data["broker"] = {"mode": "disabled", "endpoint": None}
+        config_data = enterprise_broker_disabled_mapping()
         config_data["llm"] = {
             "mode": "maya_managed",
             "provider": "openai",
@@ -72,9 +88,7 @@ class TestPhase2ModelConfig(unittest.TestCase):
         self.assertIn("requires Maya cloud services", validation.message)
 
     def test_doctor_reports_invalid_model_config_without_secret_value(self):
-        config_data = valid_config_mapping()
-        config_data["product"]["edition"] = "enterprise"
-        config_data["broker"] = {"mode": "disabled", "endpoint": None}
+        config_data = enterprise_broker_disabled_mapping()
         config_data["llm"].pop("credential_ref")
         config = config_from_mapping(config_data)
 
@@ -86,9 +100,7 @@ class TestPhase2ModelConfig(unittest.TestCase):
         self.assertNotIn("secret://llm/openai", checks["model.config"].message)
 
     def test_local_product_requires_valid_model_config_before_assembly(self):
-        config_data = valid_config_mapping()
-        config_data["product"]["edition"] = "enterprise"
-        config_data["broker"] = {"mode": "disabled", "endpoint": None}
+        config_data = enterprise_broker_disabled_mapping()
         config_data["memory"]["retriever"] = "local_json"
         config_data["llm"] = {
             "mode": "local",

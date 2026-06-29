@@ -32,7 +32,13 @@ from .config import (
     config_to_mapping,
 )
 from .bootstrap import LocalMayaProduct, build_local_product
-from .connectors import ConnectorCapability, ConnectorManifest
+from .connectors import (
+    ConnectorCapability,
+    ConnectorCredentialContract,
+    ConnectorManifest,
+    build_connector_manifest,
+    get_connector_contract,
+)
 from .doctor import DoctorCheck, DoctorReport, DoctorStatus, run_doctor
 from .governance import (
     ActionAuthorizationGateway,
@@ -111,6 +117,7 @@ __all__ = [
     "ComponentProfile",
     "ConfigError",
     "ConnectorCapability",
+    "ConnectorCredentialContract",
     "ConnectorManifest",
     "CredentialMode",
     "DenyByDefaultGateway",
@@ -167,9 +174,11 @@ __all__ = [
     "config_from_mapping",
     "config_to_mapping",
     "build_local_product",
+    "build_connector_manifest",
     "build_local_api_http_server",
     "check_updates",
     "create_agent",
+    "get_connector_contract",
     "load_policy_gateway",
     "require_authorized",
     "require_valid_model_config",
