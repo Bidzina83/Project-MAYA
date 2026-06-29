@@ -74,9 +74,12 @@ from .local_api import (
     build_local_api_http_server,
 )
 from .model_config import (
+    LocalModelEndpointReadiness,
+    LocalModelEndpointStatus,
     ModelConfigStatus,
     ModelConfigValidation,
     require_valid_model_config,
+    validate_local_model_endpoint,
     validate_model_config,
 )
 from .repair import (
@@ -150,6 +153,8 @@ __all__ = [
     "LocalAPIResponse",
     "LocalJsonlAuditSink",
     "LocalMayaProduct",
+    "LocalModelEndpointReadiness",
+    "LocalModelEndpointStatus",
     "MayaConfig",
     "PolicyAuthorizationGateway",
     "PolicyRule",
@@ -198,6 +203,7 @@ __all__ = [
     "rollback_update",
     "run_doctor",
     "validate_configured_connectors",
+    "validate_local_model_endpoint",
     "validate_connector",
     "validate_model_config",
 ]
