@@ -1,0 +1,72 @@
+{
+  "schema_version": 2,
+  "product": {
+    "edition": "enterprise",
+    "instance_id": "${MAYA_INSTANCE_ID}"
+  },
+  "deployment": {
+    "class": "desktop",
+    "network_policy": "enterprise-local-model",
+    "data_dir": "${MAYA_DATA_DIR}"
+  },
+  "runtime": {
+    "hermes_compatibility": ">=0.1",
+    "enabled_profiles": [
+      "maya-core",
+      "maya-local-models"
+    ]
+  },
+  "broker": {
+    "mode": "disabled",
+    "endpoint": null
+  },
+  "llm": {
+    "mode": "local",
+    "provider": "openai-compatible",
+    "model": "local-model",
+    "credential_ref": null,
+    "endpoint": "http://127.0.0.1:11434/v1",
+    "timeout_seconds": 120
+  },
+  "integrations": {
+    "google": {
+      "enabled": false,
+      "credential_mode": "disabled",
+      "credential_ref": null
+    },
+    "slack": {
+      "enabled": false,
+      "credential_mode": "disabled",
+      "credential_ref": null
+    },
+    "telegram": {
+      "enabled": false,
+      "credential_mode": "disabled",
+      "credential_ref": null
+    }
+  },
+  "memory": {
+    "hermes_provider": "local",
+    "retriever": "local_json",
+    "registry": "sqlite",
+    "governance_enabled": true
+  },
+  "governance": {
+    "policy_file": "${MAYA_DATA_DIR}/governance/policies/local-model.json",
+    "audit_enabled": true,
+    "default_action": "deny",
+    "minimum_memory_trust": 0.7
+  },
+  "metabase": {
+    "enabled": false,
+    "deployment": "disabled",
+    "endpoint": null,
+    "application_database": null,
+    "analytics_sources": []
+  },
+  "local_api": {
+    "bind": "127.0.0.1",
+    "port": 8765,
+    "remote_access": false
+  }
+}

@@ -31,6 +31,7 @@ from .config import (
     config_from_mapping,
     config_to_mapping,
 )
+from .config_profiles import ConfigProfileError, load_config_profile
 from .bootstrap import LocalMayaProduct, build_local_product
 from .connectors import (
     ConnectorCapability,
@@ -122,6 +123,7 @@ __all__ = [
     "BearerTokenAuthenticator",
     "ComponentProfile",
     "ConfigError",
+    "ConfigProfileError",
     "ConnectorCapability",
     "ConnectorCredentialContract",
     "ConnectorHealthState",
@@ -190,6 +192,7 @@ __all__ = [
     "create_agent",
     "get_connector_contract",
     "load_policy_gateway",
+    "load_config_profile",
     "require_authorized",
     "require_valid_model_config",
     "rollback_update",
