@@ -60,13 +60,20 @@ Phase 2 does not implement:
 
 ## Implementation Order
 
-1. Enterprise broker-disabled configuration tests.
-2. Customer-owned model credential and endpoint validation.
-3. Connector credential contract expansion for Google, Slack, and Telegram.
-4. Redacted connector validation status.
-5. Connector reset/revocation contract separation.
-6. Package verification for Enterprise BYO surfaces.
-7. Phase 2 closure audit.
+Work Phase 2 in this approved order unless a later approved architecture
+decision changes it:
+
+1. Phase 2 scope gate.
+2. Model credential modes.
+3. Connector credential contracts.
+4. Connector validation.
+5. Connector revocation and reset contracts.
+6. Broker-disabled runtime path.
+7. Enterprise config profiles.
+8. Local model endpoint readiness.
+9. Secret backend extension point.
+10. Phase 2 package verification.
+11. Phase 2 closure audit.
 
 ## Required Boundaries
 
