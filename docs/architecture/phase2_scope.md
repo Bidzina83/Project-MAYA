@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 2 starts after the Phase 1 closure checkpoint. Its purpose is to prove
+Phase 2 started after the Phase 1 closure checkpoint. Its purpose was to prove
 that Maya Enterprise can operate with customer-owned credentials and with Maya
 cloud services disabled.
 
@@ -16,6 +16,9 @@ Phase 2 must build on the Phase 1 local runtime, governance, memory, secrets,
 audit, local API, backup, restore, migration, repair, integration reset, and
 update-status surfaces. It must not create a second runtime, bypass local
 governance, or move authoritative state into Maya cloud services.
+
+Phase 2 closure evidence is recorded in
+`docs/architecture/phase2_closure.md`.
 
 ## Acceptance Criteria
 
