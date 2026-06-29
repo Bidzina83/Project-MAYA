@@ -60,6 +60,12 @@ from .local_api import (
     LocalAPIResponse,
     build_local_api_http_server,
 )
+from .model_config import (
+    ModelConfigStatus,
+    ModelConfigValidation,
+    require_valid_model_config,
+    validate_model_config,
+)
 from .repair import (
     RepairAction,
     RepairError,
@@ -133,6 +139,8 @@ __all__ = [
     "AgentState",
     "MemoryRetriever",
     "ModelEgressPolicy",
+    "ModelConfigStatus",
+    "ModelConfigValidation",
     "NullAuditSink",
     "Retriever",
     "RepairAction",
@@ -164,6 +172,8 @@ __all__ = [
     "create_agent",
     "load_policy_gateway",
     "require_authorized",
+    "require_valid_model_config",
     "rollback_update",
     "run_doctor",
+    "validate_model_config",
 ]
