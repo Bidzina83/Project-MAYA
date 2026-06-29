@@ -10,6 +10,7 @@ from enum import Enum
 from .agent import AgentState
 from .agent.contracts import AgentRuntime
 from .config import ConfigError, MayaConfig
+from .connectors import validate_configured_connectors
 from .governance import load_policy_gateway
 from .model_config import validate_model_config
 from .secrets import SecretStore, SecretStoreStatus
@@ -381,22 +382,16 @@ def _connector_config_check(config: MayaConfig) -> DoctorCheck:
             DoctorStatus.WARN,
             "no connectors configured",
         )
-    entries: list[str] = []
-    for name in sorted(config.integrations):
-        integration = config.integrations[name]
-        enabled_state = "enabled" if integration.enabled else "disabled"
-        credential_state = (
-            "configured" if integration.credential_ref else "not_configured"
-        )
-        entries.append(
-            (
-                f"{name}:{enabled_state},"
-                f"credential_mode={integration.credential_mode.value},"
-                f"credential_ref={credential_state}"
-            )
-        )
+    validations = validate_configured_connectors(
+        config.integrations,
+        broker_mode=config.broker.mode,
+    )
     return DoctorCheck(
         "connectors.config",
-        DoctorStatus.PASS,
-        "; ".join(entries),
+        (
+            DoctorStatus.PASS
+            if all(validation.valid for validation in validations)
+            else DoctorStatus.FAIL
+        ),
+        "; ".join(validation.redacted_summary() for validation in validations),
     )

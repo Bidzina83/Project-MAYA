@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Mapping
 
 from .config import BrokerMode, ConfigError, CredentialMode, IntegrationConfig
@@ -41,6 +42,63 @@ class ConnectorManifest:
             raise ConfigError("connector must declare at least one capability")
         if any(not capability.name.strip() for capability in self.capabilities):
             raise ConfigError("connector capability name is required")
+
+
+class ConnectorValidationStatus(str, Enum):
+    VALID = "valid"
+    INVALID = "invalid"
+
+
+class ConnectorHealthState(str, Enum):
+    CONFIGURED = "configured"
+    DISABLED = "disabled"
+    UNAVAILABLE = "unavailable"
+    INVALID = "invalid"
+
+
+@dataclass(frozen=True)
+class ConnectorValidation:
+    """Redacted connector validation result for diagnostics."""
+
+    name: str
+    status: ConnectorValidationStatus
+    enabled: bool
+    credential_mode: CredentialMode
+    credential_ref_state: str
+    capabilities: tuple[str, ...]
+    scopes: tuple[str, ...]
+    allowlist_state: Mapping[str, str]
+    health: ConnectorHealthState
+    network_used: bool
+    message: str
+
+    @property
+    def valid(self) -> bool:
+        return self.status is ConnectorValidationStatus.VALID
+
+    def redacted_summary(self) -> str:
+        enabled_state = "enabled" if self.enabled else "disabled"
+        capabilities = ",".join(self.capabilities) if self.capabilities else "none"
+        scopes = ",".join(self.scopes) if self.scopes else "none"
+        allowlists = (
+            ",".join(
+                f"{key}:{value}"
+                for key, value in sorted(self.allowlist_state.items())
+            )
+            if self.allowlist_state
+            else "none"
+        )
+        return (
+            f"{self.name}:{enabled_state},"
+            f"credential_mode={self.credential_mode.value},"
+            f"credential_ref={self.credential_ref_state},"
+            f"capabilities={capabilities},"
+            f"scopes={scopes},"
+            f"allowlists={allowlists},"
+            f"health={self.health.value},"
+            f"network_used={str(self.network_used).lower()},"
+            f"message={self.message}"
+        )
 
 
 @dataclass(frozen=True)
@@ -220,3 +278,84 @@ def build_connector_manifest(
     manifest = contract.manifest_for(integration)
     manifest.validate()
     return manifest
+
+
+def validate_connector(
+    name: str,
+    integration: IntegrationConfig,
+    *,
+    broker_mode: BrokerMode,
+) -> ConnectorValidation:
+    try:
+        manifest = build_connector_manifest(
+            name,
+            integration,
+            broker_mode=broker_mode,
+        )
+    except ConfigError as exc:
+        return ConnectorValidation(
+            name=name,
+            status=ConnectorValidationStatus.INVALID,
+            enabled=integration.enabled,
+            credential_mode=integration.credential_mode,
+            credential_ref_state=_credential_ref_state(integration.credential_ref),
+            capabilities=(),
+            scopes=(),
+            allowlist_state={},
+            health=ConnectorHealthState.INVALID,
+            network_used=False,
+            message=str(exc),
+        )
+    capabilities = tuple(capability.name for capability in manifest.capabilities)
+    scopes = tuple(
+        dict.fromkeys(
+            scope
+            for capability in manifest.capabilities
+            for scope in capability.scopes
+        )
+    )
+    health = (
+        ConnectorHealthState.DISABLED
+        if manifest.credential_mode is CredentialMode.DISABLED
+        else ConnectorHealthState.UNAVAILABLE
+    )
+    message = (
+        "connector disabled"
+        if health is ConnectorHealthState.DISABLED
+        else "live provider validation unavailable"
+    )
+    return ConnectorValidation(
+        name=name,
+        status=ConnectorValidationStatus.VALID,
+        enabled=integration.enabled,
+        credential_mode=integration.credential_mode,
+        credential_ref_state=_credential_ref_state(integration.credential_ref),
+        capabilities=capabilities,
+        scopes=scopes,
+        allowlist_state={
+            key: ("configured" if values else "not_configured")
+            for key, values in sorted(manifest.allowlists.items())
+        },
+        health=health,
+        network_used=False,
+        message=message,
+    )
+
+
+def validate_configured_connectors(
+    integrations: Mapping[str, IntegrationConfig],
+    *,
+    broker_mode: BrokerMode,
+) -> tuple[ConnectorValidation, ...]:
+    return tuple(
+        validate_connector(name, integration, broker_mode=broker_mode)
+        for name, integration in sorted(integrations.items())
+    )
+
+
+def _credential_ref_state(value: str | None) -> str:
+    if value is None:
+        return "not_configured"
+    if value.startswith("secret://"):
+        return "configured"
+    return "invalid"
