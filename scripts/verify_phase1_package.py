@@ -1,4 +1,4 @@
-"""Verify the Phase 1 package installs from a built wheel.
+"""Verify the Project MAYA package installs from a built wheel.
 
 The check intentionally avoids editable installs and repository PYTHONPATH
 imports. It builds a wheel, installs that wheel into a temporary virtual
@@ -124,6 +124,7 @@ def main(argv: list[str] | None = None) -> int:
         _verify_installed_reset_integration_cli(python, work_dir)
         _verify_installed_update_cli(python, work_dir)
         _verify_installed_migration_cli(python, work_dir)
+        _verify_installed_enterprise_byo_surfaces(python, work_dir)
     return 0
 
 
@@ -240,6 +241,150 @@ def _verify_installed_update_cli(python: Path, work_dir: Path) -> None:
         raise RuntimeError("installed update CLI used network")
 
 
+def _verify_installed_enterprise_byo_surfaces(
+    python: Path,
+    work_dir: Path,
+) -> None:
+    data_dir = work_dir / "enterprise-maya-data"
+    runtime_module = work_dir / "package_verify_runtime.py"
+    runtime_module.write_text(
+        "\n".join(
+            [
+                "class Runtime:",
+                "    def __init__(self, **kwargs):",
+                "        self.kwargs = kwargs",
+                "    def attach_memory(self, memory_provider):",
+                "        self.memory_provider = memory_provider",
+                "    def start(self, *, agent_name):",
+                "        self.agent_name = agent_name",
+                "    def run(self, request, **kwargs):",
+                "        return {'request': request, 'kwargs': kwargs}",
+                "    def stop(self):",
+                "        self.stopped = True",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    config_path = work_dir / "enterprise-byo-config.json"
+    _write_enterprise_byo_config(
+        config_path,
+        data_dir,
+        hermes_factory="package_verify_runtime:Runtime",
+    )
+
+    _run(
+        [
+            str(python),
+            "-c",
+            (
+                "import json; "
+                "from pathlib import Path; "
+                "from project_maya import "
+                "ProviderRevocationStatus, config_from_mapping, "
+                "validate_configured_connectors, validate_model_config; "
+                f"config = config_from_mapping(json.loads(Path(r'{config_path}').read_text())); "
+                "model = validate_model_config(config); "
+                "connectors = validate_configured_connectors(config.integrations, broker_mode=config.broker.mode); "
+                "assert model.valid and not model.network_used; "
+                "assert all(item.valid and not item.network_used for item in connectors); "
+                "assert ProviderRevocationStatus.UNAVAILABLE.value == 'unavailable'"
+            ),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+
+    export_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "export-config",
+            "--config",
+            str(config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    exported = json.loads(export_result.stdout)
+    if exported["product"]["edition"] != "enterprise":
+        raise RuntimeError("installed export-config did not preserve Enterprise edition")
+    if exported["broker"]["mode"] != "disabled":
+        raise RuntimeError("installed export-config did not preserve disabled broker")
+    if exported["integrations"]["google"]["credential_mode"] != "customer_owned":
+        raise RuntimeError("installed export-config did not preserve BYO Google mode")
+
+    imported_path = work_dir / "enterprise-imported-config.json"
+    import_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "import-config",
+            "--from",
+            str(config_path),
+            "--to",
+            str(imported_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    import_payload = json.loads(import_result.stdout)
+    if import_payload.get("status") != "dry_run":
+        raise RuntimeError("installed import-config did not default to dry-run")
+    if imported_path.exists():
+        raise RuntimeError("installed import-config dry-run wrote destination")
+
+    state_dir = data_dir / "integrations" / "google"
+    state_dir.mkdir(parents=True)
+    (state_dir / "state.json").write_text("{}", encoding="utf-8")
+    reset_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "reset-integration",
+            "google",
+            "--config",
+            str(config_path),
+            "--revoke-provider",
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    reset_payload = json.loads(reset_result.stdout)
+    if reset_payload.get("provider_revocation_status") != "unavailable":
+        raise RuntimeError(
+            "installed reset-integration did not report revocation unavailable"
+        )
+    if reset_payload.get("external_revocation_performed"):
+        raise RuntimeError("installed reset-integration falsely claimed revocation")
+    if "secret://" in reset_result.stdout:
+        raise RuntimeError("installed reset-integration printed a secret ref")
+
+    doctor_result = _run_allow_exit(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "doctor",
+            "--config",
+            str(config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+        expected_exit=1,
+    )
+    if "model.config" not in doctor_result.stdout:
+        raise RuntimeError("installed doctor did not report model config")
+    if "connectors.config" not in doctor_result.stdout:
+        raise RuntimeError("installed doctor did not report connector config")
+    if "health=unavailable" not in doctor_result.stdout:
+        raise RuntimeError("installed doctor did not report redacted connector health")
+    if "secret://" in doctor_result.stdout:
+        raise RuntimeError("installed doctor printed a secret ref")
+
+
 def _write_minimal_config(
     config_path: Path,
     data_dir: Path,
@@ -278,6 +423,86 @@ def _write_minimal_config(
                     "timeout_seconds": 60,
                 },
                 "integrations": integrations,
+                "memory": {
+                    "hermes_provider": "local",
+                    "retriever": "local_json",
+                    "registry": "sqlite",
+                    "governance_enabled": True,
+                },
+                "governance": {
+                    "policy_file": str(data_dir / "governance" / "policy.json"),
+                    "audit_enabled": True,
+                    "default_action": "deny",
+                    "minimum_memory_trust": 0.7,
+                },
+                "metabase": {
+                    "enabled": False,
+                    "deployment": "disabled",
+                    "endpoint": None,
+                    "application_database": None,
+                    "analytics_sources": [],
+                },
+                "local_api": {
+                    "bind": "127.0.0.1",
+                    "port": None,
+                    "remote_access": False,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_enterprise_byo_config(
+    config_path: Path,
+    data_dir: Path,
+    *,
+    hermes_factory: str,
+) -> None:
+    config_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "product": {
+                    "edition": "enterprise",
+                    "instance_id": "verify-enterprise",
+                },
+                "deployment": {
+                    "class": "desktop",
+                    "network_policy": "offline",
+                    "data_dir": str(data_dir),
+                },
+                "runtime": {
+                    "hermes_compatibility": "phase2-test",
+                    "enabled_profiles": ["maya-core"],
+                    "hermes_factory": hermes_factory,
+                },
+                "broker": {"mode": "disabled", "endpoint": None},
+                "llm": {
+                    "mode": "customer_owned",
+                    "provider": "openai",
+                    "model": "gpt-test",
+                    "credential_ref": "secret://llm/openai",
+                    "endpoint": None,
+                    "timeout_seconds": 60,
+                },
+                "integrations": {
+                    "google": {
+                        "enabled": True,
+                        "credential_mode": "customer_owned",
+                        "credential_ref": "secret://integrations/google",
+                    },
+                    "slack": {
+                        "enabled": True,
+                        "credential_mode": "customer_owned",
+                        "credential_ref": "secret://integrations/slack",
+                    },
+                    "telegram": {
+                        "enabled": True,
+                        "credential_mode": "customer_owned",
+                        "credential_ref": "secret://integrations/telegram",
+                    },
+                },
                 "memory": {
                     "hermes_provider": "local",
                     "retriever": "local_json",
@@ -368,6 +593,30 @@ def _run(
         raise RuntimeError(
             f"command failed with exit code {result.returncode}: {joined}\n"
             f"{result.stdout}"
+        )
+    return result
+
+
+def _run_allow_exit(
+    command: list[str],
+    *,
+    expected_exit: int,
+    cwd: Path | None = None,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(
+        command,
+        cwd=cwd,
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    if result.returncode != expected_exit:
+        joined = " ".join(command)
+        raise RuntimeError(
+            f"command returned {result.returncode}, expected {expected_exit}: "
+            f"{joined}\n{result.stdout}"
         )
     return result
 
