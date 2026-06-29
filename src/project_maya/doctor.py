@@ -11,6 +11,7 @@ from .agent import AgentState
 from .agent.contracts import AgentRuntime
 from .config import ConfigError, MayaConfig
 from .governance import load_policy_gateway
+from .model_config import validate_model_config
 from .secrets import SecretStore, SecretStoreStatus
 
 
@@ -364,19 +365,12 @@ def _enabled_profiles_check(config: MayaConfig) -> DoctorCheck:
 
 
 def _model_config_check(config: MayaConfig) -> DoctorCheck:
-    credential_state = "configured" if config.llm.credential_ref else "not_configured"
-    endpoint_state = "configured" if config.llm.endpoint else "provider_default"
+    validation = validate_model_config(config)
     return DoctorCheck(
         "model.config",
-        DoctorStatus.PASS,
-        (
-            f"mode={config.llm.mode}; "
-            f"provider={config.llm.provider}; "
-            f"model={config.llm.model}; "
-            f"endpoint={endpoint_state}; "
-            f"credential_ref={credential_state}; "
-            f"timeout_seconds={config.llm.timeout_seconds}"
-        ),
+        DoctorStatus.PASS if validation.valid else DoctorStatus.FAIL,
+        f"{validation.redacted_summary()}; "
+        f"timeout_seconds={config.llm.timeout_seconds}",
     )
 
 

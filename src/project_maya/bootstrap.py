@@ -22,6 +22,7 @@ from .memory import (
     LocalJsonRetriever,
     MemoryRetriever,
 )
+from .model_config import require_valid_model_config
 from .runtime import GovernedAgentRuntime, ModelEgressPolicy
 from .secrets import SecretStore, build_platform_secret_store
 
@@ -72,6 +73,7 @@ def build_local_product(
     """Assemble the minimal governed local Maya runtime from configuration."""
 
     config.validate()
+    require_valid_model_config(config)
     secret_store = build_platform_secret_store(config.deployment.data_dir)
     retriever = _build_retriever(config)
     base_memory = MemoryRetriever(retriever)
