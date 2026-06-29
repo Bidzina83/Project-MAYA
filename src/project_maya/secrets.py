@@ -26,6 +26,14 @@ class SecretStoreStatus(str, Enum):
     UNHEALTHY = "unhealthy"
 
 
+class SecretBackendKind(str, Enum):
+    PLATFORM = "platform"
+    MASTER_KEY = "master_key"
+    TPM_HSM = "tpm_hsm"
+    EXTERNAL_VAULT = "external_vault"
+    TEST = "test"
+
+
 @dataclass(frozen=True)
 class SecretRef:
     name: str
@@ -48,6 +56,26 @@ class SecretStoreHealth:
     message: str
 
 
+@dataclass(frozen=True)
+class SecretBackendDescriptor:
+    """Redacted Enterprise secret backend declaration."""
+
+    kind: SecretBackendKind
+    name: str
+    location: str | None = None
+    key_ref: SecretRef | None = None
+
+    def redacted_summary(self) -> str:
+        location_state = "configured" if self.location else "not_configured"
+        key_ref_state = "configured" if self.key_ref else "not_configured"
+        return (
+            f"kind={self.kind.value}; "
+            f"name={self.name}; "
+            f"location={location_state}; "
+            f"key_ref={key_ref_state}"
+        )
+
+
 @runtime_checkable
 class SecretStore(Protocol):
     """Platform or Enterprise vault interface. Values never live in config."""
@@ -66,6 +94,15 @@ class SecretStore(Protocol):
 
     def health(self) -> SecretStoreHealth:
         """Return redacted backend health for diagnostics."""
+
+
+@runtime_checkable
+class EnterpriseSecretBackend(SecretStore, Protocol):
+    """Extension point for Enterprise vault, master-key, TPM/HSM backends."""
+
+    @property
+    def descriptor(self) -> SecretBackendDescriptor:
+        """Return redacted backend identity and configuration state."""
 
 
 class UnavailableSecretStore:
@@ -95,6 +132,50 @@ class UnavailableSecretStore:
             backend="unavailable",
             status=SecretStoreStatus.UNAVAILABLE,
             message=self._reason,
+        )
+
+
+class InMemoryEnterpriseSecretBackend:
+    """Local test implementation of the Enterprise secret backend contract."""
+
+    def __init__(
+        self,
+        descriptor: SecretBackendDescriptor | None = None,
+    ) -> None:
+        self._descriptor = descriptor or SecretBackendDescriptor(
+            kind=SecretBackendKind.TEST,
+            name="in-memory-enterprise-test",
+        )
+        self._values: dict[str, str] = {}
+
+    @property
+    def descriptor(self) -> SecretBackendDescriptor:
+        return self._descriptor
+
+    def read(self, ref: SecretRef) -> str:
+        _validate_secret_ref(ref)
+        try:
+            return self._values[str(ref)]
+        except KeyError as exc:
+            raise SecretStoreError(f"secret not found: {ref}") from exc
+
+    def write(self, ref: SecretRef, value: str) -> None:
+        _validate_secret_ref(ref)
+        self._values[str(ref)] = value
+
+    def delete(self, ref: SecretRef) -> None:
+        _validate_secret_ref(ref)
+        self._values.pop(str(ref), None)
+
+    def contains(self, ref: SecretRef) -> bool:
+        _validate_secret_ref(ref)
+        return str(ref) in self._values
+
+    def health(self) -> SecretStoreHealth:
+        return SecretStoreHealth(
+            backend=self._descriptor.name,
+            status=SecretStoreStatus.HEALTHY,
+            message=self._descriptor.redacted_summary(),
         )
 
 

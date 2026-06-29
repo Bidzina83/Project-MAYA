@@ -97,8 +97,12 @@ from .memory import (
 from .memory import LocalJsonRetriever
 from .runtime import GovernedAgentRuntime, ModelEgressPolicy
 from .secrets import (
+    EnterpriseSecretBackend,
+    InMemoryEnterpriseSecretBackend,
     SecretRef,
     SecretReferenceError,
+    SecretBackendDescriptor,
+    SecretBackendKind,
     SecretStore,
     SecretStoreError,
     SecretStoreHealth,
@@ -174,6 +178,10 @@ __all__ = [
     "RuntimeNotConfiguredError",
     "RestoreError",
     "RestoreResult",
+    "EnterpriseSecretBackend",
+    "InMemoryEnterpriseSecretBackend",
+    "SecretBackendDescriptor",
+    "SecretBackendKind",
     "SecretRef",
     "SecretReferenceError",
     "SecretStore",
