@@ -60,6 +60,7 @@ from .governance import (
 from .integrations import (
     IntegrationResetError,
     IntegrationResetResult,
+    ProviderRevocationStatus,
     reset_integration_state,
 )
 from .local_api import (
@@ -150,6 +151,7 @@ __all__ = [
     "MayaConfig",
     "PolicyAuthorizationGateway",
     "PolicyRule",
+    "ProviderRevocationStatus",
     "AgentStartError",
     "AgentState",
     "MemoryRetriever",

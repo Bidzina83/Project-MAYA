@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 
 from .config import MayaConfig
@@ -11,6 +12,12 @@ from .config import MayaConfig
 
 class IntegrationResetError(RuntimeError):
     """Raised when an integration reset cannot be planned or applied safely."""
+
+
+class ProviderRevocationStatus(str, Enum):
+    NOT_REQUESTED = "not_requested"
+    UNAVAILABLE = "unavailable"
+    PERFORMED = "performed"
 
 
 @dataclass(frozen=True)
@@ -22,6 +29,11 @@ class IntegrationResetResult:
     files: int
     credential_ref_present: bool
     external_revocation_performed: bool = False
+    provider_revocation_requested: bool = False
+    provider_revocation_status: ProviderRevocationStatus = (
+        ProviderRevocationStatus.NOT_REQUESTED
+    )
+    provider_revocation_reason: str = "provider revocation was not requested"
 
 
 def reset_integration_state(
@@ -29,8 +41,9 @@ def reset_integration_state(
     name: str,
     *,
     apply: bool = False,
+    revoke_provider: bool = False,
 ) -> IntegrationResetResult:
-    """Plan or remove local state for a configured integration."""
+    """Plan or remove local state without claiming provider-token revocation."""
     config.validate()
     integration_name = _validate_integration_name(name)
     if integration_name not in config.integrations:
@@ -46,6 +59,7 @@ def reset_integration_state(
             local_state_exists=False,
             files=0,
             credential_ref_present=integration.credential_ref is not None,
+            **_provider_revocation_fields(revoke_provider),
         )
     if not state_path.is_dir():
         raise IntegrationResetError("integration state path is not a directory")
@@ -60,6 +74,7 @@ def reset_integration_state(
         local_state_exists=not apply,
         files=files,
         credential_ref_present=integration.credential_ref is not None,
+        **_provider_revocation_fields(revoke_provider),
     )
 
 
@@ -78,3 +93,21 @@ def _integration_state_path(data_dir: Path, name: str) -> Path:
     if path != root and root in path.parents:
         return path
     raise IntegrationResetError("integration state path escapes data directory")
+
+
+def _provider_revocation_fields(requested: bool) -> dict[str, object]:
+    if not requested:
+        return {
+            "external_revocation_performed": False,
+            "provider_revocation_requested": False,
+            "provider_revocation_status": ProviderRevocationStatus.NOT_REQUESTED,
+            "provider_revocation_reason": "provider revocation was not requested",
+        }
+    return {
+        "external_revocation_performed": False,
+        "provider_revocation_requested": True,
+        "provider_revocation_status": ProviderRevocationStatus.UNAVAILABLE,
+        "provider_revocation_reason": (
+            "provider revocation requires a provider-specific revoker"
+        ),
+    }
