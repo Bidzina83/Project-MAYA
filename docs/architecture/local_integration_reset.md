@@ -30,3 +30,18 @@ This is a Phase 1 local recovery surface. Full connector reset and revocation
 requires provider-specific connector contracts, token ownership design,
 allowlist reset behavior, audit records, and broker/customer-owned credential
 mode handling.
+
+Phase 2 makes the reset/revocation boundary explicit. `reset-integration`
+reports:
+
+- whether local state would be or was removed;
+- whether a credential reference is configured;
+- whether provider-token revocation was requested;
+- provider revocation status;
+- the reason provider revocation did or did not happen.
+
+Local reset does not revoke OAuth grants, Telegram bot tokens, broker
+sessions, or customer-owned provider credentials. If provider revocation is
+requested before a provider-specific revoker exists, Maya reports
+`provider_revocation_status=unavailable` and
+`external_revocation_performed=false`.

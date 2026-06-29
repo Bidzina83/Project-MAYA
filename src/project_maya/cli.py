@@ -73,7 +73,15 @@ def main(argv: list[str] | None = None) -> int:
     reset_mode.add_argument(
         "--apply",
         action="store_true",
-        help="Delete local integration state. External tokens are not revoked in Phase 1.",
+        help="Delete local integration state. Provider tokens are not revoked.",
+    )
+    reset_integration_parser.add_argument(
+        "--revoke-provider",
+        action="store_true",
+        help=(
+            "Request provider-token revocation. Reports unavailable until a "
+            "provider-specific revoker exists."
+        ),
     )
     run_parser = subparsers.add_parser(
         "run",
@@ -304,6 +312,7 @@ def main(argv: list[str] | None = None) -> int:
             args.config,
             args.name,
             apply=args.apply,
+            revoke_provider=args.revoke_provider,
         )
     if args.command == "run":
         return _run(
@@ -405,10 +414,21 @@ def _repair(config_path: Path, *, apply: bool = False) -> int:
     return 0
 
 
-def _reset_integration(config_path: Path, name: str, *, apply: bool = False) -> int:
+def _reset_integration(
+    config_path: Path,
+    name: str,
+    *,
+    apply: bool = False,
+    revoke_provider: bool = False,
+) -> int:
     try:
         config = _load_config(config_path)
-        result = reset_integration_state(config, name, apply=apply)
+        result = reset_integration_state(
+            config,
+            name,
+            apply=apply,
+            revoke_provider=revoke_provider,
+        )
     except (IntegrationResetError, OSError, ValueError):
         print(
             json.dumps(
@@ -434,6 +454,13 @@ def _reset_integration(config_path: Path, name: str, *, apply: bool = False) -> 
                 "external_revocation_performed": (
                     result.external_revocation_performed
                 ),
+                "provider_revocation_requested": (
+                    result.provider_revocation_requested
+                ),
+                "provider_revocation_status": (
+                    result.provider_revocation_status.value
+                ),
+                "provider_revocation_reason": result.provider_revocation_reason,
             },
             sort_keys=True,
         )
