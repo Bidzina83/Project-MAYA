@@ -43,3 +43,23 @@ The contract layer feeds typed configuration validation and connector
 manifests. Connector operations still remain behind the local authorization
 gateway, and unsupported provider operations must report unavailable rather
 than healthy.
+
+## Redacted Validation Status
+
+`project_maya.connectors.validate_connector()` and
+`validate_configured_connectors()` produce redacted validation status for
+diagnostics. The status includes:
+
+- connector name and enabled state;
+- credential mode and credential-reference state;
+- declared capabilities;
+- declared scopes;
+- allowlist categories and whether values are configured;
+- redacted health;
+- whether network access was used.
+
+Phase 2 validation uses no provider network calls. Enabled connectors with
+valid local configuration therefore report `health=unavailable` until a
+provider-specific adapter can verify credentials, scopes, token freshness, and
+provider reachability behind the local authorization boundary. Disabled
+connectors report `health=disabled`.

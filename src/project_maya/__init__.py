@@ -35,9 +35,14 @@ from .bootstrap import LocalMayaProduct, build_local_product
 from .connectors import (
     ConnectorCapability,
     ConnectorCredentialContract,
+    ConnectorHealthState,
     ConnectorManifest,
+    ConnectorValidation,
+    ConnectorValidationStatus,
     build_connector_manifest,
     get_connector_contract,
+    validate_configured_connectors,
+    validate_connector,
 )
 from .doctor import DoctorCheck, DoctorReport, DoctorStatus, run_doctor
 from .governance import (
@@ -118,7 +123,10 @@ __all__ = [
     "ConfigError",
     "ConnectorCapability",
     "ConnectorCredentialContract",
+    "ConnectorHealthState",
     "ConnectorManifest",
+    "ConnectorValidation",
+    "ConnectorValidationStatus",
     "CredentialMode",
     "DenyByDefaultGateway",
     "DoctorCheck",
@@ -184,5 +192,7 @@ __all__ = [
     "require_valid_model_config",
     "rollback_update",
     "run_doctor",
+    "validate_configured_connectors",
+    "validate_connector",
     "validate_model_config",
 ]
