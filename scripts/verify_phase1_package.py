@@ -250,7 +250,7 @@ def _write_minimal_config(
     if include_google:
         integrations["google"] = {
             "enabled": True,
-            "credential_mode": "broker",
+            "credential_mode": "customer_owned",
             "credential_ref": "secret://integrations/google",
         }
     config_path.write_text(
