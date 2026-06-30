@@ -33,9 +33,18 @@ not importable, `maya doctor` reports Hermes compatibility and health failures.
 
 The current Hermes `AIAgent` seam does not expose first-class startup,
 shutdown, plugin-loading, or memory-provider attachment methods. The adapter
-therefore supports lifecycle wrapping for request execution and only delegates
-memory/plugin configuration when the concrete Hermes object exposes those
-methods.
+therefore supports lifecycle wrapping for request execution.
+
+For memory, the adapter binds Maya's governed `HermesMemoryProvider` into the
+Hermes `MemoryManager` through a small Hermes `MemoryProvider`-shaped bridge
+named `maya`. This bridge uses Hermes' real provider lifecycle
+(`initialize`, `prefetch`, `sync_turn`, and `shutdown`) while reads and writes
+continue to pass through Maya's governed memory facade.
+
+Plugin loading remains intentionally conservative. Until the selected Hermes
+runtime exposes a versioned plugin-loading seam that Project MAYA can govern
+and audit, arbitrary plugin loading through the public Maya API reports
+unavailable instead of pretending that a plugin was loaded.
 
 Future Hermes work should provide a smaller versioned factory contract for
 Maya, for example:

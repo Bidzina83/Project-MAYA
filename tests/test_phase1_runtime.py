@@ -120,6 +120,74 @@ class TestPhase1Runtime(unittest.TestCase):
         self.assertEqual(events[0], ("init", {"model": "maya-test"}))
         self.assertEqual(events[1], ("chat", "hello maya"))
 
+    def test_hermes_adapter_registers_maya_memory_with_aiagent_manager(self):
+        events = []
+
+        class FakeMemoryManager:
+            def __init__(self):
+                self.provider = None
+
+            def add_provider(self, provider):
+                self.provider = provider
+                events.append(("add_provider", provider.name, provider.is_available()))
+
+        class FakeMayaMemory:
+            def begin_session(self, session_id, metadata=None):
+                events.append(("begin_session", session_id, metadata["platform"]))
+
+            def prefetch(self, query, *, limit=5):
+                events.append(("prefetch", query, limit))
+                return [{"id": "note-1", "text": "Maya governed context"}]
+
+            def synchronize_turn(self, records=None):
+                events.append(("synchronize_turn", records[0]["category"]))
+                return {"stored": len(records or [])}
+
+            def end_session(self, session_id=None):
+                events.append(("end_session", session_id))
+
+        class FakeAIAgent:
+            def __init__(self, **kwargs):
+                self.session_id = "session-1"
+                self._memory_manager = FakeMemoryManager()
+                events.append(("init", kwargs))
+
+            def chat(self, message):
+                context = self._memory_manager.provider.prefetch(
+                    message,
+                    session_id=self.session_id,
+                )
+                self._memory_manager.provider.sync_turn(
+                    message,
+                    "answer",
+                    session_id=self.session_id,
+                )
+                events.append(("context", "Maya governed context" in context))
+                return "answer"
+
+            def shutdown_memory_provider(self):
+                events.append(("shutdown_memory_provider",))
+                self._memory_manager.provider.shutdown()
+
+            def close(self):
+                events.append(("close",))
+
+        adapter = HermesRuntimeAdapter(factory=lambda **kwargs: FakeAIAgent(**kwargs))
+        adapter.attach_memory(FakeMayaMemory())
+        adapter.start(agent_name="project_maya.test")
+        result = adapter.run("hello memory")
+        adapter.stop()
+
+        self.assertEqual(result, "answer")
+        self.assertIn(("add_provider", "maya", True), events)
+        self.assertIn(("begin_session", "session-1", "project_maya"), events)
+        self.assertIn(("prefetch", "hello memory", 5), events)
+        self.assertIn(("synchronize_turn", "conversation_turn"), events)
+        self.assertIn(("context", True), events)
+        self.assertIn(("shutdown_memory_provider",), events)
+        self.assertIn(("end_session", "session-1"), events)
+        self.assertIn(("close",), events)
+
     def test_public_agent_executes_through_governed_hermes_adapter(self):
         runtime = RuntimeDouble()
         gateway = AllowGateway()

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from importlib import import_module
 from typing import Any, Callable
 
@@ -214,14 +216,31 @@ class HermesAIAgentRuntime:
     def __init__(self, agent: Any) -> None:
         self._agent = agent
         self._memory_provider: Any | None = None
+        self._hermes_memory_provider: Any | None = None
         self._started = False
 
     def attach_memory(self, memory_provider: Any) -> None:
         self._memory_provider = memory_provider
         if hasattr(self._agent, "attach_memory"):
             self._agent.attach_memory(memory_provider)
+            return
+        manager = getattr(self._agent, "_memory_manager", None)
+        if manager is None or not hasattr(manager, "add_provider"):
+            raise HermesRuntimeUnavailableError(
+                "Hermes AIAgent memory manager is unavailable"
+            )
+        bridge = HermesMemoryProviderBridge(memory_provider)
+        manager.add_provider(bridge)
+        self._hermes_memory_provider = bridge
 
     def start(self, *, agent_name: str) -> None:
+        if self._hermes_memory_provider is not None:
+            session_id = getattr(self._agent, "session_id", None) or agent_name
+            self._hermes_memory_provider.initialize(
+                session_id=session_id,
+                agent_name=agent_name,
+                platform="project_maya",
+            )
         self._started = True
 
     def run(self, request: str, **kwargs: Any) -> Any:
@@ -235,11 +254,93 @@ class HermesAIAgentRuntime:
         return result
 
     def stop(self) -> None:
+        if hasattr(self._agent, "shutdown_memory_provider"):
+            self._agent.shutdown_memory_provider()
         if hasattr(self._agent, "stop"):
             self._agent.stop()
         elif hasattr(self._agent, "close"):
             self._agent.close()
         self._started = False
+
+
+class HermesMemoryProviderBridge:
+    """Hermes MemoryProvider-shaped adapter over Maya's governed memory provider."""
+
+    name = "maya"
+
+    def __init__(self, maya_memory_provider: Any) -> None:
+        self._maya = maya_memory_provider
+        self._session_id = ""
+
+    def is_available(self) -> bool:
+        return True
+
+    def initialize(self, session_id: str, **kwargs: Any) -> None:
+        self._session_id = session_id
+        if hasattr(self._maya, "begin_session"):
+            self._maya.begin_session(session_id, metadata=dict(kwargs))
+
+    def system_prompt_block(self) -> str:
+        return ""
+
+    def prefetch(self, query: str, *, session_id: str = "") -> str:
+        if not hasattr(self._maya, "prefetch"):
+            return ""
+        records = self._maya.prefetch(query, limit=5)
+        if not records:
+            return ""
+        return "Maya governed memory context:\n" + json.dumps(
+            records,
+            sort_keys=True,
+            ensure_ascii=True,
+        )
+
+    def queue_prefetch(self, query: str, *, session_id: str = "") -> None:
+        return None
+
+    def sync_turn(
+        self,
+        user_content: str,
+        assistant_content: str,
+        *,
+        session_id: str = "",
+        messages: list[dict[str, Any]] | None = None,
+    ) -> None:
+        if not hasattr(self._maya, "synchronize_turn"):
+            return
+        effective_session = session_id or self._session_id
+        digest = hashlib.sha256(
+            f"{effective_session}\0{user_content}\0{assistant_content}".encode(
+                "utf-8"
+            )
+        ).hexdigest()[:16]
+        self._maya.synchronize_turn(
+            [
+                {
+                    "id": f"hermes-turn:{effective_session}:{digest}",
+                    "category": "conversation_turn",
+                    "source": "hermes-agent",
+                    "session_id": effective_session,
+                    "user_content": user_content,
+                    "assistant_content": assistant_content,
+                }
+            ]
+        )
+
+    def get_tool_schemas(self) -> list[dict[str, Any]]:
+        return []
+
+    def handle_tool_call(self, tool_name: str, arguments: dict[str, Any]) -> Any:
+        raise HermesRuntimeUnavailableError(
+            f"Maya memory provider does not expose Hermes tool: {tool_name}"
+        )
+
+    def shutdown(self) -> None:
+        if not self._session_id:
+            return
+        if hasattr(self._maya, "end_session"):
+            self._maya.end_session(self._session_id)
+        self._session_id = ""
 
 
 def _normalize_hermes_runtime(runtime: Any) -> Any:
