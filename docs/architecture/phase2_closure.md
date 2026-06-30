@@ -92,6 +92,10 @@ Phase 2 exits with Enterprise BYO, broker-disabled operation, customer-owned
 connector and model contracts, local model endpoint readiness, secret backend
 extension contracts, and clean installed-package verification in place.
 
-The next phase should begin with Metabase and document capabilities while
-preserving the local governance, customer-control, secret-reference,
-broker-disabled, and package-verification boundaries established here.
+The next corrective runtime-completion phase is Hermes Runtime Inclusion and
+Adapter Wiring. It closes the installed-package gap where Maya validates and
+assembles locally but does not yet include or resolve a compatible Hermes
+runtime. After that gate is satisfied, product development can continue to
+Metabase and document capabilities while preserving the local governance,
+customer-control, secret-reference, broker-disabled, and package-verification
+boundaries established here.
