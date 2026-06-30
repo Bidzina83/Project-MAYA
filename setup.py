@@ -1,6 +1,12 @@
 from setuptools import find_packages, setup
 
 
+HERMES_RUNTIME_REQUIREMENT = (
+    "hermes-agent @ "
+    "git+https://github.com/Bidzina83/hermes-agent.git"
+    "@b13e2fd6948a59eeb59fe618914147d97a2ee90a"
+)
+
 packages = find_packages(
     where="src",
     include=["project_maya", "project_maya.*"],
@@ -14,7 +20,10 @@ setup(
     package_dir={"": "src"},
     include_package_data=False,
     package_data={'': ['plugin.yaml']},
-    python_requires='>=3.10',
+    python_requires='>=3.11,<3.14',
+    install_requires=[
+        HERMES_RUNTIME_REQUIREMENT,
+    ],
     # Optional extras for test/development workflows. Keep minimal and focused.
     extras_require={
         'test': [
