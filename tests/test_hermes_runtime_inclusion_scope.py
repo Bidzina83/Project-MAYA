@@ -143,6 +143,52 @@ class TestHermesRuntimeInclusionScope(unittest.TestCase):
 
         self.assertIn("docs/architecture/hermes_adapter_contract_update.md", doc)
 
+    def test_package_inclusion_records_pinned_runtime_dependency(self):
+        doc = Path("docs/architecture/hermes_package_inclusion.md").read_text(
+            encoding="utf-8"
+        )
+        setup = Path("setup.py").read_text(encoding="utf-8")
+        verifier = Path("scripts/verify_phase1_package.py").read_text(
+            encoding="utf-8"
+        )
+        normalized = " ".join(doc.split()).lower()
+
+        for expected in (
+            "hermes-agent @ git+https://github.com/Bidzina83/hermes-agent.git",
+            "b13e2fd6948a59eeb59fe618914147d97a2ee90a",
+            "Requires-Python: >=3.11,<3.14",
+            "local checkout",
+            "`PYTHONPATH`",
+            "`/opt/hermes`",
+            "Python 3.14",
+            "Installed Package Verification",
+        ):
+            self.assertIn(expected.lower(), normalized)
+        for expected in (
+            "HERMES_RUNTIME_REQUIREMENT",
+            "git+https://github.com/Bidzina83/hermes-agent.git",
+            "b13e2fd6948a59eeb59fe618914147d97a2ee90a",
+            "python_requires='>=3.11,<3.14'",
+            "install_requires",
+        ):
+            self.assertIn(expected, setup)
+        for expected in (
+            "HERMES_RUNTIME_COMMIT",
+            "HERMES_RUNTIME_REQUIREMENT_PREFIX",
+            "MAYA_PYTHON_REQUIRES",
+            "Requires-Dist",
+            "Requires-Python",
+            "pinned Hermes runtime dependency",
+        ):
+            self.assertIn(expected, verifier)
+
+    def test_plan_links_step_5_evidence(self):
+        doc = Path("docs/architecture/hermes_runtime_inclusion_plan.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("docs/architecture/hermes_package_inclusion.md", doc)
+
 
 if __name__ == "__main__":
     unittest.main()

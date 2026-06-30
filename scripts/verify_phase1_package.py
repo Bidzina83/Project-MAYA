@@ -17,8 +17,15 @@ import tempfile
 import venv
 import zipfile
 from contextlib import closing
+from email.parser import Parser
 from pathlib import Path
 
+
+HERMES_RUNTIME_COMMIT = "b13e2fd6948a59eeb59fe618914147d97a2ee90a"
+HERMES_RUNTIME_REQUIREMENT_PREFIX = (
+    "hermes-agent@git+https://github.com/Bidzina83/hermes-agent.git@"
+)
+MAYA_PYTHON_REQUIRES = frozenset((">=3.11", "<3.14"))
 
 REQUIRED_COMMANDS = (
     "doctor",
@@ -141,8 +148,36 @@ def _venv_python(venv_dir: Path) -> Path:
 def _verify_wheel_contents(wheel_path: Path) -> None:
     with zipfile.ZipFile(wheel_path) as wheel:
         names = wheel.namelist()
+        metadata_name = next(
+            (name for name in names if name.endswith(".dist-info/METADATA")),
+            None,
+        )
+        if metadata_name is None:
+            raise RuntimeError("wheel does not contain distribution metadata")
+        metadata = Parser().parsestr(wheel.read(metadata_name).decode("utf-8"))
     if "project_maya/__init__.py" not in names:
         raise RuntimeError("wheel does not contain project_maya")
+    requires_python = frozenset(
+        item.strip()
+        for item in (metadata.get("Requires-Python") or "").split(",")
+        if item.strip()
+    )
+    if requires_python != MAYA_PYTHON_REQUIRES:
+        raise RuntimeError(
+            "wheel has unexpected Python requirement: "
+            f"{metadata.get('Requires-Python')!r}"
+        )
+    requires_dist = metadata.get_all("Requires-Dist") or []
+    hermes_requirement = next(
+        (
+            item
+            for item in requires_dist
+            if item.replace(" ", "").startswith(HERMES_RUNTIME_REQUIREMENT_PREFIX)
+        ),
+        "",
+    )
+    if HERMES_RUNTIME_COMMIT not in hermes_requirement:
+        raise RuntimeError("wheel does not declare pinned Hermes runtime dependency")
     disallowed_fragments = (
         "__pycache__/",
         "/tests/",

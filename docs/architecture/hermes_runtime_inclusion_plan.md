@@ -57,7 +57,8 @@ Work this phase in the following order unless the operator approves a change.
 
    Make the built Maya package install with the required Hermes runtime
    available. This must not rely on `PYTHONPATH` shims, repository-relative
-   imports, `/opt/hermes`, or local checkout paths.
+   imports, `/opt/hermes`, or local checkout paths. Step 5 evidence is
+   recorded in `docs/architecture/hermes_package_inclusion.md`.
 
 6. **Skills Inclusion Boundary**
 
