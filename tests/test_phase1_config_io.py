@@ -41,6 +41,39 @@ class TestPhase1ConfigIO(unittest.TestCase):
         self.assertEqual(exported["schema_version"], 2)
         self.assertEqual(exported["product"]["edition"], "standard")
 
+    def test_export_config_cli_accepts_utf8_bom_config(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = Path(tmp) / "maya.json"
+            config_path.write_text(
+                json.dumps(valid_config_mapping()),
+                encoding="utf-8-sig",
+            )
+
+            with patch("builtins.print") as printed:
+                exit_code = maya_cli(["export-config", "--config", str(config_path)])
+
+        self.assertEqual(exit_code, 0)
+        exported = json.loads(printed.call_args.args[0])
+        self.assertEqual(exported["schema_version"], 2)
+        self.assertEqual(exported["product"]["edition"], "standard")
+
+    def test_doctor_cli_reports_invalid_config_without_traceback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = Path(tmp) / "maya.json"
+            config_path.write_text(
+                '{"secret": "raw-value", ',
+                encoding="utf-8",
+            )
+
+            with patch("builtins.print") as printed:
+                exit_code = maya_cli(["doctor", "--config", str(config_path)])
+
+        self.assertEqual(exit_code, 1)
+        output = printed.call_args.args[0]
+        self.assertEqual(output, "fail\tconfig\tconfiguration invalid")
+        self.assertNotIn("Traceback", output)
+        self.assertNotIn("raw-value", output)
+
     def test_import_config_cli_is_dry_run_by_default(self):
         with tempfile.TemporaryDirectory() as tmp:
             source_path = Path(tmp) / "source.json"

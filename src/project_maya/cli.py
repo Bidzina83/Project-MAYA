@@ -361,7 +361,11 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _doctor(config_path: Path) -> int:
-    config = _load_config(config_path)
+    try:
+        config = _load_config(config_path)
+    except Exception:
+        print(f"{DoctorStatus.FAIL.value}\tconfig\tconfiguration invalid")
+        return 1
     try:
         product = build_local_product(config)
     except Exception as exc:
@@ -803,7 +807,7 @@ def _update(config_path: Path, *, rollback: bool = False) -> int:
 
 
 def _load_config(config_path: Path):
-    return config_from_mapping(json.loads(config_path.read_text(encoding="utf-8")))
+    return config_from_mapping(json.loads(config_path.read_text(encoding="utf-8-sig")))
 
 
 def _config_json(config) -> str:
