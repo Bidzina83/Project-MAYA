@@ -34,7 +34,8 @@ Work this phase in the following order unless the operator approves a change.
    Decide how Hermes enters the Maya product. The preferred direction is to
    use `Bidzina83/hermes-agent` as the practical integration source, preserve
    compatibility with `NousResearch/hermes-agent`, and avoid copying arbitrary
-   runtime folders into `project_maya`.
+   runtime folders into `project_maya`. Step 2 evidence is recorded in
+   `docs/architecture/hermes_source_strategy.md`.
 
 3. **Runtime Contract Inventory**
 
