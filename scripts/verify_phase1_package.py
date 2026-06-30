@@ -125,6 +125,10 @@ def main(argv: list[str] | None = None) -> int:
         _verify_installed_update_cli(python, work_dir)
         _verify_installed_migration_cli(python, work_dir)
         _verify_installed_enterprise_byo_surfaces(python, work_dir)
+        _verify_installed_phase2_profile_model_and_secret_surfaces(
+            python,
+            work_dir,
+        )
     return 0
 
 
@@ -385,6 +389,92 @@ def _verify_installed_enterprise_byo_surfaces(
         raise RuntimeError("installed doctor printed a secret ref")
 
 
+def _verify_installed_phase2_profile_model_and_secret_surfaces(
+    python: Path,
+    work_dir: Path,
+) -> None:
+    data_dir = work_dir / "enterprise-local-model-data"
+    profile_path = work_dir / "enterprise-local-model-profile.json"
+    runtime_module = work_dir / "package_verify_local_runtime.py"
+    runtime_module.write_text(
+        "\n".join(
+            [
+                "EVENTS = []",
+                "class Runtime:",
+                "    def __init__(self, **kwargs):",
+                "        EVENTS.append(('init', kwargs))",
+                "    def attach_memory(self, memory_provider):",
+                "        EVENTS.append(('memory', type(memory_provider).__name__))",
+                "    def start(self, *, agent_name):",
+                "        EVENTS.append(('start', agent_name))",
+                "    def run(self, request, **kwargs):",
+                "        EVENTS.append(('run', request, kwargs))",
+                "        return 'local-model-ok'",
+                "    def stop(self):",
+                "        EVENTS.append(('stop',))",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    _write_enterprise_local_model_profile(profile_path)
+    _run(
+        [
+            str(python),
+            "-c",
+            (
+                "from pathlib import Path; "
+                "from project_maya import "
+                "AuthorizationResult, GovernanceDecision, "
+                "InMemoryEnterpriseSecretBackend, SecretBackendDescriptor, "
+                "SecretBackendKind, SecretRef, build_local_product, "
+                "config_from_mapping, config_to_mapping, load_config_profile, "
+                "validate_local_model_endpoint; "
+                "Gateway = type('Gateway', (), {"
+                "'__init__': lambda self: setattr(self, 'requests', []), "
+                "'authorize': lambda self, request: "
+                "(self.requests.append(request) or AuthorizationResult("
+                "decision=GovernanceDecision.ALLOW, "
+                "reason_code='verify.allow'))}); "
+                f"profile = Path(r'{profile_path}'); "
+                f"data_dir = Path(r'{data_dir}'); "
+                "config = load_config_profile("
+                "profile, data_dir=data_dir, instance_id='verify-local-model'); "
+                "readiness = validate_local_model_endpoint(config); "
+                "assert readiness.ready and readiness.endpoint_family == 'ollama'; "
+                "assert readiness.openai_compatible and not readiness.network_used; "
+                "assert '127.0.0.1:11434' not in readiness.redacted_summary(); "
+                "mapping = config_to_mapping(config); "
+                "mapping['runtime']['hermes_factory'] = "
+                "'package_verify_local_runtime:Runtime'; "
+                "gateway = Gateway(); "
+                "product = build_local_product("
+                "config_from_mapping(mapping), gateway=gateway); "
+                "product.start(); "
+                "assert product.run('hello') == 'local-model-ok'; "
+                "product.stop(); "
+                "assert [r.capability for r in gateway.requests] == "
+                "['runtime.execute']; "
+                "descriptor = SecretBackendDescriptor("
+                "kind=SecretBackendKind.EXTERNAL_VAULT, "
+                "name='verify-vault', "
+                "location='https://vault.customer.example', "
+                "key_ref=SecretRef.parse('secret://vault/key')); "
+                "backend = InMemoryEnterpriseSecretBackend(descriptor); "
+                "ref = SecretRef.parse('secret://llm/local'); "
+                "backend.write(ref, 'secret-value'); "
+                "assert backend.read(ref) == 'secret-value'; "
+                "health = backend.health(); "
+                "assert health.backend == 'verify-vault'; "
+                "assert 'secret-value' not in health.message; "
+                "assert 'https://vault.customer.example' not in health.message; "
+                "assert 'secret://vault/key' not in health.message"
+            ),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+
+
 def _write_minimal_config(
     config_path: Path,
     data_dir: Path,
@@ -431,6 +521,82 @@ def _write_minimal_config(
                 },
                 "governance": {
                     "policy_file": str(data_dir / "governance" / "policy.json"),
+                    "audit_enabled": True,
+                    "default_action": "deny",
+                    "minimum_memory_trust": 0.7,
+                },
+                "metabase": {
+                    "enabled": False,
+                    "deployment": "disabled",
+                    "endpoint": None,
+                    "application_database": None,
+                    "analytics_sources": [],
+                },
+                "local_api": {
+                    "bind": "127.0.0.1",
+                    "port": None,
+                    "remote_access": False,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_enterprise_local_model_profile(profile_path: Path) -> None:
+    profile_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "product": {
+                    "edition": "enterprise",
+                    "instance_id": "${MAYA_INSTANCE_ID}",
+                },
+                "deployment": {
+                    "class": "desktop",
+                    "network_policy": "enterprise-local-model",
+                    "data_dir": "${MAYA_DATA_DIR}",
+                },
+                "runtime": {
+                    "hermes_compatibility": "phase2-test",
+                    "enabled_profiles": ["maya-core", "maya-local-models"],
+                },
+                "broker": {"mode": "disabled", "endpoint": None},
+                "llm": {
+                    "mode": "local",
+                    "provider": "openai-compatible",
+                    "model": "local-model",
+                    "credential_ref": None,
+                    "endpoint": "http://127.0.0.1:11434/v1",
+                    "timeout_seconds": 120,
+                },
+                "integrations": {
+                    "google": {
+                        "enabled": False,
+                        "credential_mode": "disabled",
+                        "credential_ref": None,
+                    },
+                    "slack": {
+                        "enabled": False,
+                        "credential_mode": "disabled",
+                        "credential_ref": None,
+                    },
+                    "telegram": {
+                        "enabled": False,
+                        "credential_mode": "disabled",
+                        "credential_ref": None,
+                    },
+                },
+                "memory": {
+                    "hermes_provider": "local",
+                    "retriever": "local_json",
+                    "registry": "sqlite",
+                    "governance_enabled": True,
+                },
+                "governance": {
+                    "policy_file": (
+                        "${MAYA_DATA_DIR}/governance/policies/local-model.json"
+                    ),
                     "audit_enabled": True,
                     "default_action": "deny",
                     "minimum_memory_trust": 0.7,

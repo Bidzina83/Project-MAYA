@@ -13,14 +13,22 @@ class TestPhase2PackageVerification(unittest.TestCase):
             "Enterprise BYO",
             "`broker.mode=disabled`",
             "customer-owned",
+            "`load_config_profile`",
+            "`validate_local_model_endpoint`",
+            "`InMemoryEnterpriseSecretBackend`",
             "reset-integration --revoke-provider",
             "without printing secret",
         ):
             self.assertIn(expected, doc)
         for expected in (
             "_verify_installed_enterprise_byo_surfaces",
+            "_verify_installed_phase2_profile_model_and_secret_surfaces",
             "_write_enterprise_byo_config",
+            "_write_enterprise_local_model_profile",
             "ProviderRevocationStatus",
+            "InMemoryEnterpriseSecretBackend",
+            "load_config_profile",
+            "validate_local_model_endpoint",
             "validate_configured_connectors",
             "validate_model_config",
         ):
