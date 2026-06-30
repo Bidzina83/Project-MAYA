@@ -110,6 +110,13 @@ from .secrets import (
     WindowsDPAPISecretStore,
     build_platform_secret_store,
 )
+from .skills import (
+    MayaSkillArtifact,
+    SkillContractError,
+    SkillOrigin,
+    validate_skill_artifacts,
+    validate_skill_text_is_sanitized,
+)
 from .update import UpdateError, UpdateStatus, check_updates, rollback_update
 
 __all__ = [
@@ -160,6 +167,7 @@ __all__ = [
     "LocalModelEndpointReadiness",
     "LocalModelEndpointStatus",
     "MayaConfig",
+    "MayaSkillArtifact",
     "PolicyAuthorizationGateway",
     "PolicyRule",
     "ProviderRevocationStatus",
@@ -188,6 +196,8 @@ __all__ = [
     "SecretStoreError",
     "SecretStoreHealth",
     "SecretStoreStatus",
+    "SkillContractError",
+    "SkillOrigin",
     "UpdateError",
     "UpdateStatus",
     "WindowsDPAPISecretStore",
@@ -214,4 +224,6 @@ __all__ = [
     "validate_local_model_endpoint",
     "validate_connector",
     "validate_model_config",
+    "validate_skill_artifacts",
+    "validate_skill_text_is_sanitized",
 ]

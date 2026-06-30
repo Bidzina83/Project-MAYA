@@ -189,6 +189,49 @@ class TestHermesRuntimeInclusionScope(unittest.TestCase):
 
         self.assertIn("docs/architecture/hermes_package_inclusion.md", doc)
 
+    def test_skills_inclusion_boundary_records_artifact_contract(self):
+        doc = Path("docs/architecture/hermes_skills_inclusion_boundary.md").read_text(
+            encoding="utf-8"
+        )
+        skills = Path("src/project_maya/skills.py").read_text(encoding="utf-8")
+        normalized = " ".join(doc.split()).lower()
+
+        for expected in (
+            "Bidzina83/hermes-agent",
+            "Bidzina83/Hermes-Agent-Maya-Skills",
+            "explicit allowlisting",
+            "versioning",
+            "sanitization",
+            "hermes_default",
+            "maya_trained",
+            "skills.external_dirs",
+            "local action authorization",
+            "connector credential contracts",
+            "model-egress governance",
+            "governed memory",
+            "does not",
+            "package trained Maya skills",
+            "claim that any skill is loaded or healthy",
+        ):
+            self.assertIn(expected.lower(), normalized)
+        for expected in (
+            "SkillOrigin",
+            "HERMES_DEFAULT",
+            "MAYA_TRAINED",
+            "MayaSkillArtifact",
+            "validate_skill_artifacts",
+            "validate_skill_text_is_sanitized",
+            "_FORBIDDEN_TEXT_MARKERS",
+        ):
+            self.assertIn(expected, skills)
+
+    def test_plan_links_step_6_evidence(self):
+        doc = Path("docs/architecture/hermes_runtime_inclusion_plan.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("docs/architecture/hermes_skills_inclusion_boundary.md", doc)
+
 
 if __name__ == "__main__":
     unittest.main()
