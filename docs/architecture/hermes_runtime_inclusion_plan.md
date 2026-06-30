@@ -42,6 +42,8 @@ Work this phase in the following order unless the operator approves a change.
    Inspect the actual Hermes runtime surface in the selected source and map
    startup, `run_agent:AIAgent`, model configuration, memory hooks,
    skill/plugin loading, shutdown, health, compatibility, and dependencies.
+   Step 3 evidence is recorded in
+   `docs/architecture/hermes_runtime_contract_inventory.md`.
 
 4. **Adapter Contract Update**
 
