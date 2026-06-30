@@ -50,7 +50,8 @@ Work this phase in the following order unless the operator approves a change.
    Tighten `HermesRuntimeAdapter` against the real Hermes runtime, including
    factory resolution, constructor arguments, model/provider/base URL handoff,
    memory-provider attachment, skill/plugin registration, run/session
-   execution, stop/cleanup, and redacted health.
+   execution, stop/cleanup, and redacted health. Step 4 evidence is recorded
+   in `docs/architecture/hermes_adapter_contract_update.md`.
 
 5. **Package Inclusion**
 

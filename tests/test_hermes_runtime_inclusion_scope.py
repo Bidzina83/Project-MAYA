@@ -119,6 +119,30 @@ class TestHermesRuntimeInclusionScope(unittest.TestCase):
 
         self.assertIn("docs/architecture/hermes_runtime_contract_inventory.md", doc)
 
+    def test_adapter_contract_update_records_memory_bridge_boundary(self):
+        doc = Path("docs/architecture/hermes_adapter_contract_update.md").read_text(
+            encoding="utf-8"
+        )
+        normalized = " ".join(doc.split()).lower()
+
+        for expected in (
+            "run_agent:AIAgent",
+            "chat-oriented",
+            "AIAgent._memory_manager.add_provider()",
+            "Hermes-shaped provider named `maya`",
+            "does not create a second memory store",
+            "arbitrary plugin loading remains unavailable",
+            "does not package Hermes into Maya",
+        ):
+            self.assertIn(expected.lower(), normalized)
+
+    def test_plan_links_step_4_evidence(self):
+        doc = Path("docs/architecture/hermes_runtime_inclusion_plan.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("docs/architecture/hermes_adapter_contract_update.md", doc)
+
 
 if __name__ == "__main__":
     unittest.main()

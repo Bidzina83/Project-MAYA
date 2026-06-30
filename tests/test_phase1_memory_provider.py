@@ -89,16 +89,23 @@ class TestPhase1MemoryProvider(unittest.TestCase):
     def test_local_product_attaches_provider_to_hermes_runtime(self):
         events = []
 
+        class FakeMemoryManager:
+            def add_provider(self, provider):
+                events.append(("memory", provider.name, provider.is_available()))
+                self.provider = provider
+
         class FakeAIAgent:
             def __init__(self, **kwargs):
+                self.session_id = "local-product-session"
+                self._memory_manager = FakeMemoryManager()
                 events.append(("init", kwargs))
-
-            def attach_memory(self, memory_provider):
-                events.append(("memory", type(memory_provider).__name__))
 
             def chat(self, message):
                 events.append(("chat", message))
                 return "ok"
+
+            def shutdown_memory_provider(self):
+                self._memory_manager.provider.shutdown()
 
         with tempfile.TemporaryDirectory() as tmp:
             module_path = "tests.test_phase1_memory_provider:FakeAIAgent"
@@ -121,7 +128,7 @@ class TestPhase1MemoryProvider(unittest.TestCase):
                 globals().pop("FakeAIAgent", None)
 
         self.assertIsInstance(product.memory_provider, HermesMemoryProvider)
-        self.assertIn(("memory", "HermesMemoryProvider"), events)
+        self.assertIn(("memory", "maya", True), events)
 
 
 if __name__ == "__main__":
