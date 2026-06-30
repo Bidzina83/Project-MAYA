@@ -65,7 +65,8 @@ Work this phase in the following order unless the operator approves a change.
    Define how Maya skills are shipped and discovered. Only approved
    Maya/IM AI Employee skills may be included, skills are versioned product
    artifacts, personal account details stay out, and skill loading is mediated
-   by the Maya/Hermes adapter.
+   by the Maya/Hermes adapter. Step 6 evidence is recorded in
+   `docs/architecture/hermes_skills_inclusion_boundary.md`.
 
 7. **Memory Hook Wiring**
 
