@@ -72,7 +72,8 @@ Work this phase in the following order unless the operator approves a change.
 
    Connect Maya's `HermesMemoryProvider` to the real Hermes lifecycle.
    Retrieval and write decisions continue to pass through Maya governance, and
-   no duplicate memory store is introduced.
+   no duplicate memory store is introduced. Step 7 evidence is recorded in
+   `docs/architecture/hermes_memory_hook_wiring.md`.
 
 8. **Governed Execution Smoke Path**
 
