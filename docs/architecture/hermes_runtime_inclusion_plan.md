@@ -86,7 +86,8 @@ Work this phase in the following order unless the operator approves a change.
 9. **Installed Package Verification**
 
    Extend clean package verification to install Maya and prove Hermes
-   availability without editable installs or path shims.
+   availability without editable installs or path shims. Step 9 evidence is
+   recorded in `docs/architecture/hermes_installed_package_verification.md`.
 
 10. **Windows Manual Smoke Test**
 

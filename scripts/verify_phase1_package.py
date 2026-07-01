@@ -44,6 +44,7 @@ REQUIRED_COMMANDS = (
 
 
 def main(argv: list[str] | None = None) -> int:
+    options = _parse_args(argv or [])
     repo_root = Path(__file__).resolve().parents[1]
     with tempfile.TemporaryDirectory(prefix="maya-package-verify-") as tmp:
         work_dir = Path(tmp)
@@ -74,17 +75,10 @@ def main(argv: list[str] | None = None) -> int:
 
         venv.EnvBuilder(with_pip=True, clear=True).create(venv_dir)
         python = _venv_python(venv_dir)
-        _run(
-            [
-                str(python),
-                "-m",
-                "pip",
-                "install",
-                "--no-deps",
-                "--force-reinstall",
-                str(wheels[0]),
-            ],
-            env=_clean_env(),
+        _install_wheel(
+            python,
+            wheels[0],
+            with_runtime_deps=options.with_hermes_runtime,
         )
         _run(
             [
@@ -136,7 +130,27 @@ def main(argv: list[str] | None = None) -> int:
             python,
             work_dir,
         )
+        if options.with_hermes_runtime:
+            _verify_installed_hermes_runtime_dependency(python, work_dir)
     return 0
+
+
+def _parse_args(argv: list[str]):
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Verify the Project MAYA package installs from a built wheel."
+    )
+    parser.add_argument(
+        "--with-hermes-runtime",
+        action="store_true",
+        help=(
+            "Install package dependencies and verify the pinned Hermes runtime "
+            "is importable. This may use network access for the pinned Git "
+            "dependency."
+        ),
+    )
+    return parser.parse_args(argv)
 
 
 def _venv_python(venv_dir: Path) -> Path:
@@ -201,6 +215,49 @@ def _verify_wheel_contents(wheel_path: Path) -> None:
         raise RuntimeError(
             "wheel contains non-product files: " + ", ".join(sorted(leaked)[:10])
         )
+
+
+def _install_wheel(
+    python: Path,
+    wheel_path: Path,
+    *,
+    with_runtime_deps: bool = False,
+) -> None:
+    command = [
+        str(python),
+        "-m",
+        "pip",
+        "install",
+        "--force-reinstall",
+    ]
+    if not with_runtime_deps:
+        command.append("--no-deps")
+    command.append(str(wheel_path))
+    _run(command, env=_clean_env())
+
+
+def _verify_installed_hermes_runtime_dependency(python: Path, work_dir: Path) -> None:
+    _run(
+        [
+            str(python),
+            "-c",
+            (
+                "import importlib.metadata as metadata; "
+                "from project_maya.adapters import HermesRuntimeAdapter; "
+                "from run_agent import AIAgent; "
+                "assert callable(AIAgent); "
+                "dist = metadata.distribution('hermes-agent'); "
+                "direct_url = dist.read_text('direct_url.json') or ''; "
+                f"assert '{HERMES_RUNTIME_COMMIT}' in direct_url; "
+                "adapter = HermesRuntimeAdapter(); "
+                "compatibility = adapter.compatibility(); "
+                "assert compatibility.compatible, compatibility.reason; "
+                "print('hermes-runtime', dist.version, compatibility.runtime_name)"
+            ),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
 
 
 def _verify_installed_repair_cli(python: Path, work_dir: Path) -> None:
