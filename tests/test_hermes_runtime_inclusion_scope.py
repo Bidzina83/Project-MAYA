@@ -367,6 +367,38 @@ class TestHermesRuntimeInclusionScope(unittest.TestCase):
             doc,
         )
 
+    def test_windows_manual_smoke_records_installed_runtime_result(self):
+        doc = Path("docs/architecture/hermes_windows_manual_smoke.md").read_text(
+            encoding="utf-8"
+        )
+        normalized = " ".join(doc.split()).lower()
+
+        for expected in (
+            "Step 10",
+            "Windows installed-package smoke path",
+            "--with-hermes-runtime",
+            "neutral working directory",
+            "from run_agent import AIAgent",
+            "project_maya True",
+            "stale local `hermes-agent` wheel cache",
+            "--no-cache-dir",
+            "hermes_cli.config",
+            "load_config",
+            "load_env",
+            "get_hermes_home",
+            "_expand_env_vars",
+            "zero exit code",
+            "does not claim full Windows product support",
+        ):
+            self.assertIn(expected.lower(), normalized)
+
+    def test_plan_links_step_10_evidence(self):
+        doc = Path("docs/architecture/hermes_runtime_inclusion_plan.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("docs/architecture/hermes_windows_manual_smoke.md", doc)
+
 
 if __name__ == "__main__":
     unittest.main()

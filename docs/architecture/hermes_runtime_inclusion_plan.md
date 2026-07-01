@@ -93,7 +93,8 @@ Work this phase in the following order unless the operator approves a change.
 
     Repeat the Windows installed-package smoke test, now expecting Hermes
     compatibility to pass and runtime health to be healthy or intentionally
-    degraded rather than missing.
+    degraded rather than missing. Step 10 evidence is recorded in
+    `docs/architecture/hermes_windows_manual_smoke.md`.
 
 11. **Closure Audit**
 
