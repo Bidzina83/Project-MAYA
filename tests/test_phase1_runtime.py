@@ -1,6 +1,8 @@
 import unittest
 import sys
+import tempfile
 import types
+from pathlib import Path
 
 from project_maya import (
     ActionRequest,
@@ -9,6 +11,10 @@ from project_maya import (
     DoctorStatus,
     GovernanceDecision,
     GovernedAgentRuntime,
+    GovernedMemoryRetriever,
+    HermesMemoryProvider,
+    LocalJsonRetriever,
+    MemoryRetriever,
     create_agent,
     run_doctor,
 )
@@ -187,6 +193,98 @@ class TestPhase1Runtime(unittest.TestCase):
         self.assertIn(("shutdown_memory_provider",), events)
         self.assertIn(("end_session", "session-1"), events)
         self.assertIn(("close",), events)
+
+    def test_hermes_memory_tools_route_through_governed_maya_memory(self):
+        events = []
+
+        class FakeMemoryManager:
+            def __init__(self):
+                self.provider = None
+
+            def add_provider(self, provider):
+                self.provider = provider
+                events.append(("add_provider", provider.name))
+
+        class FakeAIAgent:
+            def __init__(self, **kwargs):
+                self.session_id = "memory-tool-session"
+                self._memory_manager = FakeMemoryManager()
+
+            def chat(self, message):
+                provider = self._memory_manager.provider
+                tool_names = [
+                    schema["function"]["name"]
+                    for schema in provider.get_tool_schemas()
+                ]
+                search_result = provider.handle_tool_call(
+                    "maya_memory_search",
+                    {"query": "durable", "category": "briefing", "limit": 5},
+                )
+                remember_result = provider.handle_tool_call(
+                    "maya_memory_remember",
+                    {
+                        "document": {
+                            "id": "tool-memory-1",
+                            "category": "briefing",
+                            "text": "written through Hermes memory tool",
+                        }
+                    },
+                )
+                recalled = provider.handle_tool_call(
+                    "maya_memory_recall",
+                    {"memory_id": "tool-memory-1"},
+                )
+                events.append(("tools", tuple(tool_names)))
+                events.append(("search", search_result[0]["id"]))
+                events.append(("remember", remember_result["stored"]))
+                events.append(("recall", recalled["text"]))
+                return "memory-tools-ok"
+
+            def shutdown_memory_provider(self):
+                self._memory_manager.provider.shutdown()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            gateway = AllowGateway()
+            retriever = LocalJsonRetriever(Path(tmp) / "records.json")
+            base = MemoryRetriever(retriever)
+            base.remember(
+                {
+                    "id": "note-1",
+                    "category": "briefing",
+                    "text": "durable context for Maya",
+                }
+            )
+            memory = GovernedMemoryRetriever(
+                base,
+                gateway,
+                actor_id="operator",
+            )
+            adapter = HermesRuntimeAdapter(factory=lambda **kwargs: FakeAIAgent())
+            adapter.attach_memory(HermesMemoryProvider(memory))
+            adapter.start(agent_name="project_maya.memory-tools")
+            result = adapter.run("use memory tools")
+            adapter.stop()
+
+        self.assertEqual(result, "memory-tools-ok")
+        self.assertIn(("add_provider", "maya"), events)
+        self.assertIn(
+            (
+                "tools",
+                (
+                    "maya_memory_search",
+                    "maya_memory_recall",
+                    "maya_memory_remember",
+                ),
+            ),
+            events,
+        )
+        self.assertIn(("search", "note-1"), events)
+        self.assertIn(("remember", 1), events)
+        self.assertIn(("recall", "written through Hermes memory tool"), events)
+        self.assertEqual(
+            [request.capability for request in gateway.requests],
+            ["memory.read", "memory.write", "memory.read"],
+        )
 
     def test_public_agent_executes_through_governed_hermes_adapter(self):
         runtime = RuntimeDouble()

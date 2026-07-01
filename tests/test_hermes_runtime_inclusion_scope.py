@@ -232,6 +232,46 @@ class TestHermesRuntimeInclusionScope(unittest.TestCase):
 
         self.assertIn("docs/architecture/hermes_skills_inclusion_boundary.md", doc)
 
+    def test_memory_hook_wiring_records_governed_tool_boundary(self):
+        doc = Path("docs/architecture/hermes_memory_hook_wiring.md").read_text(
+            encoding="utf-8"
+        )
+        adapter = Path("src/project_maya/adapters/hermes.py").read_text(
+            encoding="utf-8"
+        )
+        normalized = " ".join(doc.split()).lower()
+
+        for expected in (
+            "AIAgent._memory_manager.add_provider()",
+            "HermesMemoryProvider.begin_session",
+            "HermesMemoryProvider.prefetch",
+            "HermesMemoryProvider.synchronize_turn",
+            "HermesMemoryProvider.end_session",
+            "maya_memory_search",
+            "maya_memory_recall",
+            "maya_memory_remember",
+            "GovernedMemoryRetriever",
+            "does not create a second memory database",
+            "does not persist Hermes-only state",
+        ):
+            self.assertIn(expected.lower(), normalized)
+        for expected in (
+            "maya_memory_search",
+            "maya_memory_recall",
+            "maya_memory_remember",
+            "handle_tool_call",
+            "get_tool_schemas",
+            "_prefetch_records",
+        ):
+            self.assertIn(expected, adapter)
+
+    def test_plan_links_step_7_evidence(self):
+        doc = Path("docs/architecture/hermes_runtime_inclusion_plan.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("docs/architecture/hermes_memory_hook_wiring.md", doc)
+
 
 if __name__ == "__main__":
     unittest.main()

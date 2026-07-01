@@ -284,9 +284,7 @@ class HermesMemoryProviderBridge:
         return ""
 
     def prefetch(self, query: str, *, session_id: str = "") -> str:
-        if not hasattr(self._maya, "prefetch"):
-            return ""
-        records = self._maya.prefetch(query, limit=5)
+        records = self._prefetch_records(query, limit=5)
         if not records:
             return ""
         return "Maya governed memory context:\n" + json.dumps(
@@ -328,12 +326,74 @@ class HermesMemoryProviderBridge:
         )
 
     def get_tool_schemas(self) -> list[dict[str, Any]]:
-        return []
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": "maya_memory_search",
+                    "description": "Search Maya governed persistent memory.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {"type": "string"},
+                            "category": {"type": "string"},
+                            "limit": {"type": "integer", "minimum": 1},
+                        },
+                        "required": ["query"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "maya_memory_recall",
+                    "description": "Recall one Maya governed memory record by id.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"memory_id": {"type": "string"}},
+                        "required": ["memory_id"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "maya_memory_remember",
+                    "description": "Write one approved record to Maya governed memory.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"document": {"type": "object"}},
+                        "required": ["document"],
+                    },
+                },
+            },
+        ]
 
     def handle_tool_call(self, tool_name: str, arguments: dict[str, Any]) -> Any:
-        raise HermesRuntimeUnavailableError(
-            f"Maya memory provider does not expose Hermes tool: {tool_name}"
-        )
+        if tool_name == "maya_memory_search":
+            query = _required_string(arguments, "query")
+            category = arguments.get("category")
+            limit = _positive_int(arguments.get("limit", 5), "limit")
+            return self._prefetch_records(query, category=category, limit=limit)
+        if tool_name == "maya_memory_recall":
+            if not hasattr(self._maya, "recall"):
+                raise HermesRuntimeUnavailableError(
+                    "Maya memory provider cannot recall records"
+                )
+            return self._maya.recall(_required_string(arguments, "memory_id"))
+        if tool_name == "maya_memory_remember":
+            if not hasattr(self._maya, "remember"):
+                raise HermesRuntimeUnavailableError(
+                    "Maya memory provider cannot remember records"
+                )
+            document = arguments.get("document")
+            if not isinstance(document, dict):
+                raise HermesRuntimeUnavailableError(
+                    "maya_memory_remember requires a document object"
+                )
+            self._maya.remember(document)
+            return {"stored": 1}
+        raise HermesRuntimeUnavailableError(f"unsupported Hermes memory tool: {tool_name}")
 
     def shutdown(self) -> None:
         if not self._session_id:
@@ -341,6 +401,42 @@ class HermesMemoryProviderBridge:
         if hasattr(self._maya, "end_session"):
             self._maya.end_session(self._session_id)
         self._session_id = ""
+
+    def _prefetch_records(
+        self,
+        query: str,
+        *,
+        category: str | None = None,
+        limit: int = 5,
+    ) -> list[dict[str, Any]]:
+        if not hasattr(self._maya, "prefetch"):
+            return []
+        if category is None:
+            return self._maya.prefetch(query, limit=limit)
+        return self._maya.prefetch(
+            query,
+            category=category,
+            limit=limit,
+        )
+
+
+def _required_string(arguments: dict[str, Any], name: str) -> str:
+    value = arguments.get(name)
+    if not isinstance(value, str) or not value.strip():
+        raise HermesRuntimeUnavailableError(f"{name} is required")
+    return value
+
+
+def _positive_int(value: Any, name: str) -> int:
+    try:
+        number = int(value)
+    except (TypeError, ValueError) as exc:
+        raise HermesRuntimeUnavailableError(
+            f"{name} must be a positive integer"
+        ) from exc
+    if number < 1:
+        raise HermesRuntimeUnavailableError(f"{name} must be a positive integer")
+    return number
 
 
 def _normalize_hermes_runtime(runtime: Any) -> Any:
