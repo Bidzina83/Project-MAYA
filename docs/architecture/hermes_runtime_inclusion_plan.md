@@ -80,7 +80,8 @@ Work this phase in the following order unless the operator approves a change.
    Prove that `build_local_product(config).run(...)` and
    `maya run --config ... --input ...` reach Hermes through the public Agent
    facade and governed runtime wrapper, producing runtime authorization and
-   model-egress audit records.
+   model-egress audit records. Step 8 evidence is recorded in
+   `docs/architecture/hermes_governed_execution_smoke.md`.
 
 9. **Installed Package Verification**
 
