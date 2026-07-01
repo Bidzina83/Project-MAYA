@@ -399,6 +399,44 @@ class TestHermesRuntimeInclusionScope(unittest.TestCase):
 
         self.assertIn("docs/architecture/hermes_windows_manual_smoke.md", doc)
 
+    def test_closure_audit_maps_phase_evidence_and_limits(self):
+        doc = Path("docs/architecture/hermes_runtime_inclusion_closure.md").read_text(
+            encoding="utf-8"
+        )
+        normalized = " ".join(doc.split()).lower()
+
+        for expected in (
+            "Step 11",
+            "Hermes Runtime Inclusion phase is complete for its approved scope",
+            "Acceptance Criteria Audit",
+            "docs/architecture/hermes_runtime_inclusion_scope.md",
+            "docs/architecture/hermes_source_strategy.md",
+            "docs/architecture/hermes_runtime_contract_inventory.md",
+            "docs/architecture/hermes_adapter_contract_update.md",
+            "docs/architecture/hermes_package_inclusion.md",
+            "docs/architecture/hermes_skills_inclusion_boundary.md",
+            "docs/architecture/hermes_memory_hook_wiring.md",
+            "docs/architecture/hermes_governed_execution_smoke.md",
+            "docs/architecture/hermes_installed_package_verification.md",
+            "docs/architecture/hermes_windows_manual_smoke.md",
+            "scripts/verify_phase1_package.py --with-hermes-runtime",
+            "tests/test_hermes_governed_execution_smoke.py",
+            "known limits",
+            "does not claim",
+            "live model inference",
+            "packaged trained Maya skills",
+            "Metabase runtime packaging",
+            "signed production installers",
+        ):
+            self.assertIn(expected.lower(), normalized)
+
+    def test_plan_links_step_11_evidence(self):
+        doc = Path("docs/architecture/hermes_runtime_inclusion_plan.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("docs/architecture/hermes_runtime_inclusion_closure.md", doc)
+
 
 if __name__ == "__main__":
     unittest.main()

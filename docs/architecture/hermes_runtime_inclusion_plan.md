@@ -99,7 +99,8 @@ Work this phase in the following order unless the operator approves a change.
 11. **Closure Audit**
 
     Add a closure document mapping this phase's acceptance criteria to tests,
-    docs, implemented code, and known limits.
+    docs, implemented code, and known limits. Step 11 evidence is recorded in
+    `docs/architecture/hermes_runtime_inclusion_closure.md`.
 
 ## Guardrails
 
