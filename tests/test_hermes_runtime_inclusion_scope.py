@@ -272,6 +272,46 @@ class TestHermesRuntimeInclusionScope(unittest.TestCase):
 
         self.assertIn("docs/architecture/hermes_memory_hook_wiring.md", doc)
 
+    def test_governed_execution_smoke_records_runtime_and_cli_boundary(self):
+        doc = Path("docs/architecture/hermes_governed_execution_smoke.md").read_text(
+            encoding="utf-8"
+        )
+        test_source = Path(
+            "tests/test_hermes_governed_execution_smoke.py"
+        ).read_text(encoding="utf-8")
+        normalized = " ".join(doc.split()).lower()
+
+        for expected in (
+            "build_local_product(config)",
+            "maya run --config",
+            "public Agent facade",
+            "GovernedAgentRuntime",
+            "HermesRuntimeAdapter",
+            "runtime.execute",
+            "model.egress",
+            "idempotency key",
+            "data classification",
+            "prompt text",
+            "secret://",
+            "Step 9",
+        ):
+            self.assertIn(expected.lower(), normalized)
+        for expected in (
+            "test_build_local_product_run_emits_runtime_and_model_egress_audit",
+            "test_maya_run_cli_emits_runtime_and_model_egress_audit",
+            "authorization.runtime",
+            "authorization.model_egress",
+            "tests.test_hermes_governed_execution_smoke:SmokeAIAgent",
+        ):
+            self.assertIn(expected, test_source)
+
+    def test_plan_links_step_8_evidence(self):
+        doc = Path("docs/architecture/hermes_runtime_inclusion_plan.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("docs/architecture/hermes_governed_execution_smoke.md", doc)
+
 
 if __name__ == "__main__":
     unittest.main()

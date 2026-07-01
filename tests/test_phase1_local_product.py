@@ -30,6 +30,11 @@ class AllowGateway:
         )
 
 
+class FakeMemoryManager:
+    def add_provider(self, provider):
+        self.provider = provider
+
+
 class TestPhase1LocalProduct(unittest.TestCase):
     def test_local_json_retriever_persists_records(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -95,11 +100,16 @@ class TestPhase1LocalProduct(unittest.TestCase):
 
         class FakeAIAgent:
             def __init__(self, **kwargs):
+                self.session_id = "local-product-cli-session"
+                self._memory_manager = FakeMemoryManager()
                 events.append(("init", kwargs))
 
             def chat(self, message):
                 events.append(("chat", message))
                 return {"reply": message.upper()}
+
+            def shutdown_memory_provider(self):
+                self._memory_manager.provider.shutdown()
 
             def stop(self):
                 events.append(("stop",))
@@ -260,11 +270,16 @@ class TestPhase1LocalProduct(unittest.TestCase):
             def __init__(self, **kwargs):
                 if "agent_name" in kwargs:
                     raise TypeError("unexpected agent_name")
+                self.session_id = "local-product-session"
+                self._memory_manager = FakeMemoryManager()
                 events.append(("init", kwargs))
 
             def chat(self, message):
                 events.append(("chat", message))
                 return "assembled response"
+
+            def shutdown_memory_provider(self):
+                self._memory_manager.provider.shutdown()
 
         with tempfile.TemporaryDirectory() as tmp:
             module_path = "tests.test_phase1_local_product:FakeAIAgent"
@@ -320,11 +335,16 @@ class TestPhase1LocalProduct(unittest.TestCase):
 
         class FakeAIAgent:
             def __init__(self, **kwargs):
+                self.session_id = "local-product-context-session"
+                self._memory_manager = FakeMemoryManager()
                 events.append(("init", kwargs))
 
             def chat(self, message):
                 events.append(("chat", message))
                 return "context response"
+
+            def shutdown_memory_provider(self):
+                self._memory_manager.provider.shutdown()
 
         with tempfile.TemporaryDirectory() as tmp:
             module_path = "tests.test_phase1_local_product:FakeAIAgent"
