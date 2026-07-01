@@ -312,6 +312,49 @@ class TestHermesRuntimeInclusionScope(unittest.TestCase):
 
         self.assertIn("docs/architecture/hermes_governed_execution_smoke.md", doc)
 
+    def test_installed_package_verification_records_hermes_runtime_mode(self):
+        doc = Path(
+            "docs/architecture/hermes_installed_package_verification.md"
+        ).read_text(encoding="utf-8")
+        script = Path("scripts/verify_phase1_package.py").read_text(
+            encoding="utf-8"
+        )
+        normalized = " ".join(doc.split()).lower()
+
+        for expected in (
+            "--with-hermes-runtime",
+            "--no-deps",
+            "run_agent:AIAgent",
+            "direct-url metadata",
+            "b13e2fd6948a59eeb59fe618914147d97a2ee90a",
+            "HermesRuntimeAdapter().compatibility()",
+            "without editable installs",
+            "PYTHONPATH",
+            "/opt/hermes",
+            "local checkout paths",
+        ):
+            self.assertIn(expected.lower(), normalized)
+        for expected in (
+            "with_hermes_runtime",
+            "_install_wheel",
+            "_verify_installed_hermes_runtime_dependency",
+            "metadata.distribution('hermes-agent')",
+            "from run_agent import AIAgent",
+            "direct_url.json",
+            "HermesRuntimeAdapter",
+        ):
+            self.assertIn(expected, script)
+
+    def test_plan_links_step_9_evidence(self):
+        doc = Path("docs/architecture/hermes_runtime_inclusion_plan.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn(
+            "docs/architecture/hermes_installed_package_verification.md",
+            doc,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
