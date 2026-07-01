@@ -232,6 +232,11 @@ def _install_wheel(
     ]
     if not with_runtime_deps:
         command.append("--no-deps")
+    else:
+        # The pinned Hermes dependency is a Git URL with a reused package
+        # version. Force a source rebuild so a stale local wheel cache cannot
+        # mask packaging regressions in the installed runtime surface.
+        command.append("--no-cache-dir")
     command.append(str(wheel_path))
     _run(command, env=_clean_env())
 
@@ -243,9 +248,17 @@ def _verify_installed_hermes_runtime_dependency(python: Path, work_dir: Path) ->
             "-c",
             (
                 "import importlib.metadata as metadata; "
+                "import hermes_cli.config as hermes_config; "
                 "from project_maya.adapters import HermesRuntimeAdapter; "
                 "from run_agent import AIAgent; "
                 "assert callable(AIAgent); "
+                "required_config_attrs = "
+                "('load_config', 'load_env', 'get_hermes_home', "
+                "'_expand_env_vars'); "
+                "missing = [name for name in required_config_attrs "
+                "if not hasattr(hermes_config, name)]; "
+                "assert not missing, "
+                "f'installed hermes_cli.config missing {missing}'; "
                 "dist = metadata.distribution('hermes-agent'); "
                 "direct_url = dist.read_text('direct_url.json') or ''; "
                 f"assert '{HERMES_RUNTIME_COMMIT}' in direct_url; "

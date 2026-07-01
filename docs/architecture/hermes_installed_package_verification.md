@@ -25,6 +25,11 @@ the wheel metadata:
 hermes-agent @ git+https://github.com/Bidzina83/hermes-agent.git@b13e2fd6948a59eeb59fe618914147d97a2ee90a
 ```
 
+Runtime mode passes `--no-cache-dir` to pip. The pinned Git dependency
+currently uses the same package version across commits, so a stale local wheel
+cache can otherwise install an incompatible `hermes-agent` artifact even when
+the pinned source commit is correct.
+
 ## Runtime Availability Proof
 
 After dependency installation, the verifier runs from the temporary installed
@@ -32,6 +37,9 @@ environment with `PYTHONPATH` removed and checks:
 
 - `project_maya` imports from the installed wheel;
 - `run_agent:AIAgent` imports and is callable;
+- `hermes_cli.config` exposes the config/runtime helpers required by installed
+  Hermes imports, including `load_config`, `load_env`, `get_hermes_home`, and
+  `_expand_env_vars`;
 - installed `hermes-agent` metadata exists;
 - installed direct-url metadata references the inspected Hermes commit;
 - `HermesRuntimeAdapter().compatibility()` reports compatible.
