@@ -26,6 +26,9 @@ HERMES_RUNTIME_REQUIREMENT_PREFIX = (
     "hermes-agent@git+https://github.com/Bidzina83/hermes-agent.git@"
 )
 MAYA_PYTHON_REQUIRES = frozenset((">=3.11", "<3.14"))
+DOCUMENTS_EXTRA_REQUIREMENTS = frozenset(
+    ("markdown", "pillow", "pypdf", "reportlab")
+)
 
 REQUIRED_COMMANDS = (
     "doctor",
@@ -193,6 +196,25 @@ def _verify_wheel_contents(wheel_path: Path) -> None:
     )
     if HERMES_RUNTIME_COMMIT not in hermes_requirement:
         raise RuntimeError("wheel does not declare pinned Hermes runtime dependency")
+    extras = set(metadata.get_all("Provides-Extra") or [])
+    if "documents" not in extras:
+        raise RuntimeError("wheel does not declare documents extra")
+    if "documents-preview" not in extras:
+        raise RuntimeError("wheel does not declare documents-preview extra")
+    normalized_requires_dist = [
+        item.replace(" ", "").lower() for item in requires_dist
+    ]
+    for package in sorted(DOCUMENTS_EXTRA_REQUIREMENTS):
+        if not any(
+            item.startswith(package) and 'extra=="documents"' in item
+            for item in normalized_requires_dist
+        ):
+            raise RuntimeError(f"documents extra missing requirement: {package}")
+    if not any(
+        item.startswith("pymupdf") and 'extra=="documents-preview"' in item
+        for item in normalized_requires_dist
+    ):
+        raise RuntimeError("documents-preview extra missing PyMuPDF requirement")
     disallowed_fragments = (
         "__pycache__/",
         "/tests/",
@@ -330,6 +352,65 @@ def _verify_installed_dependency_contract_surfaces(
     )
     if "dependency-contracts" not in result.stdout:
         raise RuntimeError("installed dependency contract check did not run")
+    metadata_result = _run(
+        [
+            str(python),
+            "-c",
+            (
+                "import importlib.metadata as metadata; "
+                "dist = metadata.distribution('project-maya'); "
+                "meta = dist.metadata; "
+                "extras = set(meta.get_all('Provides-Extra') or []); "
+                "assert 'documents' in extras; "
+                "assert 'documents-preview' in extras; "
+                "requires = [item.replace(' ', '').lower() "
+                "for item in (meta.get_all('Requires-Dist') or [])]; "
+                "missing = [package for package in "
+                "('markdown', 'pillow', 'pypdf', 'reportlab') "
+                "if not any(item.startswith(package) and "
+                "'extra==\"documents\"' in item for item in requires)]; "
+                "assert not missing, missing; "
+                "assert any(item.startswith('pymupdf') and "
+                "'extra==\"documents-preview\"' in item for item in requires); "
+                "print('documents-extra-ready')"
+            ),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    if "documents-extra-ready" not in metadata_result.stdout:
+        raise RuntimeError("installed documents extra metadata check did not run")
+    documents_config_path = work_dir / "documents-dependency-config.json"
+    _write_minimal_config(
+        documents_config_path,
+        work_dir / "documents-dependency-maya-data",
+        enabled_profiles=("maya-core", "maya-documents"),
+    )
+    doctor_result = _run_allow_exit(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "doctor",
+            "--config",
+            str(documents_config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+        expected_exit=1,
+    )
+    for expected in (
+        "dependencies.profile.maya-documents",
+        "dependencies.python.pypdf",
+        "dependencies.python.markdown",
+        "dependencies.python.pillow",
+        "dependencies.command.pdftoppm",
+        "dependencies.application.ms-office",
+    ):
+        if expected not in doctor_result.stdout:
+            raise RuntimeError(f"installed doctor missing document check: {expected}")
+    if "secret://" in doctor_result.stdout:
+        raise RuntimeError("installed document dependency doctor printed a secret ref")
 
 
 def _verify_installed_reset_integration_cli(python: Path, work_dir: Path) -> None:
@@ -621,6 +702,7 @@ def _write_minimal_config(
     data_dir: Path,
     *,
     include_google: bool = False,
+    enabled_profiles: tuple[str, ...] = ("maya-core",),
 ) -> None:
     integrations = {}
     if include_google:
@@ -641,7 +723,7 @@ def _write_minimal_config(
                 },
                 "runtime": {
                     "hermes_compatibility": "phase1-test",
-                    "enabled_profiles": ["maya-core"],
+                    "enabled_profiles": list(enabled_profiles),
                 },
                 "broker": {"mode": "disabled", "endpoint": None},
                 "llm": {

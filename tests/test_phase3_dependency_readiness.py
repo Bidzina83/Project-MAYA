@@ -89,6 +89,8 @@ class TestPhase3DependencyReadiness(unittest.TestCase):
         }
         self.assertIn("python.reportlab", by_id)
         self.assertIn("python.pypdf", by_id)
+        self.assertIn("python.markdown", by_id)
+        self.assertIn("python.pillow", by_id)
         self.assertIn("command.pdftoppm", by_id)
         self.assertIn("application.ms-office", by_id)
         self.assertEqual(
