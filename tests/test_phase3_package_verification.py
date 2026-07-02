@@ -15,8 +15,25 @@ class TestPhase3PackageVerification(unittest.TestCase):
             "ComponentProfile.DOCUMENTS",
             "ComponentProfile.METABASE",
             "ComponentProfile.MESSAGING",
+            "DOCUMENTS_EXTRA_REQUIREMENTS",
+            "dependencies.python.markdown",
+            "documents-extra-ready",
         ):
             self.assertIn(expected, script)
+
+    def test_setup_declares_documents_extras_without_default_install(self):
+        setup_py = Path("setup.py").read_text(encoding="utf-8")
+
+        for expected in (
+            "'documents': DOCUMENTS_REQUIREMENTS",
+            "'documents-preview'",
+            "'Markdown>=3.5'",
+            "'Pillow>=10.0'",
+            "'pypdf>=4.0'",
+            "'reportlab>=4.0'",
+            "'PyMuPDF>=1.24'",
+        ):
+            self.assertIn(expected, setup_py)
 
     def test_phase3_docs_record_scope_contracts_and_limits(self):
         scope = Path("docs/architecture/phase3_dependency_readiness_scope.md").read_text(
@@ -27,6 +44,9 @@ class TestPhase3PackageVerification(unittest.TestCase):
         )
         closure = Path(
             "docs/architecture/phase3_dependency_readiness_closure.md"
+        ).read_text(encoding="utf-8")
+        documents = Path(
+            "docs/architecture/phase3_documents_pdf_readiness.md"
         ).read_text(encoding="utf-8")
 
         for expected in (
@@ -42,6 +62,8 @@ class TestPhase3PackageVerification(unittest.TestCase):
         for expected in (
             "reportlab",
             "pypdf",
+            "Markdown",
+            "Pillow",
             "pdftoppm",
             "Microsoft Office",
             "Google",
@@ -51,6 +73,13 @@ class TestPhase3PackageVerification(unittest.TestCase):
         ):
             self.assertIn(expected, contracts)
         self.assertIn("Known Limits", closure)
+        for expected in (
+            "project-maya[documents]",
+            "project-maya[documents-preview]",
+            "Hermes-Agent-Maya-Skills",
+            "does not package trained Maya skills",
+        ):
+            self.assertIn(expected, documents)
 
 
 if __name__ == "__main__":

@@ -94,10 +94,10 @@ class ProfileReadiness:
 
 
 PYTHON_PACKAGE_HINTS = {
-    "Windows": "python -m pip install reportlab pypdf",
-    "Darwin": "python -m pip install reportlab pypdf",
-    "Linux": "python -m pip install reportlab pypdf",
-    "default": "python -m pip install reportlab pypdf",
+    "Windows": "python -m pip install project-maya[documents]",
+    "Darwin": "python -m pip install project-maya[documents]",
+    "Linux": "python -m pip install project-maya[documents]",
+    "default": "python -m pip install project-maya[documents]",
 }
 
 
@@ -136,6 +136,28 @@ DEPENDENCY_CONTRACTS: tuple[DependencyContract, ...] = (
         python_module="pypdf",
         install_hints=PYTHON_PACKAGE_HINTS,
         description="PDF validation and text extraction package.",
+    ),
+    DependencyContract(
+        dependency_id="python.markdown",
+        profile=ComponentProfile.DOCUMENTS,
+        category=DependencyCategory.PYTHON_PACKAGE,
+        requirement=DependencyRequirement.REQUIRED,
+        display_name="Markdown",
+        check_name="dependencies.python.markdown",
+        python_module="markdown",
+        install_hints=PYTHON_PACKAGE_HINTS,
+        description="Markdown conversion package used by document workflows.",
+    ),
+    DependencyContract(
+        dependency_id="python.pillow",
+        profile=ComponentProfile.DOCUMENTS,
+        category=DependencyCategory.PYTHON_PACKAGE,
+        requirement=DependencyRequirement.REQUIRED,
+        display_name="Pillow",
+        check_name="dependencies.python.pillow",
+        python_module="PIL",
+        install_hints=PYTHON_PACKAGE_HINTS,
+        description="Image handling package used by document/PDF workflows.",
     ),
     DependencyContract(
         dependency_id="python.pymupdf",

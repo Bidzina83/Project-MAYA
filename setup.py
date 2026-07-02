@@ -7,6 +7,13 @@ HERMES_RUNTIME_REQUIREMENT = (
     "@b13e2fd6948a59eeb59fe618914147d97a2ee90a"
 )
 
+DOCUMENTS_REQUIREMENTS = [
+    'Markdown>=3.5',
+    'Pillow>=10.0',
+    'pypdf>=4.0',
+    'reportlab>=4.0',
+]
+
 packages = find_packages(
     where="src",
     include=["project_maya", "project_maya.*"],
@@ -40,6 +47,11 @@ setup(
         'migration': [
             'alembic>=1.13',
             'sqlalchemy>=2.0',
+        ],
+        'documents': DOCUMENTS_REQUIREMENTS,
+        'documents-preview': [
+            *DOCUMENTS_REQUIREMENTS,
+            'PyMuPDF>=1.24',
         ],
     },
     entry_points={

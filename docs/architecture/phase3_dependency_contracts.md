@@ -17,7 +17,7 @@ network validation.
 
 | Profile | Dependencies |
 | --- | --- |
-| `maya-documents` | `reportlab`, `pypdf`, optional `pymupdf`, optional `pdftoppm`, optional `soffice`, customer-managed Microsoft Office |
+| `maya-documents` | `reportlab`, `pypdf`, `Markdown`, `Pillow`, optional `pymupdf`, optional `pdftoppm`, optional `soffice`, customer-managed Microsoft Office |
 | `maya-metabase` | Java runtime, customer-managed Metabase service, customer-managed Metabase application database |
 | `maya-browser` | optional supported browser executable |
 | `maya-messaging` | Google, Slack, and Telegram external-service readiness through connector validation |
@@ -45,6 +45,8 @@ Phase 3.
 
 Examples:
 
+- Documents Python extra: `python -m pip install project-maya[documents]`
+- Documents preview Python extra: `python -m pip install project-maya[documents-preview]`
 - Windows Poppler: `winget install oschwartz10612.Poppler`
 - macOS Poppler: `brew install poppler`
 - Debian/Ubuntu Poppler: `sudo apt-get install -y poppler-utils`
