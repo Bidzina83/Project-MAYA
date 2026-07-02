@@ -11,6 +11,10 @@ from .agent import AgentState
 from .agent.contracts import AgentRuntime
 from .config import ConfigError, MayaConfig
 from .connectors import validate_configured_connectors
+from .dependencies import (
+    DependencyReadinessStatus,
+    evaluate_enabled_profile_readiness,
+)
 from .governance import load_policy_gateway
 from .model_config import validate_model_config
 from .secrets import SecretStore, SecretStoreStatus
@@ -64,6 +68,7 @@ def run_doctor(
     checks.append(_managed_directory_check(config, "migration.state", "migrations"))
     checks.append(_lifecycle_state_check(lifecycle_state))
     checks.append(_enabled_profiles_check(config))
+    checks.extend(_dependency_readiness_checks(config))
     checks.append(_model_config_check(config))
     checks.append(_connector_config_check(config))
 
@@ -363,6 +368,45 @@ def _enabled_profiles_check(config: MayaConfig) -> DoctorCheck:
         DoctorStatus.PASS,
         "enabled profiles: " + ", ".join(profiles),
     )
+
+
+def _dependency_readiness_checks(config: MayaConfig) -> list[DoctorCheck]:
+    checks: list[DoctorCheck] = []
+    for profile in evaluate_enabled_profile_readiness(config):
+        checks.append(
+            DoctorCheck(
+                f"dependencies.profile.{profile.profile.value}",
+                _dependency_status_to_doctor_status(profile.status),
+                profile.redacted_summary(),
+            )
+        )
+        for dependency in profile.dependencies:
+            checks.append(
+                DoctorCheck(
+                    dependency.check_name,
+                    _dependency_status_to_doctor_status(dependency.status),
+                    dependency.redacted_summary(),
+                )
+            )
+    return checks
+
+
+def _dependency_status_to_doctor_status(
+    status: DependencyReadinessStatus,
+) -> DoctorStatus:
+    if status in {
+        DependencyReadinessStatus.AVAILABLE,
+        DependencyReadinessStatus.CUSTOMER_MANAGED,
+        DependencyReadinessStatus.DISABLED,
+    }:
+        return DoctorStatus.PASS
+    if status in {
+        DependencyReadinessStatus.MISSING_OPTIONAL,
+        DependencyReadinessStatus.UNSUPPORTED_OS,
+        DependencyReadinessStatus.UNKNOWN,
+    }:
+        return DoctorStatus.WARN
+    return DoctorStatus.FAIL
 
 
 def _model_config_check(config: MayaConfig) -> DoctorCheck:

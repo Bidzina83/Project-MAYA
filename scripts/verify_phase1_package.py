@@ -125,6 +125,7 @@ def main(argv: list[str] | None = None) -> int:
         _verify_installed_reset_integration_cli(python, work_dir)
         _verify_installed_update_cli(python, work_dir)
         _verify_installed_migration_cli(python, work_dir)
+        _verify_installed_dependency_contract_surfaces(python, work_dir)
         _verify_installed_enterprise_byo_surfaces(python, work_dir)
         _verify_installed_phase2_profile_model_and_secret_surfaces(
             python,
@@ -294,6 +295,41 @@ def _verify_installed_repair_cli(python: Path, work_dir: Path) -> None:
         raise RuntimeError("installed repair CLI did not default to dry-run")
     if data_dir.exists():
         raise RuntimeError("installed repair dry-run created data directory")
+
+
+def _verify_installed_dependency_contract_surfaces(
+    python: Path,
+    work_dir: Path,
+) -> None:
+    data_dir = work_dir / "dependency-maya-data"
+    config_path = work_dir / "dependency-config.json"
+    _write_minimal_config(config_path, data_dir)
+    result = _run(
+        [
+            str(python),
+            "-c",
+            (
+                "import json; "
+                "from pathlib import Path; "
+                "from project_maya import ComponentProfile, dependency_contracts; "
+                "from project_maya.dependencies import evaluate_profile_readiness; "
+                "from project_maya.config import config_from_mapping; "
+                f"config = config_from_mapping(json.loads(Path(r'{config_path}').read_text())); "
+                "contracts = dependency_contracts(); "
+                "profiles = {contract.profile for contract in contracts}; "
+                "assert ComponentProfile.DOCUMENTS in profiles; "
+                "assert ComponentProfile.METABASE in profiles; "
+                "assert ComponentProfile.MESSAGING in profiles; "
+                "readiness = evaluate_profile_readiness(config, ComponentProfile.CORE); "
+                "assert readiness.profile is ComponentProfile.CORE; "
+                "print('dependency-contracts', len(contracts))"
+            ),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    if "dependency-contracts" not in result.stdout:
+        raise RuntimeError("installed dependency contract check did not run")
 
 
 def _verify_installed_reset_integration_cli(python: Path, work_dir: Path) -> None:
