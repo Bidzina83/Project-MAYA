@@ -131,6 +131,7 @@ def main(argv: list[str] | None = None) -> int:
         _verify_installed_update_cli(python, work_dir)
         _verify_installed_migration_cli(python, work_dir)
         _verify_installed_dependency_contract_surfaces(python, work_dir)
+        _verify_installed_skill_allowlist_surfaces(python, work_dir)
         _verify_installed_phase4_capability_surfaces(python, work_dir)
         _verify_installed_enterprise_byo_surfaces(python, work_dir)
         _verify_installed_phase2_profile_model_and_secret_surfaces(
@@ -544,6 +545,32 @@ def _verify_installed_dependency_contract_surfaces(
             raise RuntimeError(f"installed doctor missing messaging check: {expected}")
     if "secret://integrations" in messaging_doctor_result.stdout:
         raise RuntimeError("installed messaging dependency doctor printed a secret ref")
+
+
+def _verify_installed_skill_allowlist_surfaces(
+    python: Path,
+    work_dir: Path,
+) -> None:
+    result = _run(
+        [
+            str(python),
+            "-c",
+            (
+                "from project_maya import document_skill_allowlist; "
+                "skills = document_skill_allowlist(); "
+                "assert len(skills) == 1; "
+                "skill = skills[0]; "
+                "assert skill.skill_id == 'documents/pdf'; "
+                "assert skill.source_path == 'skills/pdf/SKILL.md'; "
+                "assert 'documents.extract-text' in skill.capabilities; "
+                "print('document-skill-allowlist-ready')"
+            ),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    if "document-skill-allowlist-ready" not in result.stdout:
+        raise RuntimeError("installed document skill allowlist check did not run")
 
 
 def _verify_installed_phase4_capability_surfaces(

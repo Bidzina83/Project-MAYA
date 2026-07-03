@@ -62,6 +62,28 @@ class MayaSkillArtifact:
                 )
 
 
+DOCUMENT_SKILL_ALLOWLIST: tuple[MayaSkillArtifact, ...] = (
+    MayaSkillArtifact(
+        skill_id="documents/pdf",
+        origin=SkillOrigin.MAYA_TRAINED,
+        version="0.1.0",
+        source_path="skills/pdf/SKILL.md",
+        capabilities=(
+            "documents.inspect",
+            "documents.extract-text",
+            "documents.create-pdf",
+        ),
+    ),
+)
+
+
+def document_skill_allowlist() -> tuple[MayaSkillArtifact, ...]:
+    """Return approved document skill metadata without loading skill files."""
+
+    validate_skill_artifacts(DOCUMENT_SKILL_ALLOWLIST)
+    return DOCUMENT_SKILL_ALLOWLIST
+
+
 def validate_skill_artifacts(artifacts: tuple[MayaSkillArtifact, ...]) -> None:
     """Validate a future product skill allowlist without loading the skills."""
 

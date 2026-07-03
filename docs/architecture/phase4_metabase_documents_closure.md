@@ -19,7 +19,7 @@ without exposing memory, secrets, prompts, or unapproved records.
 | Document capability core | `src/project_maya/documents.py`, `tests/test_phase4_documents.py`, `docs/architecture/phase4_document_capability_hardening.md` |
 | Document governance and audit | `src/project_maya/documents.py`, `tests/test_phase4_documents.py` |
 | Document CLI surface | `src/project_maya/cli.py`, `scripts/verify_phase1_package.py` |
-| Skill inclusion boundary | `docs/architecture/phase4_document_capability.md` |
+| Skill inclusion boundary | `docs/architecture/phase4_document_capability.md`, `docs/architecture/phase4_document_skill_allowlist.md`, `src/project_maya/skills.py`, `tests/test_hermes_skills_boundary.py` |
 | Metabase integration contract | `src/project_maya/metabase.py`, `tests/test_phase4_metabase.py`, `docs/architecture/phase4_metabase_capability_hardening.md` |
 | Metabase health and lifecycle | `src/project_maya/metabase.py`, `tests/test_phase4_metabase.py` |
 | Metabase provisioning foundation | `src/project_maya/metabase.py`, `src/project_maya/cli.py`, `tests/test_phase4_metabase.py` |
@@ -32,6 +32,8 @@ without exposing memory, secrets, prompts, or unapproved records.
   extraction, extraction-to-file, PDF creation, redacted summaries, stable
   outputs under `maya-data/documents/outputs`, and path validation under
   `maya-data/documents`.
+- `project_maya.skills` declares a metadata-only allowlist for the future
+  trained `documents/pdf` skill without bundling or loading it.
 - `project_maya.metabase` provides secret-safe health validation,
   customer-managed and managed-local lifecycle reporting, redacted persisted
   provisioning plans, and governed apply recording.
