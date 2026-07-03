@@ -166,6 +166,72 @@ Metabase is included and enabled by default in a normal Standard installation.
 Heavy components remain separately managed and health-checked so constrained
 or policy-controlled deployments can disable them explicitly.
 
+### 6.1 Included Installer and Source-Controlled Artifacts
+
+Maya-owned, Maya-curated, or Maya-pinned components ship with the installer or
+are produced from the Project MAYA source and release process. They may be
+updated by the Maya maintainer through normal versioned releases, but they are
+not silently pulled from arbitrary local paths at runtime.
+
+Included artifacts cover:
+
+- the `project_maya` core runtime, CLI, configuration, lifecycle, local API,
+  doctor, repair, backup, restore, migration, and update-check surfaces;
+- the pinned compatible Hermes Agent runtime artifact and the Maya-Hermes
+  adapter;
+- local governance, authorization, audit, redaction, and policy templates;
+- the persistent-memory provider, retriever, registry, migration, and backup
+  contracts;
+- connector and gateway adapter code for approved services such as Google,
+  Slack, Telegram, and future Microsoft Teams integration;
+- model adapter, model-egress governance, and local-model configuration
+  contracts;
+- dependency and readiness contracts for all component profiles;
+- approved, allowlisted, sanitized, and versioned Maya skills and plugins;
+- document capability adapters and Metabase integration, provisioning, and
+  health-check code;
+- managed-local service definitions and, for full Standard installers where
+  supported, bundled runtime artifacts such as Metabase;
+- installer manifests, dependency metadata, software bill of materials,
+  signed update metadata, and release provenance.
+
+Included code or artifacts do not imply configured, credentialed, enabled,
+healthy, authorized, or supported operation. A connector adapter, skill,
+plugin, service integration, or managed-local component may ship with Maya
+while remaining disabled until setup, credentials, allowlists, governance
+policy, platform checks, and readiness validation succeed.
+
+### 6.2 On-Demand and Customer-Managed Dependencies
+
+Profile-specific heavy dependencies, native applications, customer
+infrastructure, and external-service credentials are installed, connected, or
+validated on demand. Maya reports their readiness and supplies safe setup
+hints, but it does not silently install system software, create customer
+tenant resources, or claim support when lifecycle and recovery tests have not
+passed.
+
+On-demand or customer-managed dependencies include:
+
+- optional Python extras such as document and preview packages installed into
+  Maya's managed runtime environment;
+- native document tools such as Poppler, LibreOffice, and customer-managed
+  Microsoft Office desktop applications;
+- browser binaries and approved browser-automation runtimes or drivers;
+- Java runtimes, Metabase service runtimes, application databases, and
+  analytics data sources when not bundled and managed by a supported Standard
+  installer;
+- local model runtimes, model artifacts, and OpenAI-compatible endpoints such
+  as Ollama, LM Studio, and vLLM;
+- customer-owned Google, Slack, Telegram, Microsoft Teams, and future
+  connector applications, bots, tokens, OAuth grants, webhooks, scopes, and
+  allowlists;
+- Enterprise vaults, TPM/HSM integrations, master-key backends, databases,
+  networking, certificates, and offline update channels.
+
+These dependencies remain governed by profile readiness checks, connector
+contracts, secret-reference rules, local authorization, audit, backup and
+restore policy, and platform-support qualification.
+
 ## 7. Persistent Memory
 
 Maya distinguishes:
