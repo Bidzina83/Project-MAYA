@@ -1,7 +1,7 @@
 # Phase 4 Closure Audit
 
-Phase 4 is implementation-complete for the first Metabase and Document
-Capability Integration checkpoint.
+Phase 4 is complete for the approved Metabase and Document Capability
+Integration scope.
 
 ## Objective
 
@@ -11,21 +11,21 @@ flows from the installed package, through governance, with audit records and
 without exposing memory, secrets, prompts, or unapproved records.
 ```
 
-## Evidence
+## Approved Step Evidence
 
 | Step | Evidence |
 | --- | --- |
-| Scope gate | `docs/architecture/phase4_metabase_documents_scope.md` |
-| Document capability core | `src/project_maya/documents.py`, `tests/test_phase4_documents.py`, `docs/architecture/phase4_document_capability_hardening.md` |
-| Document governance and audit | `src/project_maya/documents.py`, `tests/test_phase4_documents.py` |
-| Document CLI surface | `src/project_maya/cli.py`, `scripts/verify_phase1_package.py` |
-| Skill inclusion boundary | `docs/architecture/phase4_document_capability.md`, `docs/architecture/phase4_document_skill_allowlist.md`, `src/project_maya/skills.py`, `tests/test_hermes_skills_boundary.py` |
-| Metabase integration contract | `src/project_maya/metabase.py`, `tests/test_phase4_metabase.py`, `docs/architecture/phase4_metabase_capability_hardening.md` |
-| Metabase health and lifecycle | `src/project_maya/metabase.py`, `tests/test_phase4_metabase.py` |
-| Metabase provisioning foundation | `src/project_maya/metabase.py`, `src/project_maya/cli.py`, `tests/test_phase4_metabase.py` |
-| Backup boundary | `src/project_maya/backup.py`, `tests/test_phase4_backup_boundaries.py`, `docs/architecture/phase4_backup_boundary.md` |
-| Doctor and package verification | `src/project_maya/doctor.py`, `scripts/verify_phase1_package.py` |
-| Documentation | `docs/architecture/phase4_document_capability.md`, `docs/architecture/phase4_metabase_capability.md`, `docs/examples/phase4_documents_metabase_operator_smoke.md` |
+| 1. Phase 4 scope gate | `docs/architecture/phase4_metabase_documents_scope.md` |
+| 2. Document capability core | `src/project_maya/documents.py`, `tests/test_phase4_documents.py`, `docs/architecture/phase4_document_capability.md`, `docs/architecture/phase4_document_capability_hardening.md` |
+| 3. Document governance and audit | `src/project_maya/documents.py`, `tests/test_phase4_documents.py` |
+| 4. Document CLI/API surface | `src/project_maya/cli.py`, `scripts/verify_phase1_package.py`, `docs/architecture/phase4_document_capability.md` |
+| 5. Skill inclusion boundary for documents | `docs/architecture/phase4_document_skill_allowlist.md`, `src/project_maya/skills.py`, `tests/test_hermes_skills_boundary.py` |
+| 6. Metabase integration contract | `src/project_maya/metabase.py`, `tests/test_phase4_metabase.py`, `docs/architecture/phase4_metabase_capability.md` |
+| 7. Metabase client and health | `src/project_maya/metabase.py`, `tests/test_phase4_metabase.py`, `docs/architecture/phase4_metabase_capability_hardening.md` |
+| 8. Metabase provisioning foundation | `src/project_maya/metabase.py`, `src/project_maya/cli.py`, `tests/test_phase4_metabase.py` |
+| 9. Metabase CLI surface | `src/project_maya/cli.py`, `scripts/verify_phase1_package.py`, `docs/examples/phase4_documents_metabase_operator_smoke.md` |
+| 10. Doctor, repair, backup, and package verification | `src/project_maya/doctor.py`, `src/project_maya/backup.py`, `tests/test_phase4_backup_boundaries.py`, `scripts/verify_phase1_package.py`, `docs/architecture/phase4_backup_boundary.md` |
+| 11. Documentation and closure | `docs/architecture/phase4_metabase_documents_closure.md`, `tests/test_phase4_closure.py`, `docs/examples/phase4_documents_metabase_operator_smoke.md` |
 
 ## Completed Surfaces
 
@@ -43,6 +43,10 @@ without exposing memory, secrets, prompts, or unapproved records.
   database state by default.
 - `maya documents` and `maya metabase` CLI groups expose the implemented
   surfaces.
+- Local API document and Metabase routes are deferred by design. The CLI and
+  product modules are the Phase 4 supported surfaces until route versioning,
+  request-size limits, upload/download handling, and client authorization are
+  specified.
 - `maya doctor` reports Phase 4 document and Metabase capability checks.
 - Clean package verification imports the installed capability modules and runs
   installed CLI smoke checks without repository path shims.
@@ -60,4 +64,6 @@ Phase 4 intentionally does not:
 - bundle a production Metabase runtime;
 - silently back up customer analytics databases or Metabase application
   databases;
+- expose document upload/download or Metabase provisioning through the local
+  API;
 - claim OS/platform installer support.
