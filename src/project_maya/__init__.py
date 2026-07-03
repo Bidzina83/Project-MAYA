@@ -146,9 +146,11 @@ from .secrets import (
     build_platform_secret_store,
 )
 from .skills import (
+    DOCUMENT_SKILL_ALLOWLIST,
     MayaSkillArtifact,
     SkillContractError,
     SkillOrigin,
+    document_skill_allowlist,
     validate_skill_artifacts,
     validate_skill_text_is_sanitized,
 )
@@ -186,6 +188,7 @@ __all__ = [
     "DependencyReadiness",
     "DependencyReadinessStatus",
     "DependencyRequirement",
+    "DOCUMENT_SKILL_ALLOWLIST",
     "DocumentCapabilityError",
     "DocumentDependencyUnavailable",
     "DocumentOperationResult",
@@ -266,6 +269,7 @@ __all__ = [
     "contracts_for_profile",
     "dependency_contracts",
     "document_capability_checks",
+    "document_skill_allowlist",
     "evaluate_dependency",
     "evaluate_enabled_profile_readiness",
     "evaluate_profile_readiness",

@@ -4,6 +4,7 @@ from project_maya import (
     MayaSkillArtifact,
     SkillContractError,
     SkillOrigin,
+    document_skill_allowlist,
     validate_skill_artifacts,
     validate_skill_text_is_sanitized,
 )
@@ -71,6 +72,18 @@ class TestHermesSkillsBoundary(unittest.TestCase):
 
         with self.assertRaisesRegex(SkillContractError, "personal"):
             validate_skill_text_is_sanitized(unsafe_text)
+
+    def test_document_skill_allowlist_is_metadata_only_and_portable(self):
+        allowlist = document_skill_allowlist()
+
+        validate_skill_artifacts(allowlist)
+        self.assertEqual(len(allowlist), 1)
+        artifact = allowlist[0]
+        self.assertEqual(artifact.skill_id, "documents/pdf")
+        self.assertEqual(artifact.origin, SkillOrigin.MAYA_TRAINED)
+        self.assertEqual(artifact.source_path, "skills/pdf/SKILL.md")
+        self.assertIn("documents.extract-text", artifact.capabilities)
+        self.assertNotIn("secret", artifact.source_path)
 
 
 if __name__ == "__main__":
