@@ -8,6 +8,7 @@ import platform
 import shutil
 from dataclasses import dataclass
 from enum import Enum
+from urllib.parse import urlparse
 
 from .config import ComponentProfile, MayaConfig
 from .connectors import validate_configured_connectors
@@ -263,6 +264,18 @@ DEPENDENCY_CONTRACTS: tuple[DependencyContract, ...] = (
         description="Metabase application database readiness placeholder.",
     ),
     DependencyContract(
+        dependency_id="database.metabase-analytics-sources",
+        profile=ComponentProfile.METABASE,
+        category=DependencyCategory.CUSTOMER_MANAGED,
+        requirement=DependencyRequirement.OPTIONAL,
+        display_name="Metabase analytics sources",
+        check_name="dependencies.database.metabase-analytics-sources",
+        install_hints={
+            "default": "configure approved metabase.analytics_sources with secret references",
+        },
+        description="Approved analytics data source readiness for Metabase.",
+    ),
+    DependencyContract(
         dependency_id="browser.executable",
         profile=ComponentProfile.BROWSER,
         category=DependencyCategory.SYSTEM_COMMAND,
@@ -360,6 +373,12 @@ def evaluate_dependency(
         DependencyCategory.SERVICE_RUNTIME,
         DependencyCategory.CUSTOMER_MANAGED,
     }:
+        if contract.dependency_id.startswith("service.metabase"):
+            return _evaluate_metabase_service(contract, config)
+        if contract.dependency_id == "database.metabase-application":
+            return _evaluate_metabase_application_database(contract, config)
+        if contract.dependency_id == "database.metabase-analytics-sources":
+            return _evaluate_metabase_analytics_sources(contract, config)
         if contract.command_names:
             return _evaluate_system_command(contract)
         return DependencyReadiness(
@@ -537,6 +556,113 @@ def _evaluate_model_endpoint(
         status,
         readiness.redacted_summary(),
     )
+
+
+def _evaluate_metabase_service(
+    contract: DependencyContract,
+    config: MayaConfig,
+) -> DependencyReadiness:
+    metabase = config.metabase
+    if not metabase.enabled:
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.MISSING_REQUIRED,
+            "metabase.enabled=false",
+        )
+    if metabase.deployment == "disabled":
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.MISSING_REQUIRED,
+            "metabase.deployment=disabled",
+        )
+    endpoint_state = _metabase_endpoint_state(metabase.endpoint)
+    if metabase.endpoint is None:
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.MISSING_REQUIRED,
+            (
+                f"deployment={metabase.deployment}; "
+                f"endpoint={endpoint_state}; "
+                f"hint={contract.install_hint()}"
+            ),
+        )
+    return DependencyReadiness(
+        contract,
+        DependencyReadinessStatus.CUSTOMER_MANAGED,
+        (
+            f"deployment={metabase.deployment}; "
+            f"endpoint={endpoint_state}; "
+            "network_used=false"
+        ),
+    )
+
+
+def _evaluate_metabase_application_database(
+    contract: DependencyContract,
+    config: MayaConfig,
+) -> DependencyReadiness:
+    metabase = config.metabase
+    if not metabase.enabled:
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.DISABLED,
+            "metabase.enabled=false",
+        )
+    if metabase.application_database is None:
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.MISSING_REQUIRED,
+            f"application_database=missing; hint={contract.install_hint()}",
+        )
+    return DependencyReadiness(
+        contract,
+        DependencyReadinessStatus.CUSTOMER_MANAGED,
+        (
+            f"engine={metabase.application_database.engine}; "
+            "credential_ref=configured"
+        ),
+    )
+
+
+def _evaluate_metabase_analytics_sources(
+    contract: DependencyContract,
+    config: MayaConfig,
+) -> DependencyReadiness:
+    metabase = config.metabase
+    if not metabase.enabled:
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.DISABLED,
+            "metabase.enabled=false",
+        )
+    if not metabase.analytics_sources:
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.MISSING_OPTIONAL,
+            f"analytics_sources=0; hint={contract.install_hint()}",
+        )
+    engines = ",".join(
+        sorted({source.engine for source in metabase.analytics_sources})
+    )
+    return DependencyReadiness(
+        contract,
+        DependencyReadinessStatus.CUSTOMER_MANAGED,
+        (
+            f"analytics_sources={len(metabase.analytics_sources)}; "
+            f"engines={engines}; "
+            "credential_refs=configured"
+        ),
+    )
+
+
+def _metabase_endpoint_state(endpoint: str | None) -> str:
+    if endpoint is None:
+        return "not_configured"
+    parsed = urlparse(endpoint)
+    host = parsed.hostname or ""
+    if host == "localhost" or host == "::1" or host.startswith("127."):
+        return "loopback_configured"
+    return "customer_hosted_configured"
 
 
 def _missing_dependency(

@@ -411,6 +411,37 @@ def _verify_installed_dependency_contract_surfaces(
             raise RuntimeError(f"installed doctor missing document check: {expected}")
     if "secret://" in doctor_result.stdout:
         raise RuntimeError("installed document dependency doctor printed a secret ref")
+    metabase_config_path = work_dir / "metabase-dependency-config.json"
+    _write_minimal_config(
+        metabase_config_path,
+        work_dir / "metabase-dependency-maya-data",
+        enabled_profiles=("maya-core", "maya-metabase"),
+        include_metabase=True,
+    )
+    metabase_doctor_result = _run_allow_exit(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "doctor",
+            "--config",
+            str(metabase_config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+        expected_exit=1,
+    )
+    for expected in (
+        "dependencies.profile.maya-metabase",
+        "dependencies.runtime.java",
+        "dependencies.service.metabase",
+        "dependencies.database.metabase-application",
+        "dependencies.database.metabase-analytics-sources",
+    ):
+        if expected not in metabase_doctor_result.stdout:
+            raise RuntimeError(f"installed doctor missing Metabase check: {expected}")
+    if "secret://metabase" in metabase_doctor_result.stdout:
+        raise RuntimeError("installed Metabase dependency doctor printed a secret ref")
 
 
 def _verify_installed_reset_integration_cli(python: Path, work_dir: Path) -> None:
@@ -703,6 +734,7 @@ def _write_minimal_config(
     *,
     include_google: bool = False,
     enabled_profiles: tuple[str, ...] = ("maya-core",),
+    include_metabase: bool = False,
 ) -> None:
     integrations = {}
     if include_google:
@@ -710,6 +742,30 @@ def _write_minimal_config(
             "enabled": True,
             "credential_mode": "customer_owned",
             "credential_ref": "secret://integrations/google",
+        }
+    metabase = {
+        "enabled": False,
+        "deployment": "disabled",
+        "endpoint": None,
+        "application_database": None,
+        "analytics_sources": [],
+    }
+    if include_metabase:
+        metabase = {
+            "enabled": True,
+            "deployment": "managed_local",
+            "endpoint": "http://127.0.0.1:3000",
+            "application_database": {
+                "engine": "sqlite",
+                "credential_ref": "secret://metabase/application-db",
+            },
+            "analytics_sources": [
+                {
+                    "name": "maya_operational",
+                    "engine": "sqlite",
+                    "credential_ref": "secret://metabase/maya-operational",
+                }
+            ],
         }
     config_path.write_text(
         json.dumps(
@@ -748,13 +804,7 @@ def _write_minimal_config(
                     "default_action": "deny",
                     "minimum_memory_trust": 0.7,
                 },
-                "metabase": {
-                    "enabled": False,
-                    "deployment": "disabled",
-                    "endpoint": None,
-                    "application_database": None,
-                    "analytics_sources": [],
-                },
+                "metabase": metabase,
                 "local_api": {
                     "bind": "127.0.0.1",
                     "port": None,
