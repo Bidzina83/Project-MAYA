@@ -20,7 +20,7 @@ network validation.
 | `maya-documents` | `reportlab`, `pypdf`, `Markdown`, `Pillow`, optional `pymupdf`, optional `pdftoppm`, optional `soffice`, customer-managed Microsoft Office |
 | `maya-metabase` | Java runtime, customer-managed Metabase service, customer-managed Metabase application database, approved analytics sources |
 | `maya-browser` | supported browser executable, customer-managed automation driver/runtime, local governance policy |
-| `maya-messaging` | Google, Slack, and Telegram external-service readiness through connector validation |
+| `maya-messaging` | Google, Slack, and Telegram service readiness, connector contracts, and local governance/allowlist readiness |
 | `maya-local-models` | OpenAI-compatible local endpoint configuration, customer-managed runtime family, customer-managed model artifact |
 
 `maya-core` intentionally has no heavy dependency requirements in this phase.
@@ -40,6 +40,8 @@ network validation.
 - `dependencies.endpoint.local-model`
 - `dependencies.runtime.local-model-family`
 - `dependencies.service.google`
+- `dependencies.connector.google-contract`
+- `dependencies.connector.google-governance`
 
 Dependency messages are redacted summaries. They report install hints and
 configuration status without printing secret values.
@@ -66,6 +68,7 @@ Examples:
 - Browser automation driver: configure an approved browser automation runtime before enabling actions
 - Local model endpoint: configure an OpenAI-compatible endpoint such as Ollama, LM Studio, or vLLM
 - Local model artifact: pull or configure the requested model in the selected local runtime
+- Messaging connectors: configure Google, Slack, and customer-owned Telegram credentials, scopes, and allowlists
 
 Google, Slack, Telegram, Microsoft Office, Metabase databases, and local model
 endpoints are customer-managed readiness surfaces, not packages Maya silently

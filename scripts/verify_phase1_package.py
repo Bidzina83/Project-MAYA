@@ -505,6 +505,42 @@ def _verify_installed_dependency_contract_surfaces(
             )
     if "127.0.0.1:11434" in local_model_doctor_result.stdout:
         raise RuntimeError("installed local model doctor printed endpoint host")
+    messaging_config_path = work_dir / "messaging-dependency-config.json"
+    _write_minimal_config(
+        messaging_config_path,
+        work_dir / "messaging-dependency-maya-data",
+        enabled_profiles=("maya-core", "maya-messaging"),
+        include_messaging=True,
+    )
+    messaging_doctor_result = _run_allow_exit(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "doctor",
+            "--config",
+            str(messaging_config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+        expected_exit=1,
+    )
+    for expected in (
+        "dependencies.profile.maya-messaging",
+        "dependencies.service.google",
+        "dependencies.connector.google-contract",
+        "dependencies.connector.google-governance",
+        "dependencies.service.slack",
+        "dependencies.connector.slack-contract",
+        "dependencies.connector.slack-governance",
+        "dependencies.service.telegram",
+        "dependencies.connector.telegram-contract",
+        "dependencies.connector.telegram-governance",
+    ):
+        if expected not in messaging_doctor_result.stdout:
+            raise RuntimeError(f"installed doctor missing messaging check: {expected}")
+    if "secret://integrations" in messaging_doctor_result.stdout:
+        raise RuntimeError("installed messaging dependency doctor printed a secret ref")
 
 
 def _verify_installed_reset_integration_cli(python: Path, work_dir: Path) -> None:
@@ -799,6 +835,7 @@ def _write_minimal_config(
     enabled_profiles: tuple[str, ...] = ("maya-core",),
     include_metabase: bool = False,
     include_local_model: bool = False,
+    include_messaging: bool = False,
 ) -> None:
     integrations = {}
     if include_google:
@@ -807,6 +844,26 @@ def _write_minimal_config(
             "credential_mode": "customer_owned",
             "credential_ref": "secret://integrations/google",
         }
+    if include_messaging:
+        integrations.update(
+            {
+                "google": {
+                    "enabled": True,
+                    "credential_mode": "customer_owned",
+                    "credential_ref": "secret://integrations/google",
+                },
+                "slack": {
+                    "enabled": True,
+                    "credential_mode": "customer_owned",
+                    "credential_ref": "secret://integrations/slack",
+                },
+                "telegram": {
+                    "enabled": True,
+                    "credential_mode": "customer_owned",
+                    "credential_ref": "secret://integrations/telegram",
+                },
+            }
+        )
     metabase = {
         "enabled": False,
         "deployment": "disabled",
