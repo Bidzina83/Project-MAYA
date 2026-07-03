@@ -98,12 +98,15 @@ from .local_api import (
 from .metabase import (
     MetabaseCapabilityError,
     MetabaseHealth,
+    MetabaseLifecycleState,
     MetabaseProvisioningPlan,
     MetabaseProvisioningStep,
     apply_metabase_provisioning,
+    inspect_metabase_lifecycle,
     metabase_capability_checks,
     plan_metabase_provisioning,
     validate_metabase_health,
+    write_metabase_provisioning_plan,
 )
 from .model_config import (
     LocalModelEndpointReadiness,
@@ -210,6 +213,7 @@ __all__ = [
     "MayaSkillArtifact",
     "MetabaseCapabilityError",
     "MetabaseHealth",
+    "MetabaseLifecycleState",
     "MetabaseProvisioningPlan",
     "MetabaseProvisioningStep",
     "PolicyAuthorizationGateway",
@@ -268,6 +272,7 @@ __all__ = [
     "extract_pdf_text",
     "get_connector_contract",
     "inspect_document",
+    "inspect_metabase_lifecycle",
     "load_policy_gateway",
     "load_config_profile",
     "metabase_capability_checks",
@@ -282,6 +287,7 @@ __all__ = [
     "validate_connector",
     "validate_metabase_health",
     "validate_model_config",
+    "write_metabase_provisioning_plan",
     "validate_skill_artifacts",
     "validate_skill_text_is_sanitized",
 ]

@@ -11,9 +11,11 @@ from project_maya import (
     MetabaseCapabilityError,
     apply_metabase_provisioning,
     config_from_mapping,
+    inspect_metabase_lifecycle,
     plan_metabase_provisioning,
     run_doctor,
     validate_metabase_health,
+    write_metabase_provisioning_plan,
 )
 from project_maya.adapters import HermesRuntimeAdapter
 from tests.test_phase0_contracts import valid_config_mapping
@@ -70,6 +72,25 @@ class TestPhase4Metabase(unittest.TestCase):
         self.assertNotIn("secret://metabase", summary)
         self.assertIn('"memory_exposed": "false"', summary)
 
+    def test_customer_managed_lifecycle_reports_customer_owned_boundary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            lifecycle = inspect_metabase_lifecycle(_config(Path(tmp) / "maya-data"))
+            summary = json.dumps(lifecycle.redacted_summary(), sort_keys=True)
+
+        self.assertEqual(lifecycle.status, "customer_managed")
+        self.assertTrue(lifecycle.customer_managed)
+        self.assertNotIn(str(Path(tmp)), summary)
+
+    def test_managed_local_lifecycle_reports_missing_artifact_without_failure_claim(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp) / "maya-data"
+            lifecycle = inspect_metabase_lifecycle(
+                _config(data_dir, deployment="managed_local")
+            )
+
+        self.assertEqual(lifecycle.status, "managed_local_artifact_missing")
+        self.assertEqual(lifecycle.service_artifact, "missing")
+
     def test_live_health_is_deferred_without_network(self):
         with tempfile.TemporaryDirectory() as tmp:
             health = validate_metabase_health(_config(Path(tmp) / "maya-data"), live=True)
@@ -89,6 +110,33 @@ class TestPhase4Metabase(unittest.TestCase):
         self.assertIn('"files": "excluded"', summary)
         self.assertNotIn("secret://metabase", summary)
 
+    def test_write_provisioning_plan_persists_redacted_metadata_under_maya_data(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp) / "maya-data"
+            config = _config(data_dir)
+            plan = plan_metabase_provisioning(config)
+
+            path = write_metabase_provisioning_plan(config, plan)
+            text = path.read_text(encoding="utf-8")
+
+        self.assertEqual(path.name, "latest-plan.json")
+        self.assertIn("metabase", path.parts)
+        self.assertIn("provisioning", path.parts)
+        self.assertNotIn("secret://metabase", text)
+        self.assertIn('"raw_memory": "excluded"', text)
+
+    def test_write_provisioning_plan_rejects_unsafe_filename(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = _config(Path(tmp) / "maya-data")
+            plan = plan_metabase_provisioning(config)
+
+            with self.assertRaises(MetabaseCapabilityError):
+                write_metabase_provisioning_plan(
+                    config,
+                    plan,
+                    filename="../escape.json",
+                )
+
     def test_apply_requires_governance_and_audits_without_secret_refs(self):
         with tempfile.TemporaryDirectory() as tmp:
             data_dir = Path(tmp) / "maya-data"
@@ -103,8 +151,16 @@ class TestPhase4Metabase(unittest.TestCase):
 
             audit_text = audit_path.read_text(encoding="utf-8")
             record = json.loads(audit_text.splitlines()[0])
+            applied_path = (
+                data_dir
+                / "metabase"
+                / "provisioning"
+                / "last-applied-plan.json"
+            )
+            applied_exists = applied_path.is_file()
 
         self.assertEqual(result.status, "applied")
+        self.assertTrue(applied_exists)
         self.assertEqual(gateway.requests[0].capability, "metabase.apply-provision")
         self.assertEqual(record["event_type"], "authorization.metabase")
         self.assertNotIn("secret://metabase", audit_text)
@@ -146,6 +202,7 @@ class TestPhase4Metabase(unittest.TestCase):
 
         checks = {check.name: check for check in report.checks}
         self.assertIn("metabase.health", checks)
+        self.assertIn("metabase.lifecycle", checks)
         self.assertIn("metabase.provisioning", checks)
         self.assertNotIn("secret://metabase", checks["metabase.health"].message)
 

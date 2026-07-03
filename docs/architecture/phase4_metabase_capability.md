@@ -39,8 +39,18 @@ Metabase health validation is secret-safe and local by default. It validates:
 - credential-reference presence;
 - analytics source declaration count.
 
-Provisioning is plan-first. `apply-provision` requires local governance
-authorization and currently records the governed apply event without live
+Lifecycle reporting is separate from health. Customer-managed deployments
+report customer ownership. Managed-local deployments report whether the local
+service artifact is present without claiming start/stop support.
+
+Provisioning is plan-first. Redacted plans may be written under:
+
+```text
+maya-data/metabase/provisioning/
+```
+
+`apply-provision` requires local governance authorization and currently records
+the governed apply event plus a redacted applied-plan file without live
 Metabase mutations.
 
 ## Deferred Work

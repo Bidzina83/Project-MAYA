@@ -435,12 +435,20 @@ def _metabase_capability_checks(config: MayaConfig) -> list[DoctorCheck]:
     checks: list[DoctorCheck] = []
     for result in metabase_capability_checks(config):
         summary = result.redacted_summary()
-        name = "metabase.health" if "endpoint_state" in summary else "metabase.provisioning"
+        if "endpoint_state" in summary:
+            name = "metabase.health"
+        elif "service_artifact" in summary:
+            name = "metabase.lifecycle"
+        else:
+            name = "metabase.provisioning"
         status_value = str(summary.get("status", "unknown"))
         status = DoctorStatus.PASS
         if status_value in {"not_ready", "blocked", "unsupported_deployment"}:
             status = DoctorStatus.FAIL
-        elif status_value in {"live_check_deferred"}:
+        elif status_value in {
+            "live_check_deferred",
+            "managed_local_artifact_missing",
+        }:
             status = DoctorStatus.WARN
         checks.append(
             DoctorCheck(

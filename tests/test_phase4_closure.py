@@ -12,6 +12,7 @@ class TestPhase4Closure(unittest.TestCase):
             "src/project_maya/documents.py",
             "src/project_maya/metabase.py",
             "docs/architecture/phase4_document_capability_hardening.md",
+            "docs/architecture/phase4_metabase_capability_hardening.md",
             "tests/test_phase4_documents.py",
             "tests/test_phase4_metabase.py",
             "scripts/verify_phase1_package.py",

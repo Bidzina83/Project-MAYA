@@ -20,8 +20,8 @@ without exposing memory, secrets, prompts, or unapproved records.
 | Document governance and audit | `src/project_maya/documents.py`, `tests/test_phase4_documents.py` |
 | Document CLI surface | `src/project_maya/cli.py`, `scripts/verify_phase1_package.py` |
 | Skill inclusion boundary | `docs/architecture/phase4_document_capability.md` |
-| Metabase integration contract | `src/project_maya/metabase.py`, `tests/test_phase4_metabase.py` |
-| Metabase health | `src/project_maya/metabase.py`, `tests/test_phase4_metabase.py` |
+| Metabase integration contract | `src/project_maya/metabase.py`, `tests/test_phase4_metabase.py`, `docs/architecture/phase4_metabase_capability_hardening.md` |
+| Metabase health and lifecycle | `src/project_maya/metabase.py`, `tests/test_phase4_metabase.py` |
 | Metabase provisioning foundation | `src/project_maya/metabase.py`, `src/project_maya/cli.py`, `tests/test_phase4_metabase.py` |
 | Doctor and package verification | `src/project_maya/doctor.py`, `scripts/verify_phase1_package.py` |
 | Documentation | `docs/architecture/phase4_document_capability.md`, `docs/architecture/phase4_metabase_capability.md`, `docs/examples/phase4_documents_metabase_operator_smoke.md` |
@@ -33,8 +33,8 @@ without exposing memory, secrets, prompts, or unapproved records.
   outputs under `maya-data/documents/outputs`, and path validation under
   `maya-data/documents`.
 - `project_maya.metabase` provides secret-safe health validation,
-  customer-managed and managed-local mode reporting, redacted provisioning
-  plans, and governed apply recording.
+  customer-managed and managed-local lifecycle reporting, redacted persisted
+  provisioning plans, and governed apply recording.
 - `maya documents` and `maya metabase` CLI groups expose the implemented
   surfaces.
 - `maya doctor` reports Phase 4 document and Metabase capability checks.
