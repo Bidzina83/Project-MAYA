@@ -96,7 +96,14 @@ class TestPhase3PackageVerification(unittest.TestCase):
             "local endpoint",
         ):
             self.assertIn(expected, contracts)
-        self.assertIn("Known Limits", closure)
+        for expected in (
+            "Phase 3 Closure Audit",
+            "Approved Step Evidence",
+            "Acceptance Evidence",
+            "Non-Goals Still Deferred",
+            "Exit Statement",
+        ):
+            self.assertIn(expected, closure)
         for expected in (
             "project-maya[documents]",
             "project-maya[documents-preview]",
