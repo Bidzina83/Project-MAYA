@@ -201,6 +201,25 @@ Use coordinated component profiles:
 Metabase is included and enabled by default in the normal Standard
 installation, while remaining separately managed and health-checked.
 
+Separate included/source-controlled artifacts from on-demand or
+customer-managed dependencies. The installer or release artifact may include
+Maya-owned, Maya-curated, or Maya-pinned components such as `project_maya`, the
+pinned Hermes runtime, the Maya-Hermes adapter, governance, persistent memory,
+local API, connector and gateway adapter code, model adapters, readiness
+contracts, approved sanitized skills and plugins, Metabase/document integration
+code, manifests, SBOM, and signed update metadata. Included code does not mean
+the capability is configured, credentialed, enabled, healthy, authorized, or
+supported.
+
+Profile-specific heavy dependencies are installed, connected, or validated on
+demand. These include optional Python extras, Poppler, LibreOffice,
+customer-managed Microsoft Office, browser binaries and automation runtimes,
+Java, customer-managed Metabase runtimes or databases, local model runtimes and
+artifacts, connector applications and bot registrations, OAuth grants,
+webhooks, allowlists, Enterprise vaults, certificates, networking, and offline
+update channels. Do not silently install system software or create customer
+tenant resources.
+
 Do not claim support for Windows, macOS, Linux, server, or container deployment
 until installation, lifecycle, health, backup, restore, update, and rollback
 tests pass for that artifact.

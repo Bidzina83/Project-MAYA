@@ -359,6 +359,25 @@ LibreOffice, browser automation, messaging gateways, local models, and other
 heavy dependencies are installed through declared profiles rather than hidden
 core dependencies.
 
+Maya distinguishes source-controlled installer artifacts from on-demand or
+customer-managed dependencies. The installer or release artifact includes
+Maya-owned, Maya-curated, or Maya-pinned components such as `project_maya`, the
+pinned compatible Hermes runtime, the Maya-Hermes adapter, governance,
+persistent memory, local API, connector and gateway adapter code, model
+adapters, readiness contracts, approved sanitized skills and plugins,
+Metabase/document integration code, manifests, SBOM, and signed update
+metadata. Included code does not mean the related capability is configured,
+credentialed, enabled, healthy, authorized, or supported on a platform.
+
+Profile-specific heavy dependencies remain installed, connected, or validated
+on demand. These include optional Python extras, Poppler, LibreOffice,
+customer-managed Microsoft Office, browser binaries and automation runtimes,
+Java, customer-managed Metabase runtimes or databases, local model runtimes and
+model artifacts, connector applications and bot registrations, OAuth grants,
+webhooks, allowlists, Enterprise vaults, certificates, networking, and offline
+update channels. Maya reports their readiness and setup hints without silently
+installing system software or creating customer tenant resources.
+
 ## Local API
 
 The local API:
