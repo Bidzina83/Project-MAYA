@@ -140,11 +140,22 @@ def _iter_backup_files(data_dir: Path):
         resolved = path.resolve()
         if resolved == backups_dir or backups_dir in resolved.parents:
             continue
+        if _excluded_from_default_backup(data_dir, resolved):
+            continue
         yield resolved
 
 
 def _archive_name(data_dir: Path, path: Path) -> str:
     return "maya-data/" + path.relative_to(data_dir.resolve()).as_posix()
+
+
+def _excluded_from_default_backup(data_dir: Path, path: Path) -> bool:
+    relative_parts = path.relative_to(data_dir.resolve()).parts
+    excluded_prefixes = (
+        ("analytics", "sources"),
+        ("metabase", "application"),
+    )
+    return any(relative_parts[: len(prefix)] == prefix for prefix in excluded_prefixes)
 
 
 def _restore_members(archive: zipfile.ZipFile) -> list[str]:

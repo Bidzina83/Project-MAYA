@@ -14,8 +14,10 @@ class TestPhase4Closure(unittest.TestCase):
             "docs/architecture/phase4_document_capability_hardening.md",
             "docs/architecture/phase4_document_skill_allowlist.md",
             "docs/architecture/phase4_metabase_capability_hardening.md",
+            "docs/architecture/phase4_backup_boundary.md",
             "tests/test_phase4_documents.py",
             "tests/test_phase4_metabase.py",
+            "tests/test_phase4_backup_boundaries.py",
             "scripts/verify_phase1_package.py",
         ):
             self.assertIn(expected, closure)
