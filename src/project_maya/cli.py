@@ -12,8 +12,23 @@ from .backup import BackupError, RestoreError, create_local_backup, restore_loca
 from .bootstrap import build_local_product
 from .config import config_from_mapping, config_to_mapping
 from .doctor import DoctorStatus, run_doctor
+from .documents import (
+    DocumentCapabilityError,
+    DocumentDependencyUnavailable,
+    create_pdf,
+    extract_pdf_text,
+    inspect_document,
+)
+from .governance import DenyByDefaultGateway, load_policy_gateway
 from .integrations import IntegrationResetError, reset_integration_state
 from .local_api import build_local_api_http_server
+from .audit import LocalJsonlAuditSink
+from .metabase import (
+    MetabaseCapabilityError,
+    apply_metabase_provisioning,
+    plan_metabase_provisioning,
+    validate_metabase_health,
+)
 from .repair import RepairError, repair_local_state
 from .secrets import (
     SecretRef,
@@ -301,6 +316,85 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Check local signed rollback metadata without changing files.",
     )
+    documents_parser = subparsers.add_parser(
+        "documents",
+        help="Run governed local document operations.",
+    )
+    documents_subparsers = documents_parser.add_subparsers(
+        dest="documents_command",
+        required=True,
+    )
+    documents_inspect = documents_subparsers.add_parser(
+        "inspect",
+        help="Inspect redacted local document metadata.",
+    )
+    documents_inspect.add_argument("--config", type=Path, required=True)
+    documents_inspect.add_argument("--source", type=Path, required=True)
+    documents_inspect.add_argument("--data-classification", default="internal")
+    documents_extract = documents_subparsers.add_parser(
+        "extract-text",
+        help="Extract text from a governed local PDF.",
+    )
+    documents_extract.add_argument("--config", type=Path, required=True)
+    documents_extract.add_argument("--source", type=Path, required=True)
+    documents_extract.add_argument(
+        "--include-text",
+        action="store_true",
+        help="Include extracted text in stdout. Audit remains redacted.",
+    )
+    documents_extract.add_argument("--data-classification", default="internal")
+    documents_create = documents_subparsers.add_parser(
+        "create-pdf",
+        help="Create a governed local PDF from plain text or Markdown.",
+    )
+    documents_create.add_argument("--config", type=Path, required=True)
+    documents_create.add_argument("--output", type=Path, required=True)
+    documents_create.add_argument(
+        "--text",
+        required=True,
+        help="Source text. The value is not written to audit records.",
+    )
+    documents_create.add_argument(
+        "--source-format",
+        choices=("plain", "markdown"),
+        default="plain",
+    )
+    documents_create.add_argument("--data-classification", default="internal")
+    metabase_parser = subparsers.add_parser(
+        "metabase",
+        help="Validate and plan governed Metabase integration.",
+    )
+    metabase_subparsers = metabase_parser.add_subparsers(
+        dest="metabase_command",
+        required=True,
+    )
+    metabase_health = metabase_subparsers.add_parser(
+        "health",
+        help="Report secret-safe Metabase health.",
+    )
+    metabase_health.add_argument("--config", type=Path, required=True)
+    metabase_health.add_argument(
+        "--live",
+        action="store_true",
+        help="Request a live check. Phase 4 reports this as deferred.",
+    )
+    metabase_plan = metabase_subparsers.add_parser(
+        "plan-provision",
+        help="Create a redacted Metabase provisioning plan.",
+    )
+    metabase_plan.add_argument("--config", type=Path, required=True)
+    metabase_apply = metabase_subparsers.add_parser(
+        "apply-provision",
+        help="Apply an approved Metabase provisioning plan.",
+    )
+    metabase_apply.add_argument("--config", type=Path, required=True)
+    metabase_apply.add_argument(
+        "--apply",
+        action="store_true",
+        required=True,
+        help="Required confirmation for Phase 4 provisioning apply.",
+    )
+    metabase_apply.add_argument("--data-classification", default="internal")
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -356,6 +450,10 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.command == "update":
         return _update(args.config, rollback=args.rollback)
+    if args.command == "documents":
+        return _documents(args)
+    if args.command == "metabase":
+        return _metabase(args)
     parser.error(f"unknown command: {args.command}")
     return 2
 
@@ -804,6 +902,116 @@ def _update(config_path: Path, *, rollback: bool = False) -> int:
         )
     )
     return 0
+
+
+def _documents(args) -> int:
+    try:
+        config = _load_config(args.config)
+        gateway = _build_cli_gateway(config)
+        audit_sink = _build_cli_audit_sink(config)
+        if args.documents_command == "inspect":
+            result = inspect_document(
+                config,
+                args.source,
+                gateway=gateway,
+                audit_sink=audit_sink,
+                data_classification=args.data_classification,
+            )
+            print(json.dumps(result.redacted_summary(), sort_keys=True))
+            return 0
+        if args.documents_command == "extract-text":
+            result, text = extract_pdf_text(
+                config,
+                args.source,
+                gateway=gateway,
+                audit_sink=audit_sink,
+                data_classification=args.data_classification,
+            )
+            payload = result.redacted_summary()
+            if args.include_text:
+                payload["text"] = text
+            print(json.dumps(payload, sort_keys=True))
+            return 0
+        if args.documents_command == "create-pdf":
+            result = create_pdf(
+                config,
+                text=args.text,
+                output=args.output,
+                source_format=args.source_format,
+                gateway=gateway,
+                audit_sink=audit_sink,
+                data_classification=args.data_classification,
+            )
+            print(json.dumps(result.redacted_summary(), sort_keys=True))
+            return 0
+    except (
+        DocumentCapabilityError,
+        DocumentDependencyUnavailable,
+        OSError,
+        ValueError,
+        PermissionError,
+    ):
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "document_operation_failed",
+                        "message": "document operation failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+    return 2
+
+
+def _metabase(args) -> int:
+    try:
+        config = _load_config(args.config)
+        if args.metabase_command == "health":
+            result = validate_metabase_health(config, live=args.live)
+            print(json.dumps(result.redacted_summary(), sort_keys=True))
+            return 0 if result.status in {"ready", "live_check_deferred"} else 1
+        if args.metabase_command == "plan-provision":
+            result = plan_metabase_provisioning(config)
+            print(json.dumps(result.redacted_summary(), sort_keys=True))
+            return 0 if result.status == "planned" else 1
+        if args.metabase_command == "apply-provision":
+            result = apply_metabase_provisioning(
+                config,
+                gateway=_build_cli_gateway(config),
+                audit_sink=_build_cli_audit_sink(config),
+                data_classification=args.data_classification,
+            )
+            print(json.dumps(result.redacted_summary(), sort_keys=True))
+            return 0
+    except (MetabaseCapabilityError, OSError, ValueError, PermissionError):
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "metabase_operation_failed",
+                        "message": "Metabase operation failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+    return 2
+
+
+def _build_cli_gateway(config):
+    if config.governance.policy_file.is_file():
+        return load_policy_gateway(config.governance.policy_file)
+    return DenyByDefaultGateway()
+
+
+def _build_cli_audit_sink(config):
+    return LocalJsonlAuditSink(
+        config.deployment.data_dir / "governance" / "audit" / "runtime.jsonl"
+    )
 
 
 def _load_config(config_path: Path):

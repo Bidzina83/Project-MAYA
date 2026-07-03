@@ -43,6 +43,8 @@ REQUIRED_COMMANDS = (
     "restore",
     "migrate",
     "update",
+    "documents",
+    "metabase",
 )
 
 
@@ -129,6 +131,7 @@ def main(argv: list[str] | None = None) -> int:
         _verify_installed_update_cli(python, work_dir)
         _verify_installed_migration_cli(python, work_dir)
         _verify_installed_dependency_contract_surfaces(python, work_dir)
+        _verify_installed_phase4_capability_surfaces(python, work_dir)
         _verify_installed_enterprise_byo_surfaces(python, work_dir)
         _verify_installed_phase2_profile_model_and_secret_surfaces(
             python,
@@ -541,6 +544,141 @@ def _verify_installed_dependency_contract_surfaces(
             raise RuntimeError(f"installed doctor missing messaging check: {expected}")
     if "secret://integrations" in messaging_doctor_result.stdout:
         raise RuntimeError("installed messaging dependency doctor printed a secret ref")
+
+
+def _verify_installed_phase4_capability_surfaces(
+    python: Path,
+    work_dir: Path,
+) -> None:
+    data_dir = work_dir / "phase4-maya-data"
+    config_path = work_dir / "phase4-config.json"
+    _write_minimal_config(
+        config_path,
+        data_dir,
+        enabled_profiles=("maya-core", "maya-documents", "maya-metabase"),
+        include_metabase=True,
+    )
+    policy_path = data_dir / "governance" / "policy.json"
+    policy_path.parent.mkdir(parents=True)
+    policy_path.write_text(
+        json.dumps(
+            {
+                "allow": [
+                    {
+                        "capability": "documents.inspect",
+                        "operation": "inspect",
+                        "decision": "allow",
+                    },
+                    {
+                        "capability": "metabase.apply-provision",
+                        "operation": "apply-provision",
+                        "decision": "allow",
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    documents_dir = data_dir / "documents"
+    documents_dir.mkdir(parents=True)
+    sample = documents_dir / "sample.txt"
+    sample.write_text("installed package smoke text", encoding="utf-8")
+    import_result = _run(
+        [
+            str(python),
+            "-c",
+            (
+                "from project_maya.documents import inspect_document; "
+                "from project_maya.metabase import plan_metabase_provisioning; "
+                "assert callable(inspect_document); "
+                "assert callable(plan_metabase_provisioning); "
+                "print('phase4-capabilities-importable')"
+            ),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    if "phase4-capabilities-importable" not in import_result.stdout:
+        raise RuntimeError("installed Phase 4 capability import check did not run")
+    documents_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "documents",
+            "inspect",
+            "--config",
+            str(config_path),
+            "--source",
+            str(sample),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    documents_payload = json.loads(documents_result.stdout)
+    if documents_payload.get("operation") != "inspect":
+        raise RuntimeError("installed documents inspect did not run")
+    if "installed package smoke text" in documents_result.stdout:
+        raise RuntimeError("installed documents inspect leaked document contents")
+    if str(sample) in documents_result.stdout:
+        raise RuntimeError("installed documents inspect leaked full source path")
+    metabase_health_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "metabase",
+            "health",
+            "--config",
+            str(config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    health_payload = json.loads(metabase_health_result.stdout)
+    if health_payload.get("status") != "ready":
+        raise RuntimeError("installed Metabase health did not report ready")
+    metabase_plan_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "metabase",
+            "plan-provision",
+            "--config",
+            str(config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    plan_payload = json.loads(metabase_plan_result.stdout)
+    if plan_payload.get("status") != "planned":
+        raise RuntimeError("installed Metabase provisioning plan did not run")
+    if "secret://metabase" in metabase_plan_result.stdout:
+        raise RuntimeError("installed Metabase plan printed a secret ref")
+    doctor_result = _run_allow_exit(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "doctor",
+            "--config",
+            str(config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+        expected_exit=1,
+    )
+    for expected in (
+        "documents.documents-root",
+        "documents.documents-cache",
+        "metabase.health",
+        "metabase.provisioning",
+    ):
+        if expected not in doctor_result.stdout:
+            raise RuntimeError(f"installed doctor missing Phase 4 check: {expected}")
+    if "secret://metabase" in doctor_result.stdout:
+        raise RuntimeError("installed Phase 4 doctor printed a secret ref")
 
 
 def _verify_installed_reset_integration_cli(python: Path, work_dir: Path) -> None:
