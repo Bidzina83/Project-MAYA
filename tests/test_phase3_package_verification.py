@@ -27,6 +27,9 @@ class TestPhase3PackageVerification(unittest.TestCase):
             "dependencies.endpoint.local-model",
             "dependencies.runtime.local-model-family",
             "dependencies.model.local-model-artifact",
+            "dependencies.connector.google-contract",
+            "dependencies.connector.slack-governance",
+            "dependencies.connector.telegram-contract",
         ):
             self.assertIn(expected, script)
 
@@ -66,6 +69,9 @@ class TestPhase3PackageVerification(unittest.TestCase):
         local_model = Path(
             "docs/architecture/phase3_local_model_readiness.md"
         ).read_text(encoding="utf-8")
+        messaging = Path("docs/architecture/phase3_messaging_readiness.md").read_text(
+            encoding="utf-8"
+        )
 
         for expected in (
             "python_package",
@@ -123,6 +129,15 @@ class TestPhase3PackageVerification(unittest.TestCase):
             "claim local model support",
         ):
             self.assertIn(expected, local_model)
+        for expected in (
+            "dependencies.connector.google-contract",
+            "dependencies.connector.slack-governance",
+            "dependencies.connector.telegram-contract",
+            "Telegram remains customer-owned only",
+            "does not:",
+            "perform live OAuth",
+        ):
+            self.assertIn(expected, messaging)
 
 
 if __name__ == "__main__":

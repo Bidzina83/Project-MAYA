@@ -334,6 +334,26 @@ DEPENDENCY_CONTRACTS: tuple[DependencyContract, ...] = (
         description="External Google connector readiness from connector validation.",
     ),
     DependencyContract(
+        dependency_id="connector.google-contract",
+        profile=ComponentProfile.MESSAGING,
+        category=DependencyCategory.CUSTOMER_MANAGED,
+        requirement=DependencyRequirement.CUSTOMER_MANAGED,
+        display_name="Google connector contract",
+        check_name="dependencies.connector.google-contract",
+        install_hints={"default": "validate Google connector capability and scope contract"},
+        description="Google connector capability, scope, and credential-mode contract readiness.",
+    ),
+    DependencyContract(
+        dependency_id="connector.google-governance",
+        profile=ComponentProfile.MESSAGING,
+        category=DependencyCategory.CUSTOMER_MANAGED,
+        requirement=DependencyRequirement.CUSTOMER_MANAGED,
+        display_name="Google connector governance",
+        check_name="dependencies.connector.google-governance",
+        install_hints={"default": "configure Google users/resources allowlists before broad use"},
+        description="Google connector allowlist and local-governance readiness.",
+    ),
+    DependencyContract(
         dependency_id="service.slack",
         profile=ComponentProfile.MESSAGING,
         category=DependencyCategory.EXTERNAL_SERVICE,
@@ -344,6 +364,26 @@ DEPENDENCY_CONTRACTS: tuple[DependencyContract, ...] = (
         description="External Slack connector readiness from connector validation.",
     ),
     DependencyContract(
+        dependency_id="connector.slack-contract",
+        profile=ComponentProfile.MESSAGING,
+        category=DependencyCategory.CUSTOMER_MANAGED,
+        requirement=DependencyRequirement.CUSTOMER_MANAGED,
+        display_name="Slack connector contract",
+        check_name="dependencies.connector.slack-contract",
+        install_hints={"default": "validate Slack connector capability and scope contract"},
+        description="Slack connector capability, scope, and credential-mode contract readiness.",
+    ),
+    DependencyContract(
+        dependency_id="connector.slack-governance",
+        profile=ComponentProfile.MESSAGING,
+        category=DependencyCategory.CUSTOMER_MANAGED,
+        requirement=DependencyRequirement.CUSTOMER_MANAGED,
+        display_name="Slack connector governance",
+        check_name="dependencies.connector.slack-governance",
+        install_hints={"default": "configure Slack workspace/channel/user allowlists before broad use"},
+        description="Slack connector allowlist and local-governance readiness.",
+    ),
+    DependencyContract(
         dependency_id="service.telegram",
         profile=ComponentProfile.MESSAGING,
         category=DependencyCategory.EXTERNAL_SERVICE,
@@ -352,6 +392,26 @@ DEPENDENCY_CONTRACTS: tuple[DependencyContract, ...] = (
         check_name="dependencies.service.telegram",
         install_hints={"default": "configure a customer-owned Telegram bot token"},
         description="External Telegram connector readiness from connector validation.",
+    ),
+    DependencyContract(
+        dependency_id="connector.telegram-contract",
+        profile=ComponentProfile.MESSAGING,
+        category=DependencyCategory.CUSTOMER_MANAGED,
+        requirement=DependencyRequirement.CUSTOMER_MANAGED,
+        display_name="Telegram connector contract",
+        check_name="dependencies.connector.telegram-contract",
+        install_hints={"default": "validate customer-owned Telegram bot credential contract"},
+        description="Telegram connector capability, scope, and credential-mode contract readiness.",
+    ),
+    DependencyContract(
+        dependency_id="connector.telegram-governance",
+        profile=ComponentProfile.MESSAGING,
+        category=DependencyCategory.CUSTOMER_MANAGED,
+        requirement=DependencyRequirement.CUSTOMER_MANAGED,
+        display_name="Telegram connector governance",
+        check_name="dependencies.connector.telegram-governance",
+        install_hints={"default": "configure Telegram chat/user allowlists before broad use"},
+        description="Telegram connector allowlist and local-governance readiness.",
     ),
     DependencyContract(
         dependency_id="endpoint.local-model",
@@ -443,6 +503,8 @@ def evaluate_dependency(
             return _evaluate_local_model_runtime_family(contract, config)
         if contract.dependency_id == "model.local-model-artifact":
             return _evaluate_local_model_artifact(contract, config)
+        if contract.dependency_id.startswith("connector."):
+            return _evaluate_connector_dependency(contract, config)
         if contract.command_names:
             return _evaluate_system_command(contract)
         return DependencyReadiness(
@@ -563,29 +625,18 @@ def _evaluate_external_service(
     config: MayaConfig,
 ) -> DependencyReadiness:
     service_name = contract.dependency_id.removeprefix("service.")
-    integration = config.integrations.get(service_name)
-    if integration is None or not integration.enabled:
+    validation = _connector_validation_for(service_name, config)
+    if validation is None:
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.DISABLED,
+            f"{service_name} connector not configured",
+        )
+    if not validation.enabled:
         return DependencyReadiness(
             contract,
             DependencyReadinessStatus.DISABLED,
             f"{service_name} connector disabled",
-        )
-    validation = next(
-        (
-            item
-            for item in validate_configured_connectors(
-                {service_name: integration},
-                broker_mode=config.broker.mode,
-            )
-            if item.name == service_name
-        ),
-        None,
-    )
-    if validation is None:
-        return DependencyReadiness(
-            contract,
-            DependencyReadinessStatus.UNKNOWN,
-            f"{service_name} connector validation unavailable",
         )
     status = (
         DependencyReadinessStatus.CUSTOMER_MANAGED
@@ -597,6 +648,82 @@ def _evaluate_external_service(
         status,
         validation.redacted_summary(),
     )
+
+
+def _evaluate_connector_dependency(
+    contract: DependencyContract,
+    config: MayaConfig,
+) -> DependencyReadiness:
+    dependency_name = contract.dependency_id.removeprefix("connector.")
+    connector_name, readiness_kind = dependency_name.rsplit("-", 1)
+    validation = _connector_validation_for(connector_name, config)
+    if validation is None:
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.DISABLED,
+            f"{connector_name} connector not configured",
+        )
+    if not validation.enabled:
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.DISABLED,
+            f"{connector_name} connector disabled",
+        )
+    if not validation.valid:
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.MISSING_REQUIRED,
+            validation.redacted_summary(),
+        )
+    if readiness_kind == "contract":
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.CUSTOMER_MANAGED,
+            (
+                f"{connector_name}:credential_mode={validation.credential_mode.value}; "
+                f"capabilities={_join_or_none(validation.capabilities)}; "
+                f"scopes={_join_or_none(validation.scopes)}; "
+                "network_used=false"
+            ),
+        )
+    if readiness_kind == "governance":
+        allowlists = (
+            ",".join(
+                f"{key}:{value}"
+                for key, value in sorted(validation.allowlist_state.items())
+            )
+            if validation.allowlist_state
+            else "none"
+        )
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.CUSTOMER_MANAGED,
+            (
+                f"{connector_name}:allowlists={allowlists}; "
+                f"default_action={config.governance.default_action}; "
+                "governance_required=true; "
+                "network_used=false"
+            ),
+        )
+    return DependencyReadiness(
+        contract,
+        DependencyReadinessStatus.UNKNOWN,
+        f"unknown connector dependency kind: {readiness_kind}",
+    )
+
+
+def _connector_validation_for(connector_name: str, config: MayaConfig):
+    integration = config.integrations.get(connector_name)
+    if integration is None:
+        return None
+    return validate_configured_connectors(
+        {connector_name: integration},
+        broker_mode=config.broker.mode,
+    )[0]
+
+
+def _join_or_none(values: tuple[str, ...]) -> str:
+    return ",".join(values) if values else "none"
 
 
 def _evaluate_model_endpoint(

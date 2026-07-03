@@ -343,6 +343,145 @@ class TestPhase3DependencyReadiness(unittest.TestCase):
         self.assertNotIn("secret://integrations/google", checks["dependencies.service.google"].message)
         self.assertIn("credential_ref=configured", checks["dependencies.service.google"].message)
 
+    def test_messaging_profile_reports_connector_contract_and_governance_readiness(self):
+        data = valid_config_mapping()
+        data["runtime"]["enabled_profiles"] = ["maya-core", "maya-messaging"]
+        data["integrations"] = {
+            "google": {
+                "enabled": True,
+                "credential_mode": "customer_owned",
+                "credential_ref": "secret://integrations/google",
+            },
+            "slack": {
+                "enabled": True,
+                "credential_mode": "customer_owned",
+                "credential_ref": "secret://integrations/slack",
+            },
+            "telegram": {
+                "enabled": True,
+                "credential_mode": "customer_owned",
+                "credential_ref": "secret://integrations/telegram",
+            },
+        }
+        data["deployment"]["data_dir"] = str(Path.cwd() / "maya-data")
+        config = config_from_mapping(data)
+
+        readiness = evaluate_profile_readiness(
+            config,
+            ComponentProfile.MESSAGING,
+        )
+
+        by_id = {
+            dependency.contract.dependency_id: dependency
+            for dependency in readiness.dependencies
+        }
+        for connector in ("google", "slack", "telegram"):
+            self.assertEqual(
+                by_id[f"service.{connector}"].status,
+                DependencyReadinessStatus.CUSTOMER_MANAGED,
+            )
+            self.assertEqual(
+                by_id[f"connector.{connector}-contract"].status,
+                DependencyReadinessStatus.CUSTOMER_MANAGED,
+            )
+            self.assertEqual(
+                by_id[f"connector.{connector}-governance"].status,
+                DependencyReadinessStatus.CUSTOMER_MANAGED,
+            )
+            self.assertNotIn("secret://integrations", by_id[f"service.{connector}"].message)
+            self.assertIn("network_used=false", by_id[f"service.{connector}"].message)
+            self.assertIn(
+                "governance_required=true",
+                by_id[f"connector.{connector}-governance"].message,
+            )
+        self.assertIn(
+            "scopes=https://www.googleapis.com/auth/drive.readonly",
+            by_id["connector.google-contract"].message,
+        )
+        self.assertIn(
+            "scopes=channels:history,chat:write",
+            by_id["connector.slack-contract"].message,
+        )
+        self.assertIn(
+            "credential_mode=customer_owned",
+            by_id["connector.telegram-contract"].message,
+        )
+
+    def test_messaging_profile_marks_disabled_connectors_without_failure(self):
+        data = valid_config_mapping()
+        data["runtime"]["enabled_profiles"] = ["maya-core", "maya-messaging"]
+        data["integrations"] = {
+            "google": {
+                "enabled": False,
+                "credential_mode": "disabled",
+                "credential_ref": None,
+            },
+            "slack": {
+                "enabled": False,
+                "credential_mode": "disabled",
+                "credential_ref": None,
+            },
+            "telegram": {
+                "enabled": False,
+                "credential_mode": "disabled",
+                "credential_ref": None,
+            },
+        }
+        data["deployment"]["data_dir"] = str(Path.cwd() / "maya-data")
+        config = config_from_mapping(data)
+
+        readiness = evaluate_profile_readiness(
+            config,
+            ComponentProfile.MESSAGING,
+        )
+
+        by_id = {
+            dependency.contract.dependency_id: dependency
+            for dependency in readiness.dependencies
+        }
+        self.assertEqual(readiness.status, DependencyReadinessStatus.AVAILABLE)
+        for connector in ("google", "slack", "telegram"):
+            self.assertEqual(
+                by_id[f"service.{connector}"].status,
+                DependencyReadinessStatus.DISABLED,
+            )
+            self.assertEqual(
+                by_id[f"connector.{connector}-contract"].status,
+                DependencyReadinessStatus.DISABLED,
+            )
+            self.assertEqual(
+                by_id[f"connector.{connector}-governance"].status,
+                DependencyReadinessStatus.DISABLED,
+            )
+
+    def test_doctor_reports_messaging_dependency_readiness(self):
+        data = valid_config_mapping()
+        data["runtime"]["enabled_profiles"] = ["maya-core", "maya-messaging"]
+        data["integrations"]["google"]["enabled"] = True
+        data["deployment"]["data_dir"] = str(Path.cwd() / "maya-data")
+        config = config_from_mapping(data)
+        report = run_doctor(
+            config,
+            HermesRuntimeAdapter(factory_path="missing.hermes:factory"),
+            lifecycle_state=AgentState.CREATED,
+        )
+
+        checks = {check.name: check for check in report.checks}
+        self.assertIn("dependencies.profile.maya-messaging", checks)
+        self.assertIn("dependencies.service.google", checks)
+        self.assertIn("dependencies.connector.google-contract", checks)
+        self.assertIn("dependencies.connector.google-governance", checks)
+        self.assertIn("dependencies.service.telegram", checks)
+        self.assertIn("dependencies.connector.telegram-contract", checks)
+        self.assertEqual(
+            checks["dependencies.connector.google-contract"].status,
+            DoctorStatus.PASS,
+        )
+        self.assertNotIn(
+            "secret://integrations/google",
+            checks["dependencies.service.google"].message,
+        )
+
     def test_local_model_dependency_uses_phase2_local_mode_contract(self):
         data = valid_config_mapping()
         data["runtime"]["enabled_profiles"] = ["maya-core", "maya-local-models"]
