@@ -15,7 +15,9 @@ from .dependencies import (
     DependencyReadinessStatus,
     evaluate_enabled_profile_readiness,
 )
+from .documents import document_capability_checks
 from .governance import load_policy_gateway
+from .metabase import metabase_capability_checks
 from .model_config import validate_model_config
 from .secrets import SecretStore, SecretStoreStatus
 
@@ -69,6 +71,8 @@ def run_doctor(
     checks.append(_lifecycle_state_check(lifecycle_state))
     checks.append(_enabled_profiles_check(config))
     checks.extend(_dependency_readiness_checks(config))
+    checks.extend(_document_capability_checks(config))
+    checks.extend(_metabase_capability_checks(config))
     checks.append(_model_config_check(config))
     checks.append(_connector_config_check(config))
 
@@ -407,6 +411,62 @@ def _dependency_status_to_doctor_status(
     }:
         return DoctorStatus.WARN
     return DoctorStatus.FAIL
+
+
+def _document_capability_checks(config: MayaConfig) -> list[DoctorCheck]:
+    checks: list[DoctorCheck] = []
+    for result in document_capability_checks(config):
+        status = DoctorStatus.PASS
+        if result.status == "will_create":
+            status = DoctorStatus.WARN
+        if result.status == "invalid":
+            status = DoctorStatus.FAIL
+        checks.append(
+            DoctorCheck(
+                f"documents.{result.operation}",
+                status,
+                _summary_message(result.redacted_summary()),
+            )
+        )
+    return checks
+
+
+def _metabase_capability_checks(config: MayaConfig) -> list[DoctorCheck]:
+    checks: list[DoctorCheck] = []
+    for result in metabase_capability_checks(config):
+        summary = result.redacted_summary()
+        name = "metabase.health" if "endpoint_state" in summary else "metabase.provisioning"
+        status_value = str(summary.get("status", "unknown"))
+        status = DoctorStatus.PASS
+        if status_value in {"not_ready", "blocked", "unsupported_deployment"}:
+            status = DoctorStatus.FAIL
+        elif status_value in {"live_check_deferred"}:
+            status = DoctorStatus.WARN
+        checks.append(
+            DoctorCheck(
+                name,
+                status,
+                _summary_message(summary),
+            )
+        )
+    return checks
+
+
+def _summary_message(summary: dict[str, object]) -> str:
+    return "; ".join(
+        f"{key}={_summary_value(value)}"
+        for key, value in sorted(summary.items())
+    )
+
+
+def _summary_value(value: object) -> str:
+    if isinstance(value, bool):
+        return str(value).lower()
+    if isinstance(value, list):
+        return f"items={len(value)}"
+    if isinstance(value, dict):
+        return ",".join(f"{key}:{item}" for key, item in sorted(value.items()))
+    return str(value)
 
 
 def _model_config_check(config: MayaConfig) -> DoctorCheck:
