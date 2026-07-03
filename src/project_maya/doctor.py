@@ -419,7 +419,7 @@ def _document_capability_checks(config: MayaConfig) -> list[DoctorCheck]:
         status = DoctorStatus.PASS
         if result.status == "will_create":
             status = DoctorStatus.WARN
-        if result.status == "invalid":
+        if result.status in {"invalid", "missing_required"}:
             status = DoctorStatus.FAIL
         checks.append(
             DoctorCheck(

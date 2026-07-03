@@ -16,7 +16,7 @@ without exposing memory, secrets, prompts, or unapproved records.
 | Step | Evidence |
 | --- | --- |
 | Scope gate | `docs/architecture/phase4_metabase_documents_scope.md` |
-| Document capability core | `src/project_maya/documents.py`, `tests/test_phase4_documents.py` |
+| Document capability core | `src/project_maya/documents.py`, `tests/test_phase4_documents.py`, `docs/architecture/phase4_document_capability_hardening.md` |
 | Document governance and audit | `src/project_maya/documents.py`, `tests/test_phase4_documents.py` |
 | Document CLI surface | `src/project_maya/cli.py`, `scripts/verify_phase1_package.py` |
 | Skill inclusion boundary | `docs/architecture/phase4_document_capability.md` |
@@ -29,7 +29,8 @@ without exposing memory, secrets, prompts, or unapproved records.
 ## Completed Surfaces
 
 - `project_maya.documents` provides governed document inspect, PDF text
-  extraction, PDF creation, redacted summaries, and path validation under
+  extraction, extraction-to-file, PDF creation, redacted summaries, stable
+  outputs under `maya-data/documents/outputs`, and path validation under
   `maya-data/documents`.
 - `project_maya.metabase` provides secret-safe health validation,
   customer-managed and managed-local mode reporting, redacted provisioning
