@@ -19,6 +19,7 @@ false support claims.
 | Contracts | `src/project_maya/dependencies.py`, `docs/architecture/phase3_dependency_contracts.md` |
 | Documents/PDF readiness | `setup.py`, `docs/architecture/phase3_documents_pdf_readiness.md`, `tests/test_phase3_package_verification.py` |
 | Metabase readiness | `src/project_maya/dependencies.py`, `docs/architecture/phase3_metabase_readiness.md`, `tests/test_phase3_dependency_readiness.py` |
+| Browser readiness | `src/project_maya/dependencies.py`, `docs/architecture/phase3_browser_readiness.md`, `tests/test_phase3_dependency_readiness.py` |
 | Doctor readiness | `src/project_maya/doctor.py`, `tests/test_phase3_dependency_readiness.py` |
 | Package verification | `scripts/verify_phase1_package.py`, `tests/test_phase3_package_verification.py` |
 

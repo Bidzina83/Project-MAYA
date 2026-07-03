@@ -21,6 +21,9 @@ class TestPhase3PackageVerification(unittest.TestCase):
             "dependencies.runtime.java",
             "dependencies.database.metabase-application",
             "dependencies.database.metabase-analytics-sources",
+            "dependencies.browser.executable",
+            "dependencies.browser.automation-driver",
+            "dependencies.browser.governance-policy",
         ):
             self.assertIn(expected, script)
 
@@ -52,6 +55,9 @@ class TestPhase3PackageVerification(unittest.TestCase):
             "docs/architecture/phase3_documents_pdf_readiness.md"
         ).read_text(encoding="utf-8")
         metabase = Path("docs/architecture/phase3_metabase_readiness.md").read_text(
+            encoding="utf-8"
+        )
+        browser = Path("docs/architecture/phase3_browser_readiness.md").read_text(
             encoding="utf-8"
         )
 
@@ -94,6 +100,14 @@ class TestPhase3PackageVerification(unittest.TestCase):
             "does not:",
         ):
             self.assertIn(expected, metabase)
+        for expected in (
+            "dependencies.browser.executable",
+            "dependencies.browser.automation-driver",
+            "dependencies.browser.governance-policy",
+            "does not:",
+            "claim browser automation support",
+        ):
+            self.assertIn(expected, browser)
 
 
 if __name__ == "__main__":
