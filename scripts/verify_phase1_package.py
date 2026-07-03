@@ -570,6 +570,16 @@ def _verify_installed_phase4_capability_surfaces(
                         "decision": "allow",
                     },
                     {
+                        "capability": "documents.create-pdf",
+                        "operation": "create-pdf",
+                        "decision": "allow",
+                    },
+                    {
+                        "capability": "documents.extract-text",
+                        "operation": "extract-text",
+                        "decision": "allow",
+                    },
+                    {
                         "capability": "metabase.apply-provision",
                         "operation": "apply-provision",
                         "decision": "allow",
@@ -622,6 +632,54 @@ def _verify_installed_phase4_capability_surfaces(
         raise RuntimeError("installed documents inspect leaked document contents")
     if str(sample) in documents_result.stdout:
         raise RuntimeError("installed documents inspect leaked full source path")
+    create_result = _run_allow_exit(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "documents",
+            "create-pdf",
+            "--config",
+            str(config_path),
+            "--output",
+            "created.pdf",
+            "--text",
+            "installed package create text",
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+        expected_exit=1,
+    )
+    if "document_operation_failed" not in create_result.stdout:
+        raise RuntimeError("installed documents create-pdf did not fail safely")
+    if "installed package create text" in create_result.stdout:
+        raise RuntimeError("installed documents create-pdf leaked source text")
+    fake_pdf = documents_dir / "sample.pdf"
+    fake_pdf.write_bytes(b"%PDF-1.4\n% package verifier placeholder\n")
+    extract_result = _run_allow_exit(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "documents",
+            "extract-text",
+            "--config",
+            str(config_path),
+            "--source",
+            str(fake_pdf),
+            "--to",
+            "sample.txt",
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+        expected_exit=1,
+    )
+    if "document_operation_failed" not in extract_result.stdout:
+        raise RuntimeError("installed documents extract-text did not fail safely")
+    if str(fake_pdf) in extract_result.stdout:
+        raise RuntimeError("installed documents extract-text leaked full source path")
+    if (documents_dir / "outputs" / "sample.txt").exists():
+        raise RuntimeError("installed documents failed extraction wrote output")
     metabase_health_result = _run(
         [
             str(python),
@@ -672,6 +730,9 @@ def _verify_installed_phase4_capability_surfaces(
     for expected in (
         "documents.documents-root",
         "documents.documents-cache",
+        "documents.documents-outputs",
+        "documents.pdf-extraction",
+        "documents.pdf-creation",
         "metabase.health",
         "metabase.provisioning",
     ):

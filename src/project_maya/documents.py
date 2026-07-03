@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import importlib
+import importlib.util
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping
@@ -93,6 +94,7 @@ def extract_pdf_text(
     config: MayaConfig,
     source: Path,
     *,
+    output: Path | None = None,
     gateway: ActionAuthorizationGateway,
     actor_id: str = "local-user",
     audit_sink: AuditSink | None = None,
@@ -101,19 +103,26 @@ def extract_pdf_text(
 ) -> tuple[DocumentOperationResult, str]:
     _require_documents_profile(config)
     source_path = _resolve_document_path(config, source)
+    output_path = (
+        _resolve_document_path(config, output, must_exist=False, default_subdir="outputs")
+        if output is not None
+        else None
+    )
     if source_path.suffix.lower() != ".pdf":
         raise DocumentCapabilityError("extract-text supports PDF sources only")
+    if output_path is not None and output_path.suffix.lower() != ".txt":
+        raise DocumentCapabilityError("extract-text output must end with .txt")
     _authorize_document_action(
         gateway,
         audit_sink or NullAuditSink(),
         actor_id=actor_id,
         operation="extract-text",
         source_ref=_redacted_ref(config, source_path),
-        output_ref=None,
+        output_ref=_redacted_ref(config, output_path) if output_path is not None else None,
         file_type="pdf",
         data_classification=data_classification,
         idempotency_key=idempotency_key,
-        mutation=False,
+        mutation=output_path is not None,
     )
     try:
         pypdf = importlib.import_module("pypdf")
@@ -124,12 +133,19 @@ def extract_pdf_text(
     reader = pypdf.PdfReader(str(source_path))
     pages = [page.extract_text() or "" for page in reader.pages]
     text = "\n".join(pages)
+    bytes_written = 0
+    if output_path is not None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(text, encoding="utf-8")
+        bytes_written = output_path.stat().st_size
     result = DocumentOperationResult(
         operation="extract-text",
         status="extracted",
         source_ref=_redacted_ref(config, source_path),
+        output_ref=_redacted_ref(config, output_path) if output_path is not None else None,
         file_type="pdf",
         bytes_read=source_path.stat().st_size,
+        bytes_written=bytes_written,
         pages=len(reader.pages),
         characters=len(text),
     )
@@ -151,7 +167,12 @@ def create_pdf(
     _require_documents_profile(config)
     if not text.strip():
         raise DocumentCapabilityError("document text is required")
-    output_path = _resolve_document_path(config, output, must_exist=False)
+    output_path = _resolve_document_path(
+        config,
+        output,
+        must_exist=False,
+        default_subdir="outputs",
+    )
     if output_path.suffix.lower() != ".pdf":
         raise DocumentCapabilityError("create-pdf output must end with .pdf")
     _authorize_document_action(
@@ -176,7 +197,7 @@ def create_pdf(
     rendered = _render_source_text(text, source_format)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     pdf = canvas_module.Canvas(str(output_path), pagesize=pagesizes.letter)
-    width, height = pagesizes.letter
+    _, height = pagesizes.letter
     y = height - 72
     for line in _plain_lines(rendered):
         if y < 72:
@@ -201,10 +222,12 @@ def document_capability_checks(config: MayaConfig) -> tuple[DocumentOperationRes
         return ()
     documents_dir = config.deployment.data_dir / "documents"
     cache_dir = documents_dir / "cache"
+    outputs_dir = documents_dir / "outputs"
     results = []
     for operation, path in (
         ("documents-root", documents_dir),
         ("documents-cache", cache_dir),
+        ("documents-outputs", outputs_dir),
     ):
         status = "available" if path.is_dir() else "will_create"
         if path.exists() and not path.is_dir():
@@ -217,6 +240,26 @@ def document_capability_checks(config: MayaConfig) -> tuple[DocumentOperationRes
                 metadata={"profile": ComponentProfile.DOCUMENTS.value},
             )
         )
+    results.append(
+        DocumentOperationResult(
+            operation="pdf-extraction",
+            status=_dependency_status("pypdf"),
+            metadata={
+                "dependency": "pypdf",
+                "profile": ComponentProfile.DOCUMENTS.value,
+            },
+        )
+    )
+    results.append(
+        DocumentOperationResult(
+            operation="pdf-creation",
+            status=_dependency_status("reportlab"),
+            metadata={
+                "dependency": "reportlab",
+                "profile": ComponentProfile.DOCUMENTS.value,
+            },
+        )
+    )
     return tuple(results)
 
 
@@ -230,9 +273,15 @@ def _resolve_document_path(
     path: Path,
     *,
     must_exist: bool = True,
+    default_subdir: str | None = None,
 ) -> Path:
     root = (config.deployment.data_dir / "documents").resolve()
-    candidate = path if path.is_absolute() else root / path
+    if path.is_absolute():
+        candidate = path
+    elif default_subdir is not None and len(path.parts) == 1:
+        candidate = root / default_subdir / path
+    else:
+        candidate = root / path
     resolved = candidate.resolve()
     if resolved != root and root not in resolved.parents:
         raise DocumentCapabilityError("document path is outside maya-data/documents")
@@ -241,6 +290,10 @@ def _resolve_document_path(
     if any(part in {"", ".", ".."} for part in resolved.relative_to(root).parts):
         raise DocumentCapabilityError("document path is unsafe")
     return resolved
+
+
+def _dependency_status(module_name: str) -> str:
+    return "available" if importlib.util.find_spec(module_name) is not None else "missing_required"
 
 
 def _require_supported_source(path: Path) -> None:

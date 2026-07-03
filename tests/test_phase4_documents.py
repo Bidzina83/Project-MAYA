@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import tempfile
 import unittest
@@ -15,7 +16,9 @@ from project_maya import (
     create_pdf,
     extract_pdf_text,
     inspect_document,
+    run_doctor,
 )
+from project_maya.adapters import HermesRuntimeAdapter
 from tests.test_phase0_contracts import valid_config_mapping
 
 
@@ -132,6 +135,86 @@ class TestPhase4Documents(unittest.TestCase):
                 )
 
             self.assertFalse(output.exists())
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("pypdf") is not None
+        and importlib.util.find_spec("reportlab") is not None,
+        "pypdf and reportlab are required for real PDF round-trip coverage",
+    )
+    def test_create_pdf_and_extract_text_round_trip_to_outputs_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp) / "maya-data"
+            config = _config(data_dir)
+            gateway = Gateway()
+
+            created = create_pdf(
+                config,
+                text="Maya document round trip",
+                output=Path("round-trip.pdf"),
+                gateway=gateway,
+            )
+            extracted, text = extract_pdf_text(
+                config,
+                data_dir / "documents" / "outputs" / "round-trip.pdf",
+                output=Path("round-trip.txt"),
+                gateway=gateway,
+            )
+
+            output_text = (
+                data_dir / "documents" / "outputs" / "round-trip.txt"
+            ).read_text(encoding="utf-8")
+
+        self.assertEqual(created.status, "created")
+        self.assertEqual(extracted.status, "extracted")
+        self.assertIn("documents/outputs/round-trip.pdf", created.output_ref)
+        self.assertIn("Maya document round trip", text)
+        self.assertIn("Maya document round trip", output_text)
+        self.assertEqual(
+            [request.capability for request in gateway.requests],
+            ["documents.create-pdf", "documents.extract-text"],
+        )
+
+    def test_markdown_pdf_creation_reports_missing_markdown_without_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp) / "maya-data"
+            output = data_dir / "documents" / "outputs" / "markdown.pdf"
+            real_import = __import__("importlib").import_module
+
+            def import_or_missing_markdown(name):
+                if name == "markdown":
+                    raise ImportError("missing markdown")
+                return real_import(name)
+
+            with mock.patch(
+                "project_maya.documents.importlib.import_module",
+                side_effect=import_or_missing_markdown,
+            ):
+                with self.assertRaises(DocumentDependencyUnavailable):
+                    create_pdf(
+                        _config(data_dir),
+                        text="# Heading",
+                        output=Path("markdown.pdf"),
+                        source_format="markdown",
+                        gateway=Gateway(),
+                    )
+
+            self.assertFalse(output.exists())
+
+    def test_doctor_reports_document_output_and_operation_readiness(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp) / "maya-data"
+            report = run_doctor(
+                _config(data_dir),
+                HermesRuntimeAdapter(factory_path="missing.hermes:factory"),
+            )
+
+        checks = {check.name: check for check in report.checks}
+        self.assertIn("documents.documents-root", checks)
+        self.assertIn("documents.documents-cache", checks)
+        self.assertIn("documents.documents-outputs", checks)
+        self.assertIn("documents.pdf-extraction", checks)
+        self.assertIn("documents.pdf-creation", checks)
+        self.assertNotIn("secret://", checks["documents.pdf-extraction"].message)
 
 
 if __name__ == "__main__":

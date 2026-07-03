@@ -29,11 +29,16 @@ Run:
 ```text
 maya documents inspect --config maya-config.json --source maya-data/documents/sample.txt
 maya documents extract-text --config maya-config.json --source maya-data/documents/sample.pdf
-maya documents create-pdf --config maya-config.json --output maya-data/documents/out.pdf --text "Hello from Maya"
+maya documents extract-text --config maya-config.json --source maya-data/documents/sample.pdf --to extracted.txt
+maya documents create-pdf --config maya-config.json --output out.pdf --text "Hello from Maya"
 ```
 
 The default output and audit records are redacted. Document contents are not
-written to audit records.
+written to audit records. Bare output filenames are written under:
+
+```text
+maya-data/documents/outputs/
+```
 
 ## Metabase
 

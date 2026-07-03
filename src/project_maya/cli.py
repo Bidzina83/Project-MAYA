@@ -342,13 +342,31 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Include extracted text in stdout. Audit remains redacted.",
     )
+    documents_extract.add_argument(
+        "--to",
+        dest="output",
+        type=Path,
+        default=None,
+        help=(
+            "Optional governed .txt output path. A bare filename is written "
+            "under maya-data/documents/outputs."
+        ),
+    )
     documents_extract.add_argument("--data-classification", default="internal")
     documents_create = documents_subparsers.add_parser(
         "create-pdf",
         help="Create a governed local PDF from plain text or Markdown.",
     )
     documents_create.add_argument("--config", type=Path, required=True)
-    documents_create.add_argument("--output", type=Path, required=True)
+    documents_create.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        help=(
+            "Governed PDF output path. A bare filename is written under "
+            "maya-data/documents/outputs."
+        ),
+    )
     documents_create.add_argument(
         "--text",
         required=True,
@@ -923,6 +941,7 @@ def _documents(args) -> int:
             result, text = extract_pdf_text(
                 config,
                 args.source,
+                output=args.output,
                 gateway=gateway,
                 audit_sink=audit_sink,
                 data_classification=args.data_classification,

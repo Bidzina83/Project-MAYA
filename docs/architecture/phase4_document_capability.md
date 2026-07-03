@@ -14,6 +14,7 @@ Initial operations are intentionally narrow:
 
 - inspect document metadata;
 - extract PDF text with `pypdf` when available;
+- optionally write extracted PDF text to a governed `.txt` output;
 - create PDF output from plain text or Markdown with document extras when
   available;
 - report dependency-unavailable states honestly.
@@ -44,6 +45,16 @@ maya-data/documents/
 This keeps the first product surface deterministic and backup-safe. Future
 customer-approved document roots require an explicit configuration contract and
 governance policy.
+
+Bare output filenames are written under:
+
+```text
+maya-data/documents/outputs/
+```
+
+`maya doctor` reports the document root, cache directory, output directory,
+PDF extraction dependency readiness, and PDF creation dependency readiness as
+separate checks.
 
 ## Local API
 
