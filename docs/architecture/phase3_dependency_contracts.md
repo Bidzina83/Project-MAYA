@@ -21,7 +21,7 @@ network validation.
 | `maya-metabase` | Java runtime, customer-managed Metabase service, customer-managed Metabase application database, approved analytics sources |
 | `maya-browser` | supported browser executable, customer-managed automation driver/runtime, local governance policy |
 | `maya-messaging` | Google, Slack, and Telegram external-service readiness through connector validation |
-| `maya-local-models` | customer-managed OpenAI-compatible local endpoint configuration |
+| `maya-local-models` | OpenAI-compatible local endpoint configuration, customer-managed runtime family, customer-managed model artifact |
 
 `maya-core` intentionally has no heavy dependency requirements in this phase.
 
@@ -37,6 +37,8 @@ network validation.
 - `dependencies.database.metabase-application`
 - `dependencies.browser.executable`
 - `dependencies.browser.automation-driver`
+- `dependencies.endpoint.local-model`
+- `dependencies.runtime.local-model-family`
 - `dependencies.service.google`
 
 Dependency messages are redacted summaries. They report install hints and
@@ -62,6 +64,8 @@ Examples:
 - Debian/Ubuntu Java runtime: `sudo apt-get install -y openjdk-21-jre`
 - Browser executable: install Chrome, Edge, Chromium, or another supported browser for your OS
 - Browser automation driver: configure an approved browser automation runtime before enabling actions
+- Local model endpoint: configure an OpenAI-compatible endpoint such as Ollama, LM Studio, or vLLM
+- Local model artifact: pull or configure the requested model in the selected local runtime
 
 Google, Slack, Telegram, Microsoft Office, Metabase databases, and local model
 endpoints are customer-managed readiness surfaces, not packages Maya silently

@@ -471,6 +471,40 @@ def _verify_installed_dependency_contract_surfaces(
             raise RuntimeError(f"installed doctor missing browser check: {expected}")
     if "secret://" in browser_doctor_result.stdout:
         raise RuntimeError("installed browser dependency doctor printed a secret ref")
+    local_model_config_path = work_dir / "local-model-dependency-config.json"
+    _write_minimal_config(
+        local_model_config_path,
+        work_dir / "local-model-dependency-maya-data",
+        enabled_profiles=("maya-core", "maya-local-models"),
+        include_local_model=True,
+    )
+    local_model_doctor_result = _run_allow_exit(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "doctor",
+            "--config",
+            str(local_model_config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+        expected_exit=1,
+    )
+    for expected in (
+        "dependencies.profile.maya-local-models",
+        "dependencies.endpoint.local-model",
+        "dependencies.runtime.local-model-family",
+        "dependencies.model.local-model-artifact",
+        "family=ollama",
+        "model_presence=not_probed",
+    ):
+        if expected not in local_model_doctor_result.stdout:
+            raise RuntimeError(
+                f"installed doctor missing local model check: {expected}"
+            )
+    if "127.0.0.1:11434" in local_model_doctor_result.stdout:
+        raise RuntimeError("installed local model doctor printed endpoint host")
 
 
 def _verify_installed_reset_integration_cli(python: Path, work_dir: Path) -> None:
@@ -764,6 +798,7 @@ def _write_minimal_config(
     include_google: bool = False,
     enabled_profiles: tuple[str, ...] = ("maya-core",),
     include_metabase: bool = False,
+    include_local_model: bool = False,
 ) -> None:
     integrations = {}
     if include_google:
@@ -796,6 +831,25 @@ def _write_minimal_config(
                 }
             ],
         }
+    llm = {
+        "mode": "customer_owned",
+        "provider": "openai",
+        "model": "gpt-test",
+        "fallback_model": None,
+        "credential_ref": "secret://llm/openai",
+        "endpoint": None,
+        "timeout_seconds": 60,
+    }
+    if include_local_model:
+        llm = {
+            "mode": "local",
+            "provider": "openai-compatible",
+            "model": "local-model",
+            "fallback_model": None,
+            "credential_ref": None,
+            "endpoint": "http://127.0.0.1:11434/v1",
+            "timeout_seconds": 120,
+        }
     config_path.write_text(
         json.dumps(
             {
@@ -811,15 +865,7 @@ def _write_minimal_config(
                     "enabled_profiles": list(enabled_profiles),
                 },
                 "broker": {"mode": "disabled", "endpoint": None},
-                "llm": {
-                    "mode": "customer_owned",
-                    "provider": "openai",
-                    "model": "gpt-test",
-                    "fallback_model": None,
-                    "credential_ref": "secret://llm/openai",
-                    "endpoint": None,
-                    "timeout_seconds": 60,
-                },
+                "llm": llm,
                 "integrations": integrations,
                 "memory": {
                     "hermes_provider": "local",

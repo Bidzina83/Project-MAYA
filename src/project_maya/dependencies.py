@@ -357,13 +357,37 @@ DEPENDENCY_CONTRACTS: tuple[DependencyContract, ...] = (
         dependency_id="endpoint.local-model",
         profile=ComponentProfile.LOCAL_MODELS,
         category=DependencyCategory.MODEL_ENDPOINT,
-        requirement=DependencyRequirement.CUSTOMER_MANAGED,
+        requirement=DependencyRequirement.REQUIRED,
         display_name="Local model endpoint",
         check_name="dependencies.endpoint.local-model",
         install_hints={
             "default": "configure an OpenAI-compatible local endpoint such as Ollama, LM Studio, or vLLM",
         },
         description="Local/customer-hosted OpenAI-compatible model endpoint readiness.",
+    ),
+    DependencyContract(
+        dependency_id="runtime.local-model-family",
+        profile=ComponentProfile.LOCAL_MODELS,
+        category=DependencyCategory.CUSTOMER_MANAGED,
+        requirement=DependencyRequirement.CUSTOMER_MANAGED,
+        display_name="Local model runtime family",
+        check_name="dependencies.runtime.local-model-family",
+        install_hints={
+            "default": "install or configure Ollama, LM Studio, vLLM, or another OpenAI-compatible runtime",
+        },
+        description="Customer-managed local model runtime family readiness.",
+    ),
+    DependencyContract(
+        dependency_id="model.local-model-artifact",
+        profile=ComponentProfile.LOCAL_MODELS,
+        category=DependencyCategory.CUSTOMER_MANAGED,
+        requirement=DependencyRequirement.CUSTOMER_MANAGED,
+        display_name="Local model artifact",
+        check_name="dependencies.model.local-model-artifact",
+        install_hints={
+            "default": "pull or configure the requested local model in the selected runtime",
+        },
+        description="Customer-managed local model artifact readiness placeholder.",
     ),
 )
 
@@ -415,6 +439,10 @@ def evaluate_dependency(
             return _evaluate_browser_automation_driver(contract, config)
         if contract.dependency_id == "browser.governance-policy":
             return _evaluate_browser_governance_policy(contract, config)
+        if contract.dependency_id == "runtime.local-model-family":
+            return _evaluate_local_model_runtime_family(contract, config)
+        if contract.dependency_id == "model.local-model-artifact":
+            return _evaluate_local_model_artifact(contract, config)
         if contract.command_names:
             return _evaluate_system_command(contract)
         return DependencyReadiness(
@@ -591,6 +619,53 @@ def _evaluate_model_endpoint(
         contract,
         status,
         readiness.redacted_summary(),
+    )
+
+
+def _evaluate_local_model_runtime_family(
+    contract: DependencyContract,
+    config: MayaConfig,
+) -> DependencyReadiness:
+    readiness = validate_local_model_endpoint(config)
+    if not readiness.ready:
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.MISSING_REQUIRED,
+            readiness.redacted_summary(),
+        )
+    return DependencyReadiness(
+        contract,
+        DependencyReadinessStatus.CUSTOMER_MANAGED,
+        (
+            f"family={readiness.endpoint_family}; "
+            "customer_managed=true; "
+            "network_used=false; "
+            f"hint={contract.install_hint()}"
+        ),
+    )
+
+
+def _evaluate_local_model_artifact(
+    contract: DependencyContract,
+    config: MayaConfig,
+) -> DependencyReadiness:
+    readiness = validate_local_model_endpoint(config)
+    if not readiness.ready:
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.MISSING_REQUIRED,
+            readiness.redacted_summary(),
+        )
+    return DependencyReadiness(
+        contract,
+        DependencyReadinessStatus.CUSTOMER_MANAGED,
+        (
+            f"model={config.llm.model}; "
+            f"family={readiness.endpoint_family}; "
+            "model_presence=not_probed; "
+            "network_used=false; "
+            f"hint={contract.install_hint()}"
+        ),
     )
 
 

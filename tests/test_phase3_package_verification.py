@@ -24,6 +24,9 @@ class TestPhase3PackageVerification(unittest.TestCase):
             "dependencies.browser.executable",
             "dependencies.browser.automation-driver",
             "dependencies.browser.governance-policy",
+            "dependencies.endpoint.local-model",
+            "dependencies.runtime.local-model-family",
+            "dependencies.model.local-model-artifact",
         ):
             self.assertIn(expected, script)
 
@@ -60,6 +63,9 @@ class TestPhase3PackageVerification(unittest.TestCase):
         browser = Path("docs/architecture/phase3_browser_readiness.md").read_text(
             encoding="utf-8"
         )
+        local_model = Path(
+            "docs/architecture/phase3_local_model_readiness.md"
+        ).read_text(encoding="utf-8")
 
         for expected in (
             "python_package",
@@ -108,6 +114,15 @@ class TestPhase3PackageVerification(unittest.TestCase):
             "claim browser automation support",
         ):
             self.assertIn(expected, browser)
+        for expected in (
+            "dependencies.endpoint.local-model",
+            "dependencies.runtime.local-model-family",
+            "dependencies.model.local-model-artifact",
+            "network-free",
+            "does not:",
+            "claim local model support",
+        ):
+            self.assertIn(expected, local_model)
 
 
 if __name__ == "__main__":

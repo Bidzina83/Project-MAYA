@@ -370,6 +370,121 @@ class TestPhase3DependencyReadiness(unittest.TestCase):
             DependencyReadinessStatus.CUSTOMER_MANAGED,
         )
         self.assertIn("family=ollama", by_id["endpoint.local-model"].message)
+        self.assertEqual(
+            by_id["runtime.local-model-family"].status,
+            DependencyReadinessStatus.CUSTOMER_MANAGED,
+        )
+        self.assertIn(
+            "family=ollama",
+            by_id["runtime.local-model-family"].message,
+        )
+        self.assertEqual(
+            by_id["model.local-model-artifact"].status,
+            DependencyReadinessStatus.CUSTOMER_MANAGED,
+        )
+        self.assertIn(
+            "model_presence=not_probed",
+            by_id["model.local-model-artifact"].message,
+        )
+        self.assertNotIn("127.0.0.1:11434", by_id["endpoint.local-model"].message)
+        self.assertNotIn("127.0.0.1:11434", by_id["runtime.local-model-family"].message)
+
+    def test_local_model_dependency_reports_supported_endpoint_families(self):
+        cases = (
+            ("http://127.0.0.1:11434/v1", "ollama"),
+            ("http://localhost:1234/v1", "lm_studio"),
+            ("http://127.0.0.1:8000/v1", "vllm"),
+            ("https://models.customer.example/v1", "openai_compatible_customer_hosted"),
+        )
+        for endpoint, family in cases:
+            with self.subTest(endpoint=endpoint):
+                data = valid_config_mapping()
+                data["runtime"]["enabled_profiles"] = ["maya-core", "maya-local-models"]
+                data["llm"] = {
+                    "mode": "local",
+                    "provider": "openai-compatible",
+                    "model": "llama-local",
+                    "endpoint": endpoint,
+                    "credential_ref": None,
+                }
+                data["deployment"]["data_dir"] = str(Path.cwd() / "maya-data")
+                config = config_from_mapping(data)
+
+                readiness = evaluate_profile_readiness(
+                    config,
+                    ComponentProfile.LOCAL_MODELS,
+                )
+
+                by_id = {
+                    dependency.contract.dependency_id: dependency
+                    for dependency in readiness.dependencies
+                }
+                self.assertIn(
+                    f"family={family}",
+                    by_id["runtime.local-model-family"].message,
+                )
+                self.assertNotIn(endpoint, by_id["endpoint.local-model"].message)
+
+    def test_local_model_dependency_reports_disabled_when_profile_enabled_without_local_mode(self):
+        data = valid_config_mapping()
+        data["runtime"]["enabled_profiles"] = ["maya-core", "maya-local-models"]
+        data["deployment"]["data_dir"] = str(Path.cwd() / "maya-data")
+        config = config_from_mapping(data)
+
+        readiness = evaluate_profile_readiness(
+            config,
+            ComponentProfile.LOCAL_MODELS,
+        )
+
+        by_id = {
+            dependency.contract.dependency_id: dependency
+            for dependency in readiness.dependencies
+        }
+        self.assertEqual(
+            by_id["endpoint.local-model"].status,
+            DependencyReadinessStatus.DISABLED,
+        )
+        self.assertEqual(
+            by_id["runtime.local-model-family"].status,
+            DependencyReadinessStatus.MISSING_REQUIRED,
+        )
+        self.assertIn(
+            "llm.mode is not local",
+            by_id["runtime.local-model-family"].message,
+        )
+
+    def test_doctor_reports_local_model_dependency_readiness(self):
+        data = valid_config_mapping()
+        data["runtime"]["enabled_profiles"] = ["maya-core", "maya-local-models"]
+        data["llm"] = {
+            "mode": "local",
+            "provider": "openai-compatible",
+            "model": "llama-local",
+            "endpoint": "http://127.0.0.1:11434/v1",
+            "credential_ref": None,
+        }
+        data["deployment"]["data_dir"] = str(Path.cwd() / "maya-data")
+        config = config_from_mapping(data)
+
+        report = run_doctor(
+            config,
+            HermesRuntimeAdapter(factory_path="missing.hermes:factory"),
+            lifecycle_state=AgentState.CREATED,
+        )
+
+        checks = {check.name: check for check in report.checks}
+        self.assertIn("dependencies.profile.maya-local-models", checks)
+        self.assertIn("dependencies.endpoint.local-model", checks)
+        self.assertIn("dependencies.runtime.local-model-family", checks)
+        self.assertIn("dependencies.model.local-model-artifact", checks)
+        self.assertEqual(
+            checks["dependencies.endpoint.local-model"].status,
+            DoctorStatus.PASS,
+        )
+        self.assertNotIn(
+            "127.0.0.1:11434",
+            checks["dependencies.endpoint.local-model"].message,
+        )
 
     def test_install_hints_are_not_machine_specific(self):
         for contract in dependency_contracts():
