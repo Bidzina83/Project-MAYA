@@ -442,6 +442,35 @@ def _verify_installed_dependency_contract_surfaces(
             raise RuntimeError(f"installed doctor missing Metabase check: {expected}")
     if "secret://metabase" in metabase_doctor_result.stdout:
         raise RuntimeError("installed Metabase dependency doctor printed a secret ref")
+    browser_config_path = work_dir / "browser-dependency-config.json"
+    _write_minimal_config(
+        browser_config_path,
+        work_dir / "browser-dependency-maya-data",
+        enabled_profiles=("maya-core", "maya-browser"),
+    )
+    browser_doctor_result = _run_allow_exit(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "doctor",
+            "--config",
+            str(browser_config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+        expected_exit=1,
+    )
+    for expected in (
+        "dependencies.profile.maya-browser",
+        "dependencies.browser.executable",
+        "dependencies.browser.automation-driver",
+        "dependencies.browser.governance-policy",
+    ):
+        if expected not in browser_doctor_result.stdout:
+            raise RuntimeError(f"installed doctor missing browser check: {expected}")
+    if "secret://" in browser_doctor_result.stdout:
+        raise RuntimeError("installed browser dependency doctor printed a secret ref")
 
 
 def _verify_installed_reset_integration_cli(python: Path, work_dir: Path) -> None:

@@ -279,17 +279,49 @@ DEPENDENCY_CONTRACTS: tuple[DependencyContract, ...] = (
         dependency_id="browser.executable",
         profile=ComponentProfile.BROWSER,
         category=DependencyCategory.SYSTEM_COMMAND,
-        requirement=DependencyRequirement.OPTIONAL,
+        requirement=DependencyRequirement.REQUIRED,
         display_name="Browser executable",
         check_name="dependencies.browser.executable",
-        command_names=("chrome", "chromium", "msedge", "google-chrome"),
+        command_names=(
+            "chrome",
+            "chrome.exe",
+            "chromium",
+            "chromium-browser",
+            "msedge",
+            "msedge.exe",
+            "google-chrome",
+        ),
         install_hints={
             "Windows": "install Chrome, Edge, or a supported browser",
             "Darwin": "install Chrome or a supported browser",
             "Linux": "install chromium or google-chrome",
             "default": "install a supported browser",
         },
-        description="Optional browser automation runtime.",
+        description="Browser executable required when browser automation is enabled.",
+    ),
+    DependencyContract(
+        dependency_id="browser.automation-driver",
+        profile=ComponentProfile.BROWSER,
+        category=DependencyCategory.CUSTOMER_MANAGED,
+        requirement=DependencyRequirement.CUSTOMER_MANAGED,
+        display_name="Browser automation driver",
+        check_name="dependencies.browser.automation-driver",
+        install_hints={
+            "default": "configure an approved browser automation driver/runtime",
+        },
+        description="Customer-managed automation driver/runtime readiness placeholder.",
+    ),
+    DependencyContract(
+        dependency_id="browser.governance-policy",
+        profile=ComponentProfile.BROWSER,
+        category=DependencyCategory.CUSTOMER_MANAGED,
+        requirement=DependencyRequirement.CUSTOMER_MANAGED,
+        display_name="Browser governance policy",
+        check_name="dependencies.browser.governance-policy",
+        install_hints={
+            "default": "configure browser automation policy before enabling actions",
+        },
+        description="Local governance policy readiness for browser automation actions.",
     ),
     DependencyContract(
         dependency_id="service.google",
@@ -379,6 +411,10 @@ def evaluate_dependency(
             return _evaluate_metabase_application_database(contract, config)
         if contract.dependency_id == "database.metabase-analytics-sources":
             return _evaluate_metabase_analytics_sources(contract, config)
+        if contract.dependency_id == "browser.automation-driver":
+            return _evaluate_browser_automation_driver(contract, config)
+        if contract.dependency_id == "browser.governance-policy":
+            return _evaluate_browser_governance_policy(contract, config)
         if contract.command_names:
             return _evaluate_system_command(contract)
         return DependencyReadiness(
@@ -663,6 +699,48 @@ def _metabase_endpoint_state(endpoint: str | None) -> str:
     if host == "localhost" or host == "::1" or host.startswith("127."):
         return "loopback_configured"
     return "customer_hosted_configured"
+
+
+def _evaluate_browser_automation_driver(
+    contract: DependencyContract,
+    config: MayaConfig,
+) -> DependencyReadiness:
+    if ComponentProfile.BROWSER not in config.runtime.enabled_profiles:
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.DISABLED,
+            "maya-browser profile disabled",
+        )
+    return DependencyReadiness(
+        contract,
+        DependencyReadinessStatus.CUSTOMER_MANAGED,
+        (
+            "customer-managed; "
+            "network_used=false; "
+            f"hint={contract.install_hint()}"
+        ),
+    )
+
+
+def _evaluate_browser_governance_policy(
+    contract: DependencyContract,
+    config: MayaConfig,
+) -> DependencyReadiness:
+    if ComponentProfile.BROWSER not in config.runtime.enabled_profiles:
+        return DependencyReadiness(
+            contract,
+            DependencyReadinessStatus.DISABLED,
+            "maya-browser profile disabled",
+        )
+    return DependencyReadiness(
+        contract,
+        DependencyReadinessStatus.CUSTOMER_MANAGED,
+        (
+            f"policy_file={config.governance.policy_file.name}; "
+            f"default_action={config.governance.default_action}; "
+            "governance_required=true"
+        ),
+    )
 
 
 def _missing_dependency(

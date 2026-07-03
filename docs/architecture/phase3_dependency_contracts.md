@@ -19,7 +19,7 @@ network validation.
 | --- | --- |
 | `maya-documents` | `reportlab`, `pypdf`, `Markdown`, `Pillow`, optional `pymupdf`, optional `pdftoppm`, optional `soffice`, customer-managed Microsoft Office |
 | `maya-metabase` | Java runtime, customer-managed Metabase service, customer-managed Metabase application database, approved analytics sources |
-| `maya-browser` | optional supported browser executable |
+| `maya-browser` | supported browser executable, customer-managed automation driver/runtime, local governance policy |
 | `maya-messaging` | Google, Slack, and Telegram external-service readiness through connector validation |
 | `maya-local-models` | customer-managed OpenAI-compatible local endpoint configuration |
 
@@ -35,6 +35,8 @@ network validation.
 - `dependencies.application.ms-office`
 - `dependencies.runtime.java`
 - `dependencies.database.metabase-application`
+- `dependencies.browser.executable`
+- `dependencies.browser.automation-driver`
 - `dependencies.service.google`
 
 Dependency messages are redacted summaries. They report install hints and
@@ -58,6 +60,8 @@ Examples:
 - Windows Java runtime: `winget install EclipseAdoptium.Temurin.21.JRE`
 - macOS Java runtime: `brew install openjdk@21`
 - Debian/Ubuntu Java runtime: `sudo apt-get install -y openjdk-21-jre`
+- Browser executable: install Chrome, Edge, Chromium, or another supported browser for your OS
+- Browser automation driver: configure an approved browser automation runtime before enabling actions
 
 Google, Slack, Telegram, Microsoft Office, Metabase databases, and local model
 endpoints are customer-managed readiness surfaces, not packages Maya silently

@@ -209,6 +209,64 @@ class TestPhase3DependencyReadiness(unittest.TestCase):
             DependencyReadinessStatus.DISABLED,
         )
 
+    def test_browser_profile_reports_executable_driver_and_policy_readiness(self):
+        config = _config_with_profiles("maya-core", "maya-browser")
+        with mock.patch("project_maya.dependencies.shutil.which", return_value=None):
+            readiness = evaluate_profile_readiness(
+                config,
+                ComponentProfile.BROWSER,
+            )
+
+        by_id = {
+            dependency.contract.dependency_id: dependency
+            for dependency in readiness.dependencies
+        }
+        self.assertEqual(
+            readiness.status,
+            DependencyReadinessStatus.MISSING_REQUIRED,
+        )
+        self.assertEqual(
+            by_id["browser.executable"].status,
+            DependencyReadinessStatus.MISSING_REQUIRED,
+        )
+        self.assertEqual(
+            by_id["browser.automation-driver"].status,
+            DependencyReadinessStatus.CUSTOMER_MANAGED,
+        )
+        self.assertIn("network_used=false", by_id["browser.automation-driver"].message)
+        self.assertEqual(
+            by_id["browser.governance-policy"].status,
+            DependencyReadinessStatus.CUSTOMER_MANAGED,
+        )
+        self.assertIn(
+            "governance_required=true",
+            by_id["browser.governance-policy"].message,
+        )
+        self.assertNotIn(str(Path.cwd()), by_id["browser.governance-policy"].message)
+
+    def test_browser_profile_reports_available_executable_without_full_path(self):
+        config = _config_with_profiles("maya-core", "maya-browser")
+
+        def fake_which(name):
+            return "C:\\Program Files\\Browser\\browser.exe" if name == "msedge" else None
+
+        with mock.patch("project_maya.dependencies.shutil.which", side_effect=fake_which):
+            readiness = evaluate_profile_readiness(
+                config,
+                ComponentProfile.BROWSER,
+            )
+
+        by_id = {
+            dependency.contract.dependency_id: dependency
+            for dependency in readiness.dependencies
+        }
+        self.assertEqual(
+            by_id["browser.executable"].status,
+            DependencyReadinessStatus.AVAILABLE,
+        )
+        self.assertEqual(by_id["browser.executable"].message, "msedge available")
+        self.assertNotIn("Program Files", by_id["browser.executable"].message)
+
     def test_doctor_reports_dependency_readiness_for_enabled_profiles(self):
         config = _config_with_profiles("maya-core", "maya-documents")
         with mock.patch("project_maya.dependencies.shutil.which", return_value=None):
@@ -247,6 +305,26 @@ class TestPhase3DependencyReadiness(unittest.TestCase):
         self.assertEqual(checks["dependencies.runtime.java"].status, DoctorStatus.FAIL)
         self.assertEqual(checks["dependencies.service.metabase"].status, DoctorStatus.PASS)
         self.assertNotIn("secret://metabase", checks["dependencies.database.metabase-application"].message)
+
+    def test_doctor_reports_browser_dependency_readiness(self):
+        config = _config_with_profiles("maya-core", "maya-browser")
+        with mock.patch("project_maya.dependencies.shutil.which", return_value=None):
+            report = run_doctor(
+                config,
+                HermesRuntimeAdapter(factory_path="missing.hermes:factory"),
+                lifecycle_state=AgentState.CREATED,
+            )
+
+        checks = {check.name: check for check in report.checks}
+        self.assertIn("dependencies.profile.maya-browser", checks)
+        self.assertIn("dependencies.browser.executable", checks)
+        self.assertIn("dependencies.browser.automation-driver", checks)
+        self.assertIn("dependencies.browser.governance-policy", checks)
+        self.assertEqual(checks["dependencies.browser.executable"].status, DoctorStatus.FAIL)
+        self.assertEqual(
+            checks["dependencies.browser.automation-driver"].status,
+            DoctorStatus.PASS,
+        )
 
     def test_connector_service_dependencies_use_redacted_validation(self):
         data = valid_config_mapping()
