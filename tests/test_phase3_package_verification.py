@@ -18,6 +18,9 @@ class TestPhase3PackageVerification(unittest.TestCase):
             "DOCUMENTS_EXTRA_REQUIREMENTS",
             "dependencies.python.markdown",
             "documents-extra-ready",
+            "dependencies.runtime.java",
+            "dependencies.database.metabase-application",
+            "dependencies.database.metabase-analytics-sources",
         ):
             self.assertIn(expected, script)
 
@@ -48,6 +51,9 @@ class TestPhase3PackageVerification(unittest.TestCase):
         documents = Path(
             "docs/architecture/phase3_documents_pdf_readiness.md"
         ).read_text(encoding="utf-8")
+        metabase = Path("docs/architecture/phase3_metabase_readiness.md").read_text(
+            encoding="utf-8"
+        )
 
         for expected in (
             "python_package",
@@ -80,6 +86,14 @@ class TestPhase3PackageVerification(unittest.TestCase):
             "does not package trained Maya skills",
         ):
             self.assertIn(expected, documents)
+        for expected in (
+            "dependencies.runtime.java",
+            "dependencies.database.metabase-application",
+            "dependencies.database.metabase-analytics-sources",
+            "Maya persistent memory is not reported as an analytics source",
+            "does not:",
+        ):
+            self.assertIn(expected, metabase)
 
 
 if __name__ == "__main__":

@@ -102,6 +102,113 @@ class TestPhase3DependencyReadiness(unittest.TestCase):
             DependencyReadinessStatus.CUSTOMER_MANAGED,
         )
 
+    def test_metabase_profile_reports_redacted_database_and_service_readiness(self):
+        config = _config_with_profiles("maya-core", "maya-metabase")
+        with mock.patch("project_maya.dependencies.shutil.which", return_value=None):
+            readiness = evaluate_profile_readiness(
+                config,
+                ComponentProfile.METABASE,
+            )
+
+        by_id = {
+            dependency.contract.dependency_id: dependency
+            for dependency in readiness.dependencies
+        }
+        self.assertEqual(
+            by_id["runtime.java"].status,
+            DependencyReadinessStatus.MISSING_REQUIRED,
+        )
+        self.assertEqual(
+            by_id["service.metabase"].status,
+            DependencyReadinessStatus.CUSTOMER_MANAGED,
+        )
+        self.assertIn("deployment=managed_local", by_id["service.metabase"].message)
+        self.assertIn("endpoint=loopback_configured", by_id["service.metabase"].message)
+        self.assertEqual(
+            by_id["database.metabase-application"].status,
+            DependencyReadinessStatus.CUSTOMER_MANAGED,
+        )
+        self.assertIn(
+            "credential_ref=configured",
+            by_id["database.metabase-application"].message,
+        )
+        self.assertNotIn(
+            "secret://metabase",
+            by_id["database.metabase-application"].message,
+        )
+        self.assertEqual(
+            by_id["database.metabase-analytics-sources"].status,
+            DependencyReadinessStatus.CUSTOMER_MANAGED,
+        )
+        self.assertIn(
+            "analytics_sources=1",
+            by_id["database.metabase-analytics-sources"].message,
+        )
+        self.assertNotIn(
+            "secret://metabase",
+            by_id["database.metabase-analytics-sources"].message,
+        )
+
+    def test_metabase_profile_warns_when_no_analytics_sources_are_configured(self):
+        data = valid_config_mapping()
+        data["runtime"]["enabled_profiles"] = ["maya-core", "maya-metabase"]
+        data["metabase"]["analytics_sources"] = []
+        data["deployment"]["data_dir"] = str(Path.cwd() / "maya-data")
+        config = config_from_mapping(data)
+
+        readiness = evaluate_profile_readiness(
+            config,
+            ComponentProfile.METABASE,
+        )
+
+        by_id = {
+            dependency.contract.dependency_id: dependency
+            for dependency in readiness.dependencies
+        }
+        self.assertEqual(
+            by_id["database.metabase-analytics-sources"].status,
+            DependencyReadinessStatus.MISSING_OPTIONAL,
+        )
+        self.assertIn(
+            "analytics_sources=0",
+            by_id["database.metabase-analytics-sources"].message,
+        )
+
+    def test_metabase_profile_fails_when_profile_enabled_but_metabase_disabled(self):
+        data = valid_config_mapping()
+        data["runtime"]["enabled_profiles"] = ["maya-core", "maya-metabase"]
+        data["deployment"]["data_dir"] = str(Path.cwd() / "maya-data")
+        data["metabase"] = {
+            "enabled": False,
+            "deployment": "disabled",
+            "endpoint": None,
+            "application_database": None,
+            "analytics_sources": [],
+        }
+        config = config_from_mapping(data)
+
+        readiness = evaluate_profile_readiness(
+            config,
+            ComponentProfile.METABASE,
+        )
+
+        by_id = {
+            dependency.contract.dependency_id: dependency
+            for dependency in readiness.dependencies
+        }
+        self.assertEqual(
+            readiness.status,
+            DependencyReadinessStatus.MISSING_REQUIRED,
+        )
+        self.assertEqual(
+            by_id["service.metabase"].status,
+            DependencyReadinessStatus.MISSING_REQUIRED,
+        )
+        self.assertEqual(
+            by_id["database.metabase-application"].status,
+            DependencyReadinessStatus.DISABLED,
+        )
+
     def test_doctor_reports_dependency_readiness_for_enabled_profiles(self):
         config = _config_with_profiles("maya-core", "maya-documents")
         with mock.patch("project_maya.dependencies.shutil.which", return_value=None):
@@ -121,6 +228,25 @@ class TestPhase3DependencyReadiness(unittest.TestCase):
             DoctorStatus.WARN,
         )
         self.assertNotIn("secret://", checks["dependencies.profile.maya-documents"].message)
+
+    def test_doctor_reports_metabase_dependency_readiness(self):
+        config = _config_with_profiles("maya-core", "maya-metabase")
+        with mock.patch("project_maya.dependencies.shutil.which", return_value=None):
+            report = run_doctor(
+                config,
+                HermesRuntimeAdapter(factory_path="missing.hermes:factory"),
+                lifecycle_state=AgentState.CREATED,
+            )
+
+        checks = {check.name: check for check in report.checks}
+        self.assertIn("dependencies.profile.maya-metabase", checks)
+        self.assertIn("dependencies.runtime.java", checks)
+        self.assertIn("dependencies.service.metabase", checks)
+        self.assertIn("dependencies.database.metabase-application", checks)
+        self.assertIn("dependencies.database.metabase-analytics-sources", checks)
+        self.assertEqual(checks["dependencies.runtime.java"].status, DoctorStatus.FAIL)
+        self.assertEqual(checks["dependencies.service.metabase"].status, DoctorStatus.PASS)
+        self.assertNotIn("secret://metabase", checks["dependencies.database.metabase-application"].message)
 
     def test_connector_service_dependencies_use_redacted_validation(self):
         data = valid_config_mapping()
