@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Mapping
 from urllib.parse import urlparse
 
@@ -73,6 +75,26 @@ class MetabaseProvisioningPlan:
         }
 
 
+@dataclass(frozen=True)
+class MetabaseLifecycleState:
+    status: str
+    deployment: str
+    application_dir: str
+    provisioning_dir: str
+    service_artifact: str
+    customer_managed: bool
+
+    def redacted_summary(self) -> dict[str, object]:
+        return {
+            "status": self.status,
+            "deployment": self.deployment,
+            "application_dir": self.application_dir,
+            "provisioning_dir": self.provisioning_dir,
+            "service_artifact": self.service_artifact,
+            "customer_managed": self.customer_managed,
+        }
+
+
 def validate_metabase_health(
     config: MayaConfig,
     *,
@@ -116,6 +138,29 @@ def validate_metabase_health(
                 else "missing"
             ),
         },
+    )
+
+
+def inspect_metabase_lifecycle(config: MayaConfig) -> MetabaseLifecycleState:
+    _require_metabase_profile(config)
+    application_dir = config.deployment.data_dir / "metabase" / "application"
+    provisioning_dir = config.deployment.data_dir / "metabase" / "provisioning"
+    service_artifact = application_dir / "metabase.jar"
+    if not config.metabase.enabled:
+        status = "disabled"
+    elif config.metabase.deployment == "customer_managed":
+        status = "customer_managed"
+    elif config.metabase.deployment == "managed_local":
+        status = "managed_local_ready" if service_artifact.is_file() else "managed_local_artifact_missing"
+    else:
+        status = "unsupported_deployment"
+    return MetabaseLifecycleState(
+        status=status,
+        deployment=config.metabase.deployment,
+        application_dir=_path_state(application_dir),
+        provisioning_dir=_path_state(provisioning_dir),
+        service_artifact="configured" if service_artifact.is_file() else "missing",
+        customer_managed=config.metabase.deployment == "customer_managed",
     )
 
 
@@ -177,6 +222,23 @@ def plan_metabase_provisioning(config: MayaConfig) -> MetabaseProvisioningPlan:
     )
 
 
+def write_metabase_provisioning_plan(
+    config: MayaConfig,
+    plan: MetabaseProvisioningPlan,
+    *,
+    filename: str = "latest-plan.json",
+) -> Path:
+    target = _provisioning_file(config, filename)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_suffix(target.suffix + ".tmp")
+    temporary.write_text(
+        json.dumps(plan.redacted_summary(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    temporary.replace(target)
+    return target
+
+
 def apply_metabase_provisioning(
     config: MayaConfig,
     *,
@@ -202,7 +264,7 @@ def apply_metabase_provisioning(
     )
     if plan.status == "blocked":
         raise MetabaseCapabilityError("Metabase provisioning plan is blocked")
-    return MetabaseProvisioningPlan(
+    applied = MetabaseProvisioningPlan(
         status="applied",
         deployment=plan.deployment,
         apply=True,
@@ -217,12 +279,20 @@ def apply_metabase_provisioning(
         ),
         network_used=False,
     )
+    write_metabase_provisioning_plan(config, applied, filename="last-applied-plan.json")
+    return applied
 
 
-def metabase_capability_checks(config: MayaConfig) -> tuple[MetabaseHealth, MetabaseProvisioningPlan]:
+def metabase_capability_checks(
+    config: MayaConfig,
+) -> tuple[MetabaseHealth, MetabaseLifecycleState, MetabaseProvisioningPlan]:
     if ComponentProfile.METABASE not in config.runtime.enabled_profiles:
         return ()
-    return (validate_metabase_health(config), plan_metabase_provisioning(config))
+    return (
+        validate_metabase_health(config),
+        inspect_metabase_lifecycle(config),
+        plan_metabase_provisioning(config),
+    )
 
 
 def _require_metabase_profile(config: MayaConfig) -> None:
@@ -240,6 +310,29 @@ def _endpoint_state(endpoint: str | None) -> str:
     if host in {"127.0.0.1", "localhost", "::1"}:
         return "loopback_configured"
     return "remote_configured"
+
+
+def _path_state(path: Path) -> str:
+    if path.is_dir():
+        return "exists"
+    if path.exists():
+        return "invalid"
+    return "will_create"
+
+
+def _provisioning_file(config: MayaConfig, filename: str) -> Path:
+    if Path(filename).name != filename or filename in {"", ".", ".."}:
+        raise MetabaseCapabilityError("provisioning filename is unsafe")
+    target = (
+        config.deployment.data_dir
+        / "metabase"
+        / "provisioning"
+        / filename
+    ).resolve()
+    root = (config.deployment.data_dir / "metabase" / "provisioning").resolve()
+    if target != root and root not in target.parents:
+        raise MetabaseCapabilityError("provisioning path escapes metabase directory")
+    return target
 
 
 def _authorize_metabase_action(

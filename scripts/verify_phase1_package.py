@@ -696,6 +696,26 @@ def _verify_installed_phase4_capability_surfaces(
     health_payload = json.loads(metabase_health_result.stdout)
     if health_payload.get("status") != "ready":
         raise RuntimeError("installed Metabase health did not report ready")
+    metabase_lifecycle_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "metabase",
+            "lifecycle",
+            "--config",
+            str(config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    lifecycle_payload = json.loads(metabase_lifecycle_result.stdout)
+    if lifecycle_payload.get("status") not in {
+        "customer_managed",
+        "managed_local_ready",
+        "managed_local_artifact_missing",
+    }:
+        raise RuntimeError("installed Metabase lifecycle reported unexpected state")
     metabase_plan_result = _run(
         [
             str(python),
@@ -705,6 +725,7 @@ def _verify_installed_phase4_capability_surfaces(
             "plan-provision",
             "--config",
             str(config_path),
+            "--write",
         ],
         cwd=work_dir,
         env=_clean_env(),
@@ -712,8 +733,38 @@ def _verify_installed_phase4_capability_surfaces(
     plan_payload = json.loads(metabase_plan_result.stdout)
     if plan_payload.get("status") != "planned":
         raise RuntimeError("installed Metabase provisioning plan did not run")
+    if plan_payload.get("plan_ref") != "maya-data/metabase/provisioning/latest-plan.json":
+        raise RuntimeError("installed Metabase provisioning plan was not persisted")
+    plan_path = data_dir / "metabase" / "provisioning" / "latest-plan.json"
+    if not plan_path.is_file():
+        raise RuntimeError("installed Metabase provisioning plan file missing")
+    plan_text = plan_path.read_text(encoding="utf-8")
     if "secret://metabase" in metabase_plan_result.stdout:
         raise RuntimeError("installed Metabase plan printed a secret ref")
+    if "secret://metabase" in plan_text:
+        raise RuntimeError("installed Metabase persisted plan printed a secret ref")
+    metabase_apply_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "metabase",
+            "apply-provision",
+            "--config",
+            str(config_path),
+            "--apply",
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    apply_payload = json.loads(metabase_apply_result.stdout)
+    if apply_payload.get("status") != "applied":
+        raise RuntimeError("installed Metabase apply-provision did not run")
+    applied_path = data_dir / "metabase" / "provisioning" / "last-applied-plan.json"
+    if not applied_path.is_file():
+        raise RuntimeError("installed Metabase applied plan file missing")
+    if "secret://metabase" in applied_path.read_text(encoding="utf-8"):
+        raise RuntimeError("installed Metabase applied plan printed a secret ref")
     doctor_result = _run_allow_exit(
         [
             str(python),
@@ -734,6 +785,7 @@ def _verify_installed_phase4_capability_surfaces(
         "documents.pdf-extraction",
         "documents.pdf-creation",
         "metabase.health",
+        "metabase.lifecycle",
         "metabase.provisioning",
     ):
         if expected not in doctor_result.stdout:

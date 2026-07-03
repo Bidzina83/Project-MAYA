@@ -26,8 +26,10 @@ from .audit import LocalJsonlAuditSink
 from .metabase import (
     MetabaseCapabilityError,
     apply_metabase_provisioning,
+    inspect_metabase_lifecycle,
     plan_metabase_provisioning,
     validate_metabase_health,
+    write_metabase_provisioning_plan,
 )
 from .repair import RepairError, repair_local_state
 from .secrets import (
@@ -396,11 +398,21 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Request a live check. Phase 4 reports this as deferred.",
     )
+    metabase_lifecycle = metabase_subparsers.add_parser(
+        "lifecycle",
+        help="Report managed-local or customer-managed Metabase lifecycle state.",
+    )
+    metabase_lifecycle.add_argument("--config", type=Path, required=True)
     metabase_plan = metabase_subparsers.add_parser(
         "plan-provision",
         help="Create a redacted Metabase provisioning plan.",
     )
     metabase_plan.add_argument("--config", type=Path, required=True)
+    metabase_plan.add_argument(
+        "--write",
+        action="store_true",
+        help="Write the redacted plan to maya-data/metabase/provisioning.",
+    )
     metabase_apply = metabase_subparsers.add_parser(
         "apply-provision",
         help="Apply an approved Metabase provisioning plan.",
@@ -992,9 +1004,22 @@ def _metabase(args) -> int:
             result = validate_metabase_health(config, live=args.live)
             print(json.dumps(result.redacted_summary(), sort_keys=True))
             return 0 if result.status in {"ready", "live_check_deferred"} else 1
+        if args.metabase_command == "lifecycle":
+            result = inspect_metabase_lifecycle(config)
+            print(json.dumps(result.redacted_summary(), sort_keys=True))
+            return (
+                0
+                if result.status
+                in {"customer_managed", "managed_local_ready", "managed_local_artifact_missing"}
+                else 1
+            )
         if args.metabase_command == "plan-provision":
             result = plan_metabase_provisioning(config)
-            print(json.dumps(result.redacted_summary(), sort_keys=True))
+            payload = result.redacted_summary()
+            if args.write:
+                plan_path = write_metabase_provisioning_plan(config, result)
+                payload["plan_ref"] = _redacted_data_ref(config, plan_path)
+            print(json.dumps(payload, sort_keys=True))
             return 0 if result.status == "planned" else 1
         if args.metabase_command == "apply-provision":
             result = apply_metabase_provisioning(
@@ -1031,6 +1056,15 @@ def _build_cli_audit_sink(config):
     return LocalJsonlAuditSink(
         config.deployment.data_dir / "governance" / "audit" / "runtime.jsonl"
     )
+
+
+def _redacted_data_ref(config, path: Path) -> str:
+    root = config.deployment.data_dir.resolve()
+    try:
+        relative = path.resolve().relative_to(root).as_posix()
+    except ValueError:
+        relative = "external"
+    return f"maya-data/{relative}"
 
 
 def _load_config(config_path: Path):

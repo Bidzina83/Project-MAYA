@@ -17,6 +17,8 @@ class TestPhase4PackageVerification(unittest.TestCase):
             "documents.documents-outputs",
             "documents.pdf-extraction",
             "documents.pdf-creation",
+            "metabase.lifecycle",
+            "last-applied-plan.json",
             "metabase.provisioning",
         ):
             self.assertIn(expected, verifier)

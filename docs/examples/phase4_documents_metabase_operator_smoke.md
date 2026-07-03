@@ -53,7 +53,8 @@ Run:
 
 ```text
 maya metabase health --config maya-config.json
-maya metabase plan-provision --config maya-config.json
+maya metabase lifecycle --config maya-config.json
+maya metabase plan-provision --config maya-config.json --write
 ```
 
 `apply-provision` requires explicit governance authorization and `--apply`:
@@ -63,4 +64,9 @@ maya metabase apply-provision --config maya-config.json --apply
 ```
 
 Phase 4 does not perform live dashboard creation by default. Provisioning plans
-exclude Maya memory, prompts, secrets, and raw files.
+exclude Maya memory, prompts, secrets, and raw files. Redacted plan files are
+written under:
+
+```text
+maya-data/metabase/provisioning/
+```
