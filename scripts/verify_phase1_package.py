@@ -29,6 +29,7 @@ MAYA_PYTHON_REQUIRES = frozenset((">=3.11", "<3.14"))
 DOCUMENTS_EXTRA_REQUIREMENTS = frozenset(
     ("markdown", "pillow", "pypdf", "reportlab")
 )
+BROKER_CRYPTO_REQUIREMENT = "cryptography"
 
 REQUIRED_COMMANDS = (
     "doctor",
@@ -48,6 +49,7 @@ REQUIRED_COMMANDS = (
     "setup",
     "health",
     "skills",
+    "broker",
 )
 
 
@@ -137,6 +139,7 @@ def main(argv: list[str] | None = None) -> int:
         _verify_installed_skill_allowlist_surfaces(python, work_dir)
         _verify_installed_phase3_metabase_document_surfaces(python, work_dir)
         _verify_installed_phase4_operator_surfaces(python, work_dir)
+        _verify_installed_phase5_broker_surfaces(python, work_dir)
         _verify_installed_enterprise_byo_surfaces(python, work_dir)
         _verify_installed_phase2_profile_model_and_secret_surfaces(
             python,
@@ -204,14 +207,19 @@ def _verify_wheel_contents(wheel_path: Path) -> None:
     )
     if HERMES_RUNTIME_COMMIT not in hermes_requirement:
         raise RuntimeError("wheel does not declare pinned Hermes runtime dependency")
+    normalized_requires_dist = [
+        item.replace(" ", "").lower() for item in requires_dist
+    ]
+    if not any(
+        item.startswith(f"{BROKER_CRYPTO_REQUIREMENT}>=")
+        for item in normalized_requires_dist
+    ):
+        raise RuntimeError("wheel does not declare broker cryptography dependency")
     extras = set(metadata.get_all("Provides-Extra") or [])
     if "documents" not in extras:
         raise RuntimeError("wheel does not declare documents extra")
     if "documents-preview" not in extras:
         raise RuntimeError("wheel does not declare documents-preview extra")
-    normalized_requires_dist = [
-        item.replace(" ", "").lower() for item in requires_dist
-    ]
     for package in sorted(DOCUMENTS_EXTRA_REQUIREMENTS):
         if not any(
             item.startswith(package) and 'extra=="documents"' in item
@@ -914,6 +922,53 @@ def _verify_installed_update_cli(python: Path, work_dir: Path) -> None:
         raise RuntimeError("installed update CLI used network")
     if payload.get("mutation"):
         raise RuntimeError("installed update CLI reported mutation")
+
+
+def _verify_installed_phase5_broker_surfaces(
+    python: Path,
+    work_dir: Path,
+) -> None:
+    data_dir = work_dir / "phase5-broker-maya-data"
+    config_path = work_dir / "phase5-broker-config.json"
+    _write_minimal_config(config_path, data_dir)
+    import_result = _run(
+        [
+            str(python),
+            "-c",
+            (
+                "from project_maya import (BROKER_PROTOCOL_VERSION, "
+                "BrokerInstanceIdentity, SignedBrokerRequest, "
+                "TokenLifecycleStatus, broker_status); "
+                "assert BROKER_PROTOCOL_VERSION == 'maya-broker-v1'; "
+                "assert callable(broker_status); "
+                "print('phase5-broker-surfaces-importable')"
+            ),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    if "phase5-broker-surfaces-importable" not in import_result.stdout:
+        raise RuntimeError("installed V2 Phase 5 broker surfaces were not importable")
+    status_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "broker",
+            "status",
+            "--config",
+            str(config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    payload = json.loads(status_result.stdout)
+    if payload.get("operation") != "broker.status":
+        raise RuntimeError("installed broker status did not run")
+    if payload.get("network_used"):
+        raise RuntimeError("installed broker status used network")
+    if "access_token" in status_result.stdout or "refresh_token" in status_result.stdout:
+        raise RuntimeError("installed broker status leaked token field names")
 
 
 def _verify_installed_phase4_operator_surfaces(

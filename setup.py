@@ -30,6 +30,7 @@ setup(
     python_requires='>=3.11,<3.14',
     install_requires=[
         HERMES_RUNTIME_REQUIREMENT,
+        'cryptography>=42',
     ],
     # Optional extras for test/development workflows. Keep minimal and focused.
     extras_require={

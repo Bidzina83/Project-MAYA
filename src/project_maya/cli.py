@@ -17,6 +17,18 @@ from .backup import (
     restore_local_backup,
 )
 from .bootstrap import build_local_product
+from .broker import (
+    BrokerOperationError,
+    broker_status,
+    complete_oauth_session,
+    model_proxy_readiness,
+    refresh_token,
+    register_broker_instance,
+    revoke_token,
+    run_mock_broker_conformance,
+    start_oauth_session,
+    token_status,
+)
 from .config import config_from_mapping, config_to_mapping
 from .doctor import DoctorStatus, run_doctor
 from .documents import (
@@ -533,6 +545,88 @@ def main(argv: list[str] | None = None) -> int:
         choices=("json", "text"),
         default="json",
     )
+    broker_parser = subparsers.add_parser(
+        "broker",
+        help="Manage Phase 5 broker and Standard OAuth readiness.",
+    )
+    broker_subparsers = broker_parser.add_subparsers(
+        dest="broker_command",
+        required=True,
+    )
+    for broker_command in ("status", "conformance", "model-proxy-status"):
+        broker_child = broker_subparsers.add_parser(
+            broker_command,
+            help=f"Run broker {broker_command}.",
+        )
+        broker_child.add_argument("--config", type=Path, required=True)
+        broker_child.add_argument(
+            "--format",
+            choices=("json", "text"),
+            default="json",
+        )
+    broker_register = broker_subparsers.add_parser(
+        "register",
+        help="Plan or store a local broker instance identity.",
+    )
+    broker_register.add_argument("--config", type=Path, required=True)
+    broker_register.add_argument("--apply", action="store_true")
+    broker_register.add_argument(
+        "--format",
+        choices=("json", "text"),
+        default="json",
+    )
+    broker_oauth_start = broker_subparsers.add_parser(
+        "oauth-start",
+        help="Plan or create a broker-assisted OAuth session.",
+    )
+    broker_oauth_start.add_argument("--config", type=Path, required=True)
+    broker_oauth_start.add_argument(
+        "--provider",
+        choices=("google", "slack"),
+        required=True,
+    )
+    broker_oauth_start.add_argument("--apply", action="store_true")
+    broker_oauth_start.add_argument(
+        "--format",
+        choices=("json", "text"),
+        default="json",
+    )
+    broker_oauth_complete = broker_subparsers.add_parser(
+        "oauth-complete",
+        help="Complete a broker-assisted OAuth session.",
+    )
+    broker_oauth_complete.add_argument("--config", type=Path, required=True)
+    broker_oauth_complete.add_argument(
+        "--provider",
+        choices=("google", "slack"),
+        required=True,
+    )
+    broker_oauth_complete.add_argument("--session", required=True)
+    broker_oauth_complete.add_argument("--callback-url", required=True)
+    broker_oauth_complete.add_argument("--apply", action="store_true", required=True)
+    broker_oauth_complete.add_argument(
+        "--format",
+        choices=("json", "text"),
+        default="json",
+    )
+    for broker_command in ("token-status", "token-refresh", "token-revoke"):
+        broker_child = broker_subparsers.add_parser(
+            broker_command,
+            help=f"Run broker {broker_command}.",
+        )
+        broker_child.add_argument("--config", type=Path, required=True)
+        broker_child.add_argument(
+            "--provider",
+            choices=("google", "slack"),
+            required=True,
+        )
+        if broker_command != "token-status":
+            broker_child.add_argument("--apply", action="store_true", required=True)
+        broker_child.add_argument(
+            "--format",
+            choices=("json", "text"),
+            default="json",
+        )
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -618,6 +712,8 @@ def main(argv: list[str] | None = None) -> int:
         return _metabase(args)
     if args.command == "skills":
         return _skills(args)
+    if args.command == "broker":
+        return _broker(args)
     parser.error(f"unknown command: {args.command}")
     return 2
 
@@ -1308,6 +1404,98 @@ def _metabase(args) -> int:
                     "error": {
                         "code": "metabase_operation_failed",
                         "message": "Metabase operation failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+    return 2
+
+
+def _broker(args) -> int:
+    try:
+        config = _load_config(args.config)
+        secret_store = build_platform_secret_store(config.deployment.data_dir)
+        if args.broker_command == "status":
+            result = broker_status(config, secret_store)
+            _print_payload(result.redacted_summary(), output_format=args.format)
+            return 0 if result.status.value in {"ready", "pending", "disabled"} else 1
+        if args.broker_command == "register":
+            result = register_broker_instance(
+                config,
+                secret_store,
+                apply=args.apply,
+            )
+            _print_payload(result.redacted_summary(), output_format=args.format)
+            return 0 if result.successful else 1
+        if args.broker_command == "oauth-start":
+            result = start_oauth_session(
+                config,
+                args.provider,
+                apply=args.apply,
+            )
+            payload = {
+                "operation": "broker.oauth-start",
+                "status": "pending" if not args.apply else "ready",
+                **result.redacted_summary(),
+            }
+            _print_payload(payload, output_format=args.format)
+            return 0
+        if args.broker_command == "oauth-complete":
+            result = complete_oauth_session(
+                config,
+                secret_store,
+                provider=args.provider,
+                session_id=args.session,
+                callback_url=args.callback_url,
+                apply=args.apply,
+            )
+            _print_payload(result.redacted_summary(), output_format=args.format)
+            return 0 if result.successful else 1
+        if args.broker_command == "token-status":
+            result = token_status(config, args.provider)
+            _print_payload(result.redacted_summary(), output_format=args.format)
+            return 0 if result.state.value in {"active", "not_configured"} else 1
+        if args.broker_command == "token-refresh":
+            result = refresh_token(
+                config,
+                secret_store,
+                args.provider,
+                apply=args.apply,
+            )
+            _print_payload(result.redacted_summary(), output_format=args.format)
+            return 0 if result.successful else 1
+        if args.broker_command == "token-revoke":
+            result = revoke_token(
+                config,
+                secret_store,
+                args.provider,
+                apply=args.apply,
+            )
+            _print_payload(result.redacted_summary(), output_format=args.format)
+            return 0 if result.successful else 1
+        if args.broker_command == "conformance":
+            result = run_mock_broker_conformance()
+            _print_payload(result.redacted_summary(), output_format=args.format)
+            return 0 if result.passed else 1
+        if args.broker_command == "model-proxy-status":
+            result = model_proxy_readiness(config, secret_store)
+            _print_payload(result.redacted_summary(), output_format=args.format)
+            return 0 if result.status.value in {"ready", "pending", "not_configured"} else 1
+    except (
+        BrokerOperationError,
+        SecretStoreError,
+        OSError,
+        ValueError,
+        PermissionError,
+    ):
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "broker_operation_failed",
+                        "message": "broker operation failed",
                     }
                 },
                 sort_keys=True,
