@@ -1,5 +1,9 @@
 name: Workflow lint
 on: [pull_request, push]
+
+permissions:
+  contents: read
+
 jobs:
   lint-workflows:
     runs-on: ubuntu-latest

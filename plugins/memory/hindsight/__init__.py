@@ -403,14 +403,6 @@ def _load_simple_env(path) -> dict[str, str]:
 
 def _build_embedded_profile_env(config: dict[str, Any], *, llm_api_key: str | None = None) -> dict[str, str]:
     """Build the profile-scoped env file that standalone hindsight-embed consumes."""
-    current_key = llm_api_key
-    if current_key is None:
-        current_key = (
-            config.get("llmApiKey")
-            or config.get("llm_api_key")
-            or os.environ.get("HINDSIGHT_LLM_API_KEY", "")
-        )
-
     current_provider = config.get("llm_provider", "")
     current_model = config.get("llm_model", "")
     current_base_url = config.get("llm_base_url") or os.environ.get("HINDSIGHT_API_LLM_BASE_URL", "")
@@ -420,7 +412,6 @@ def _build_embedded_profile_env(config: dict[str, Any], *, llm_api_key: str | No
 
     env_values = {
         "HINDSIGHT_API_LLM_PROVIDER": str(daemon_provider),
-        "HINDSIGHT_API_LLM_API_KEY": str(current_key or ""),
         "HINDSIGHT_API_LLM_MODEL": str(current_model),
         "HINDSIGHT_API_LOG_LEVEL": "info",
     }
@@ -500,8 +491,7 @@ def _resolve_bank_id_template(template: str, fallback: str, **placeholders: str)
     try:
         rendered = template.format(**sanitized)
     except (KeyError, IndexError) as exc:
-        logger.warning("Invalid bank_id_template %r: %s — using fallback %r",
-                       template, exc, fallback)
+        logger.warning("Invalid bank_id_template; using fallback bank id: %s", exc)
         return fallback
     while "--" in rendered:
         rendered = rendered.replace("--", "-")
@@ -693,8 +683,7 @@ class HindsightMemoryProvider(MemoryProvider):
             print("\n  Get your API key at https://ui.hindsight.vectorize.io\n")
             existing_key = os.environ.get("HINDSIGHT_API_KEY", "")
             if existing_key:
-                masked = f"...{existing_key[-4:]}" if len(existing_key) > 4 else "set"
-                sys.stdout.write(f"  API key (current: {masked}, blank to keep): ")
+                sys.stdout.write("  API key already present in environment (blank to keep): ")
                 sys.stdout.flush()
                 api_key = getpass.getpass(prompt="") if sys.stdin.isatty() else sys.stdin.readline().strip()
             else:
@@ -702,7 +691,7 @@ class HindsightMemoryProvider(MemoryProvider):
                 sys.stdout.flush()
                 api_key = getpass.getpass(prompt="") if sys.stdin.isatty() else sys.stdin.readline().strip()
             if api_key:
-                env_writes["HINDSIGHT_API_KEY"] = api_key
+                print("  API key accepted for this shell only; export HINDSIGHT_API_KEY securely before runtime.")
 
             val = input(f"  API URL [{_DEFAULT_API_URL}]: ").strip()
             if val:
@@ -716,7 +705,7 @@ class HindsightMemoryProvider(MemoryProvider):
             sys.stdout.flush()
             api_key = getpass.getpass(prompt="") if sys.stdin.isatty() else sys.stdin.readline().strip()
             if api_key:
-                env_writes["HINDSIGHT_API_KEY"] = api_key
+                print("  API key accepted for this shell only; export HINDSIGHT_API_KEY securely before runtime.")
 
         else:  # local_embedded
             providers_list = list(_PROVIDER_DEFAULT_MODELS.keys())
@@ -752,16 +741,9 @@ class HindsightMemoryProvider(MemoryProvider):
             sys.stdout.flush()
             llm_key = getpass.getpass(prompt="") if sys.stdin.isatty() else sys.stdin.readline().strip()
             if llm_key:
-                env_writes["HINDSIGHT_LLM_API_KEY"] = llm_key
+                print("  LLM API key accepted for this shell only; export HINDSIGHT_LLM_API_KEY securely before runtime.")
             else:
-                env_path = Path(hermes_home) / ".env"
-                existing_llm_key = ""
-                if env_path.exists():
-                    for line in env_path.read_text().splitlines():
-                        if line.startswith("HINDSIGHT_LLM_API_KEY="):
-                            existing_llm_key = line.split("=", 1)[1]
-                            break
-                env_writes["HINDSIGHT_LLM_API_KEY"] = existing_llm_key
+                print("  No LLM API key entered; embedded runtime will use the process environment.")
 
         # Step 4: Save everything
         provider_config.setdefault("bank_id", "hermes")
@@ -810,23 +792,12 @@ class HindsightMemoryProvider(MemoryProvider):
             except Exception:
                 pass
 
-            llm_api_key = env_writes.get("HINDSIGHT_LLM_API_KEY", "")
-            if not llm_api_key:
-                llm_api_key = _load_simple_env(Path(hermes_home) / ".env").get("HINDSIGHT_LLM_API_KEY", "")
-            if not llm_api_key:
-                llm_api_key = _load_simple_env(_embedded_profile_env_path(materialized_config)).get(
-                    "HINDSIGHT_API_LLM_API_KEY",
-                    "",
-                )
-
-            _materialize_embedded_profile_env(
-                materialized_config,
-                llm_api_key=llm_api_key or None,
-            )
+            _materialize_embedded_profile_env(materialized_config)
 
         print(f"\n  ✓ Hindsight memory configured ({mode} mode)")
         if env_writes:
-            print("  API keys saved to .env")
+            print("  Non-secret runtime settings saved to .env")
+        print("  API keys are not saved; provide them via environment or an approved secret manager.")
         print("\n  Start a new session to activate.\n")
 
     def get_config_schema(self):
@@ -1198,17 +1169,14 @@ class HindsightMemoryProvider(MemoryProvider):
             _client_version = pkg_version("hindsight-client")
         except Exception:
             pass
-        logger.info("Hindsight initialized: mode=%s, api_url=%s, bank=%s, budget=%s, memory_mode=%s, prefetch_method=%s, client=%s",
-                     self._mode, self._api_url, self._bank_id, self._budget, self._memory_mode, self._prefetch_method, _client_version)
+        logger.info("Hindsight initialized: mode=%s, api_url=%s, budget=%s, memory_mode=%s, prefetch_method=%s, client=%s",
+                     self._mode, self._api_url, self._budget, self._memory_mode, self._prefetch_method, _client_version)
         if self._bank_id_template:
-            logger.debug("Hindsight bank resolved from template %r: profile=%s workspace=%s platform=%s user=%s -> bank=%s",
-                         self._bank_id_template, self._agent_identity, self._agent_workspace,
-                         self._platform, self._user_id, self._bank_id)
+            logger.debug("Hindsight bank resolved from configured template")
         logger.debug("Hindsight config: auto_retain=%s, auto_recall=%s, retain_every_n=%d, "
-                     "retain_async=%s, retain_context=%s, recall_max_tokens=%d, recall_max_input_chars=%d, tags=%s, recall_tags=%s",
+                     "retain_async=%s, retain_context=%s, recall_max_tokens=%d, recall_max_input_chars=%d",
                      self._auto_retain, self._auto_recall, self._retain_every_n_turns,
-                     self._retain_async, self._retain_context, self._recall_max_tokens, self._recall_max_input_chars,
-                     self._tags, self._recall_tags)
+                     self._retain_async, self._retain_context, self._recall_max_tokens, self._recall_max_input_chars)
 
         # For local mode, start the embedded daemon in the background so it
         # doesn't block the chat. Redirect stdout/stderr to a log file to
@@ -1313,7 +1281,7 @@ class HindsightMemoryProvider(MemoryProvider):
         def _run():
             try:
                 if self._prefetch_method == "reflect":
-                    logger.debug("Prefetch: calling reflect (bank=%s, query_len=%d)", self._bank_id, len(query))
+                    logger.debug("Prefetch: calling reflect (query_len=%d)", len(query))
                     resp = self._run_hindsight_operation(lambda client: client.areflect(bank_id=self._bank_id, query=query, budget=self._budget))
                     text = resp.text or ""
                 else:
@@ -1326,8 +1294,8 @@ class HindsightMemoryProvider(MemoryProvider):
                         recall_kwargs["tags_match"] = self._recall_tags_match
                     if self._recall_types:
                         recall_kwargs["types"] = self._recall_types
-                    logger.debug("Prefetch: calling recall (bank=%s, query_len=%d, budget=%s)",
-                                 self._bank_id, len(query), self._budget)
+                    logger.debug("Prefetch: calling recall (query_len=%d, budget=%s)",
+                                 len(query), self._budget)
                     resp = self._run_hindsight_operation(lambda client: client.arecall(**recall_kwargs))
                     num_results = len(resp.results) if resp.results else 0
                     logger.debug("Prefetch: recall returned %d results", num_results)
@@ -1474,8 +1442,8 @@ class HindsightMemoryProvider(MemoryProvider):
             item.pop("retain_async", None)
             if update_mode is not None:
                 item["update_mode"] = update_mode
-            logger.debug("Hindsight retain: bank=%s, doc=%s, mode=%s, async=%s, content_len=%d, num_turns=%d",
-                         bank_id, document_id, update_mode, retain_async_flag, len(content), num_turns)
+            logger.debug("Hindsight retain: mode=%s, async=%s, content_len=%d, num_turns=%d",
+                         update_mode, retain_async_flag, len(content), num_turns)
             self._run_hindsight_operation(
                 lambda client: client.aretain_batch(
                     bank_id=bank_id,
@@ -1507,8 +1475,8 @@ class HindsightMemoryProvider(MemoryProvider):
                     context=context,
                     tags=args.get("tags"),
                 )
-                logger.debug("Tool hindsight_retain: bank=%s, content_len=%d, context=%s",
-                             self._bank_id, len(content), context)
+                logger.debug("Tool hindsight_retain: content_len=%d, context_present=%s",
+                             len(content), bool(context))
                 self._run_hindsight_operation(lambda client: client.aretain(**retain_kwargs))
                 logger.debug("Tool hindsight_retain: success")
                 return json.dumps({"result": "Memory stored successfully."})
@@ -1530,8 +1498,8 @@ class HindsightMemoryProvider(MemoryProvider):
                     recall_kwargs["tags_match"] = self._recall_tags_match
                 if self._recall_types:
                     recall_kwargs["types"] = self._recall_types
-                logger.debug("Tool hindsight_recall: bank=%s, query_len=%d, budget=%s",
-                             self._bank_id, len(query), self._budget)
+                logger.debug("Tool hindsight_recall: query_len=%d, budget=%s",
+                             len(query), self._budget)
                 resp = self._run_hindsight_operation(lambda client: client.arecall(**recall_kwargs))
                 num_results = len(resp.results) if resp.results else 0
                 logger.debug("Tool hindsight_recall: %d results", num_results)
@@ -1548,8 +1516,8 @@ class HindsightMemoryProvider(MemoryProvider):
             if not query:
                 return tool_error("Missing required parameter: query")
             try:
-                logger.debug("Tool hindsight_reflect: bank=%s, query_len=%d, budget=%s",
-                             self._bank_id, len(query), self._budget)
+                logger.debug("Tool hindsight_reflect: query_len=%d, budget=%s",
+                             len(query), self._budget)
                 resp = self._run_hindsight_operation(
                     lambda client: client.areflect(
                         bank_id=self._bank_id, query=query, budget=self._budget

@@ -986,10 +986,12 @@ def _rotate_secret(config_path: Path, name: str) -> int:
         return 1
     print(
         json.dumps(
-            {
-                "status": "rotated",
-                "secret": str(ref),
-            },
+            _redact_payload_for_output(
+                {
+                    "status": "rotated",
+                    "secret_ref_state": "configured",
+                }
+            ),
             sort_keys=True,
         )
     )
@@ -1167,7 +1169,7 @@ def _restore(
         return 1
     payload = result.redacted_summary()
     payload["status"] = "dry_run" if result.dry_run else "restored"
-    print(json.dumps(payload, sort_keys=True))
+    _print_payload(payload)
     return 0
 
 
@@ -1273,7 +1275,7 @@ def _documents(args) -> int:
                 audit_sink=audit_sink,
                 data_classification=args.data_classification,
             )
-            print(json.dumps(result.redacted_summary(), sort_keys=True))
+            _print_payload(result.redacted_summary())
             return 0
         if args.documents_command == "extract-text":
             result, text = extract_pdf_text(
@@ -1287,7 +1289,7 @@ def _documents(args) -> int:
             payload = result.redacted_summary()
             if args.include_text:
                 payload["text"] = text
-            print(json.dumps(payload, sort_keys=True))
+            _print_payload(payload)
             return 0
         if args.documents_command == "create-pdf":
             result = create_pdf(
@@ -1299,7 +1301,7 @@ def _documents(args) -> int:
                 audit_sink=audit_sink,
                 data_classification=args.data_classification,
             )
-            print(json.dumps(result.redacted_summary(), sort_keys=True))
+            _print_payload(result.redacted_summary())
             return 0
         if args.documents_command == "convert":
             result = convert_document(
@@ -1311,7 +1313,7 @@ def _documents(args) -> int:
                 audit_sink=audit_sink,
                 data_classification=args.data_classification,
             )
-            print(json.dumps(result.redacted_summary(), sort_keys=True))
+            _print_payload(result.redacted_summary())
             return 0
     except (
         DocumentCapabilityError,
@@ -1369,11 +1371,11 @@ def _metabase(args) -> int:
         config = _load_config(args.config)
         if args.metabase_command == "health":
             result = validate_metabase_health(config, live=args.live)
-            print(json.dumps(result.redacted_summary(), sort_keys=True))
+            _print_payload(result.redacted_summary())
             return 0 if result.status in {"ready", "live_unavailable"} else 1
         if args.metabase_command == "lifecycle":
             result = inspect_metabase_lifecycle(config)
-            print(json.dumps(result.redacted_summary(), sort_keys=True))
+            _print_payload(result.redacted_summary())
             return (
                 0
                 if result.status
@@ -1386,7 +1388,7 @@ def _metabase(args) -> int:
             if args.write:
                 plan_path = write_metabase_provisioning_plan(config, result)
                 payload["plan_ref"] = _redacted_data_ref(config, plan_path)
-            print(json.dumps(payload, sort_keys=True))
+            _print_payload(payload)
             return 0 if result.status == "planned" else 1
         if args.metabase_command == "apply-provision":
             result = apply_metabase_provisioning(
@@ -1395,7 +1397,7 @@ def _metabase(args) -> int:
                 audit_sink=_build_cli_audit_sink(config),
                 data_classification=args.data_classification,
             )
-            print(json.dumps(result.redacted_summary(), sort_keys=True))
+            _print_payload(result.redacted_summary())
             return 0
     except (MetabaseCapabilityError, OSError, ValueError, PermissionError):
         print(
@@ -1527,10 +1529,42 @@ def _redacted_data_ref(config, path: Path) -> str:
 
 
 def _print_payload(payload: dict[str, object], *, output_format: str = "json") -> None:
+    payload = _redact_payload_for_output(payload)
     if output_format == "text":
         print(_text_payload(payload))
         return
     print(json.dumps(payload, sort_keys=True))
+
+
+def _redact_payload_for_output(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: _redact_sensitive_value(key, item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_redact_payload_for_output(item) for item in value]
+    return value
+
+
+def _redact_sensitive_value(key: str, value: Any) -> Any:
+    lowered = key.lower()
+    sensitive_terms = (
+        "access_token",
+        "refresh_token",
+        "password",
+        "private",
+        "credential",
+        "secret",
+        "api_key",
+    )
+    if any(term in lowered for term in sensitive_terms):
+        if value is None:
+            return None
+        if isinstance(value, bool):
+            return value
+        return "configured"
+    return _redact_payload_for_output(value)
 
 
 def _text_payload(payload: dict[str, object]) -> str:

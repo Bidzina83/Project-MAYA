@@ -1,6 +1,9 @@
 name: Example caller for ingest workflows
 on: [push]
 
+permissions:
+  contents: read
+
 jobs:
   call-ingest:
     uses: Bidzina83/Project-MAYA/.github/workflows/ingest-integration.yml@main

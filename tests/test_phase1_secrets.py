@@ -18,7 +18,7 @@ from project_maya import (
     run_doctor,
 )
 from project_maya.adapters import HermesRuntimeAdapter
-from project_maya.cli import main as maya_cli
+from project_maya.cli import _print_payload, main as maya_cli
 from tests.test_phase0_contracts import valid_config_mapping
 
 
@@ -140,6 +140,34 @@ class TestPhase1Secrets(unittest.TestCase):
         output = printed.call_args.args[0]
         self.assertIn('"status": "rotated"', output)
         self.assertNotIn("new-token", output)
+        self.assertNotIn("secret://local-api/token", output)
+        self.assertIn('"secret_ref_state": "configured"', output)
+
+    def test_cli_payload_output_redacts_sensitive_fields(self):
+        payload = {
+            "status": "ready",
+            "private_key_ref": "secret://broker/private",
+            "token": {
+                "access_token": "access-value",
+                "refresh_token": "refresh-value",
+                "credential_ref": "secret://integrations/google",
+            },
+            "items": [{"password": "pw-value"}, {"public_key_state": "configured"}],
+        }
+
+        with patch("builtins.print") as printed:
+            _print_payload(payload)
+
+        output = printed.call_args.args[0]
+        self.assertIn('"status": "ready"', output)
+        self.assertIn('"private_key_ref": "configured"', output)
+        self.assertIn('"access_token": "configured"', output)
+        self.assertIn('"refresh_token": "configured"', output)
+        self.assertIn('"credential_ref": "configured"', output)
+        self.assertNotIn("access-value", output)
+        self.assertNotIn("refresh-value", output)
+        self.assertNotIn("secret://", output)
+        self.assertNotIn("pw-value", output)
 
     def test_rotate_secret_cli_reports_secret_safe_failure(self):
         with tempfile.TemporaryDirectory() as tmp:

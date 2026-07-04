@@ -3,6 +3,10 @@ name: "DRAFT - Packaging: editable-install workflow (preparation)"
 on:
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   packaging-prep:
     runs-on: ubuntu-latest

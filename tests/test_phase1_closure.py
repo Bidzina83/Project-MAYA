@@ -50,6 +50,7 @@ class TestPhase1Closure(unittest.TestCase):
             "setup",
             "health",
             "skills",
+            "broker",
         )
 
         self.assertEqual(REQUIRED_COMMANDS, expected)

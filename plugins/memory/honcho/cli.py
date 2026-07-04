@@ -408,8 +408,8 @@ def cmd_setup(args) -> None:
         cfg.pop("baseUrl", None)  # cloud uses SDK default
 
         current_key = cfg.get("apiKey", "")
-        masked = f"...{current_key[-8:]}" if len(current_key) > 8 else ("set" if current_key else "not set")
-        print(f"\n  Current API key: {masked}")
+        current_key_state = "configured" if current_key else "not configured"
+        print(f"\n  Current API key: {current_key_state}")
         new_key = _prompt("Honcho API key (leave blank to keep current)", secret=True)
         if new_key:
             cfg["apiKey"] = new_key
@@ -655,8 +655,7 @@ def cmd_status(args) -> None:
         print(f"  Config error: {e}\n")
         return
 
-    api_key = hcfg.api_key or ""
-    masked = f"...{api_key[-8:]}" if len(api_key) > 8 else ("set" if api_key else "not set")
+    api_key_state = "configured" if hcfg.api_key else "not configured"
 
     profile = _active_profile_name()
     profile_label = f" [{hcfg.host}]" if profile != "default" else ""
@@ -666,7 +665,7 @@ def cmd_status(args) -> None:
         print(f"  Profile:        {profile}")
     print(f"  Host:           {hcfg.host}")
     print(f"  Enabled:        {hcfg.enabled}")
-    print(f"  API key:        {masked}")
+    print(f"  API key:        {api_key_state}")
     print(f"  Workspace:      {hcfg.workspace_id}")
 
     # Config paths — show where config was read from and where writes go
@@ -1118,8 +1117,7 @@ def cmd_migrate(args) -> None:
     print("Step 1  Create a Honcho account")
     print()
     if has_key:
-        masked = f"...{cfg['apiKey'][-8:]}" if len(cfg["apiKey"]) > 8 else "set"
-        print(f"  Honcho API key already configured: {masked}")
+        print("  Honcho API key already configured.")
         print("  Skip to Step 2.")
     else:
         print("  Honcho is a cloud memory service that gives Hermes persistent memory")
