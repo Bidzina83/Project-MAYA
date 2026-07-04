@@ -2,10 +2,10 @@ import unittest
 from pathlib import Path
 
 
-class TestPhase5Closure(unittest.TestCase):
-    def test_phase5_scope_records_boundaries(self):
+class TestPhase4SetupRecoveryHealthClosure(unittest.TestCase):
+    def test_phase4_scope_records_boundaries(self):
         scope = Path(
-            "docs/architecture/phase5_setup_recovery_health_scope.md"
+            "docs/architecture/phase4_setup_recovery_health_scope.md"
         ).read_text(encoding="utf-8")
 
         for expected in (
@@ -17,9 +17,9 @@ class TestPhase5Closure(unittest.TestCase):
         ):
             self.assertIn(expected, scope)
 
-    def test_phase5_closure_maps_approved_steps(self):
+    def test_phase4_closure_maps_approved_steps(self):
         closure = Path(
-            "docs/architecture/phase5_setup_recovery_health_closure.md"
+            "docs/architecture/phase4_setup_recovery_health_closure.md"
         ).read_text(encoding="utf-8")
 
         for expected in (
@@ -33,7 +33,7 @@ class TestPhase5Closure(unittest.TestCase):
             "8. Windows installed-package smoke",
             "9. Package verification",
             "10. Closure",
-            "tests/test_phase5_package_verification.py",
+            "tests/test_phase4_setup_recovery_health_package_verification.py",
         ):
             self.assertIn(expected, closure)
 

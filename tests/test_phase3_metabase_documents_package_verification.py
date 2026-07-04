@@ -2,15 +2,15 @@ import unittest
 from pathlib import Path
 
 
-class TestPhase4PackageVerification(unittest.TestCase):
-    def test_clean_package_verifier_covers_phase4_surfaces(self):
+class TestPhase3MetabaseDocumentsPackageVerification(unittest.TestCase):
+    def test_clean_package_verifier_covers_phase3_metabase_document_surfaces(self):
         verifier = Path("scripts/verify_phase1_package.py").read_text(
             encoding="utf-8"
         )
 
         for expected in (
-            "_verify_installed_phase4_capability_surfaces",
-            "phase4-capabilities-importable",
+            "_verify_installed_phase3_metabase_document_surfaces",
+            "phase3-metabase-documents-importable",
             "documents",
             "metabase",
             "documents.documents-root",

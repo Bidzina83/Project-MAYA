@@ -1,4 +1,4 @@
-# Phase 5 Windows Operator Smoke
+# Phase 4 Windows Operator Smoke
 
 Run these commands from a PowerShell prompt after installing the built
 `project-maya` wheel into a virtual environment.

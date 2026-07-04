@@ -1,4 +1,4 @@
-# Phase 4 Metabase Capability
+# Phase 3 Metabase Capability
 
 ## Status
 
@@ -19,7 +19,7 @@ The layer supports two deployment modes:
 
 ## Store Separation
 
-The Phase 4 Metabase capability preserves the Product Specification V2
+The Product Spec V2 Phase 3 Metabase capability preserves the Product Specification V2
 boundary between:
 
 1. Metabase application database;

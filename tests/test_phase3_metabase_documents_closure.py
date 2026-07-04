@@ -2,14 +2,14 @@ import unittest
 from pathlib import Path
 
 
-class TestPhase4Closure(unittest.TestCase):
-    def test_phase4_closure_links_required_evidence(self):
-        closure = Path("docs/architecture/phase4_metabase_documents_closure.md").read_text(
+class TestPhase3MetabaseDocumentsClosure(unittest.TestCase):
+    def test_phase3_metabase_documents_closure_links_required_evidence(self):
+        closure = Path("docs/architecture/phase3_metabase_documents_closure.md").read_text(
             encoding="utf-8"
         )
 
         for step in (
-            "1. Phase 4 scope gate",
+            "1. Phase 3 scope gate",
             "2. Document capability core",
             "3. Document governance and audit",
             "4. Document CLI/API surface",
@@ -26,21 +26,21 @@ class TestPhase4Closure(unittest.TestCase):
         for expected in (
             "src/project_maya/documents.py",
             "src/project_maya/metabase.py",
-            "docs/architecture/phase4_document_capability.md",
-            "docs/architecture/phase4_document_capability_hardening.md",
-            "docs/architecture/phase4_document_skill_allowlist.md",
-            "docs/architecture/phase4_metabase_capability.md",
-            "docs/architecture/phase4_metabase_capability_hardening.md",
-            "docs/architecture/phase4_backup_boundary.md",
-            "tests/test_phase4_documents.py",
-            "tests/test_phase4_metabase.py",
-            "tests/test_phase4_backup_boundaries.py",
+            "docs/architecture/phase3_document_capability.md",
+            "docs/architecture/phase3_document_capability_hardening.md",
+            "docs/architecture/phase3_document_skill_allowlist.md",
+            "docs/architecture/phase3_metabase_capability.md",
+            "docs/architecture/phase3_metabase_capability_hardening.md",
+            "docs/architecture/phase3_backup_boundary.md",
+            "tests/test_phase3_documents.py",
+            "tests/test_phase3_metabase.py",
+            "tests/test_phase3_backup_boundaries.py",
             "scripts/verify_phase1_package.py",
         ):
             self.assertIn(expected, closure)
 
-    def test_phase4_scope_preserves_non_goals(self):
-        scope = Path("docs/architecture/phase4_metabase_documents_scope.md").read_text(
+    def test_phase3_metabase_documents_scope_preserves_non_goals(self):
+        scope = Path("docs/architecture/phase3_metabase_documents_scope.md").read_text(
             encoding="utf-8"
         )
 
@@ -52,8 +52,8 @@ class TestPhase4Closure(unittest.TestCase):
         ):
             self.assertIn(expected, scope)
 
-    def test_phase4_closure_records_local_api_deferral(self):
-        closure = Path("docs/architecture/phase4_metabase_documents_closure.md").read_text(
+    def test_phase3_metabase_documents_closure_records_local_api_deferral(self):
+        closure = Path("docs/architecture/phase3_metabase_documents_closure.md").read_text(
             encoding="utf-8"
         )
 

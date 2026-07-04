@@ -1,12 +1,12 @@
-# Phase 4 Backup Boundary
+# Phase 3 Backup Boundary
 
 ## Status
 
-Accepted Phase 4 boundary for document and Metabase capability integration.
+Accepted Product Spec V2 Phase 3 boundary for document and Metabase capability integration.
 
 ## Decision
 
-Maya's default local backup captures Maya-owned runtime state and Phase 4
+Maya's default local backup captures Maya-owned runtime state and V2 Phase 3
 capability artifacts, while keeping customer-managed analytics databases and
 Metabase application state outside the archive unless a future explicit backup
 contract opts them in.
@@ -24,7 +24,7 @@ Default backup excludes:
 - Metabase application database state under `maya-data/metabase/application`;
 - prior backup archives under `maya-data/backups`.
 
-This preserves the Phase 4 separation between:
+This preserves the V2 Phase 3 separation between:
 
 1. Maya persistent memory and runtime state;
 2. approved analytics source declarations and provisioning metadata;
@@ -40,7 +40,7 @@ customer-controlled and secret-safe.
 Analytics databases and Metabase application databases may be large,
 externally governed, separately backed up, licensed, encrypted, or managed by
 customer infrastructure. Maya should not silently copy them into product
-backups in Phase 4.
+backups in V2 Phase 3.
 
 ## Future Work
 

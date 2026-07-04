@@ -1,12 +1,12 @@
-# Phase 4 Scope: Metabase and Document Capability Integration
+# Phase 3 Scope: Metabase and Document Capability Integration
 
 ## Status
 
-Approved implementation scope for Phase 4.
+Approved implementation scope for Product Spec V2 Phase 3.
 
 ## Objective
 
-Phase 4 turns Phase 3 readiness checks into first usable capability surfaces
+Product Spec V2 Phase 3 turns prior readiness checks into first usable capability surfaces
 for `maya-documents` and `maya-metabase`.
 
 Maya must be able to run safe local document workflows and Metabase
@@ -45,7 +45,7 @@ unapproved records.
 
 ## Non-Goals
 
-Phase 4 does not:
+V2 Phase 3 does not:
 
 - silently install Poppler, LibreOffice, Microsoft Office, Java, Metabase,
   browsers, or local model runtimes;
@@ -58,12 +58,12 @@ Phase 4 does not:
 
 ## Exit Criteria
 
-Phase 4 exits when:
+V2 Phase 3 exits when:
 
 - document and Metabase capability modules ship in the wheel;
 - CLI surfaces can run installed-package smoke checks without repository path
   shims;
-- doctor reports implemented Phase 4 capability checks;
+- doctor reports implemented V2 Phase 3 capability checks;
 - audit records are redacted and governance-mediated;
 - closure evidence maps scope, tests, docs, package verification, and known
   limits.

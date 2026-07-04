@@ -1,4 +1,4 @@
-# Phase 4 Document Skill Allowlist
+# Phase 3 Document Skill Allowlist
 
 ## Status
 

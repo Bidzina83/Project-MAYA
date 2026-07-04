@@ -1,6 +1,6 @@
-# Phase 4 Documents and Metabase Operator Smoke
+# Phase 3 Metabase and Documents Operator Smoke
 
-This guide exercises the first Phase 4 capability surfaces from an installed
+This guide exercises the Product Spec V2 Phase 3 capability surfaces from an installed
 Maya package.
 
 ## Documents
@@ -63,7 +63,7 @@ maya metabase plan-provision --config maya-config.json --write
 maya metabase apply-provision --config maya-config.json --apply
 ```
 
-Phase 4 does not perform live dashboard creation by default. Provisioning plans
+V2 Phase 3 does not perform live dashboard creation by default. Provisioning plans
 exclude Maya memory, prompts, secrets, and raw files. Redacted plan files are
 written under:
 

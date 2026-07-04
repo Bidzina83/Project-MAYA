@@ -1,4 +1,4 @@
-# Phase 4 Document Capability
+# Phase 3 Document Capability
 
 ## Status
 
@@ -36,7 +36,7 @@ extracted text, prompts, secrets, or full local filesystem paths.
 
 ## Path Boundary
 
-Phase 4 document operations read and write only under:
+V2 Phase 3 document operations read and write only under:
 
 ```text
 maya-data/documents/
@@ -58,7 +58,7 @@ separate checks.
 
 ## Local API
 
-Phase 4 exposes document operations through the CLI and product module first.
+V2 Phase 3 exposes document operations through the CLI and product module first.
 Local API routes are deferred until the route versioning, request-size limits,
 and browser/client authorization shape for document uploads and downloads are
 specified.

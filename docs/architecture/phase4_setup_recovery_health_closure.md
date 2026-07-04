@@ -1,6 +1,6 @@
-# Phase 5 Closure Audit
+# Phase 4 Closure Audit
 
-Phase 5 is complete when the Setup, Recovery, Backup, and Health Experience
+V2 Phase 4 is complete when the Setup, Recovery, Backup, and Health Experience
 scope is implemented and verified.
 
 ## Objective
@@ -16,16 +16,16 @@ production installer support.
 
 | Step | Evidence |
 | --- | --- |
-| 1. Scope gate | `docs/architecture/phase5_setup_recovery_health_scope.md` |
-| 2. Setup contract | `src/project_maya/setup.py`, `tests/test_phase5_setup_health.py` |
+| 1. Scope gate | `docs/architecture/phase4_setup_recovery_health_scope.md` |
+| 2. Setup contract | `src/project_maya/setup.py`, `tests/test_phase4_setup_health.py` |
 | 3. Setup CLI | `src/project_maya/cli.py`, `scripts/verify_phase1_package.py` |
-| 4. Health summary | `src/project_maya/health.py`, `tests/test_phase5_setup_health.py` |
-| 5. Recovery UX | `src/project_maya/repair.py`, `docs/architecture/phase5_recovery_operator_guide.md` |
+| 4. Health summary | `src/project_maya/health.py`, `tests/test_phase4_setup_health.py` |
+| 5. Recovery UX | `src/project_maya/repair.py`, `docs/architecture/phase4_recovery_operator_guide.md` |
 | 6. Backup/restore hardening | `src/project_maya/backup.py`, `tests/test_phase1_backup.py` |
 | 7. Update readiness hardening | `src/project_maya/update.py`, `tests/test_phase1_update.py` |
-| 8. Windows installed-package smoke | `docs/examples/phase5_windows_operator_smoke.md` |
-| 9. Package verification | `scripts/verify_phase1_package.py`, `tests/test_phase5_package_verification.py` |
-| 10. Closure | `docs/architecture/phase5_setup_recovery_health_closure.md`, `tests/test_phase5_closure.py` |
+| 8. Windows installed-package smoke | `docs/examples/phase4_windows_operator_smoke.md` |
+| 9. Package verification | `scripts/verify_phase1_package.py`, `tests/test_phase4_setup_recovery_health_package_verification.py` |
+| 10. Closure | `docs/architecture/phase4_setup_recovery_health_closure.md`, `tests/test_phase4_setup_recovery_health_closure.py` |
 
 ## Completed Surfaces
 
@@ -36,11 +36,11 @@ production installer support.
 - Backup archives include `maya-backup-manifest.json`.
 - `maya backup inspect` reads manifests without extraction.
 - Update and rollback checks remain local, non-mutating, and network-free.
-- Clean package verification covers installed Phase 5 CLI surfaces.
+- Clean package verification covers installed V2 Phase 4 CLI surfaces.
 
 ## Known Limits
 
-Phase 5 intentionally does not:
+V2 Phase 4 intentionally does not:
 
 - create or sign a production installer;
 - perform automatic update or rollback;

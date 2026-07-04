@@ -1,4 +1,4 @@
-# Phase 5 Recovery Operator Guide
+# Phase 4 Recovery Operator Guide
 
 ## Purpose
 
@@ -18,10 +18,10 @@ shown.
 | Missing optional dependency | `maya health summary --config maya-config.json` | Install the profile extra or customer-managed dependency when needed |
 | Backup destination exists | `maya backup --config maya-config.json --to backup.zip` | Choose a new archive path; backup does not overwrite |
 | Restore conflicts | `maya restore --from backup.zip --to maya-data` | Inspect conflicts and rerun with `--apply --allow-overwrite` only after review |
-| Update metadata unavailable | `maya update --config maya-config.json --check` | Configure signed metadata later; Phase 5 does not install updates |
+| Update metadata unavailable | `maya update --config maya-config.json --check` | Configure signed metadata later; V2 Phase 4 does not install updates |
 
 ## Boundaries
 
-Phase 5 recovery commands do not create credentials, install system packages,
+V2 Phase 4 recovery commands do not create credentials, install system packages,
 contact providers, perform OAuth, apply updates, or execute destructive repair
 without explicit flags.

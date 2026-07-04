@@ -21,7 +21,7 @@ class FakeMemoryManager:
 
 class FakeAIAgent:
     def __init__(self, **kwargs):
-        self.session_id = "phase5-health"
+        self.session_id = "phase4-health"
         self._memory_manager = FakeMemoryManager()
 
     def chat(self, message):
@@ -31,7 +31,7 @@ class FakeAIAgent:
         self._memory_manager.provider.shutdown()
 
 
-class TestPhase5SetupHealth(unittest.TestCase):
+class TestPhase4SetupHealth(unittest.TestCase):
     def test_setup_plan_is_dry_run_and_secret_safe(self):
         with tempfile.TemporaryDirectory() as tmp:
             data_dir = Path(tmp) / "maya-data"
@@ -114,7 +114,7 @@ class TestPhase5SetupHealth(unittest.TestCase):
         config_data["deployment"]["data_dir"] = str(data_dir)
         config_data["runtime"]["enabled_profiles"] = ["maya-core"]
         config_data["runtime"]["hermes_factory"] = (
-            "tests.test_phase5_setup_health:FakeAIAgent"
+            "tests.test_phase4_setup_health:FakeAIAgent"
         )
         config_data["runtime"]["hermes_runtime_version"] = "test-hermes"
         config_data["memory"]["retriever"] = "local_json"

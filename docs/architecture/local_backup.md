@@ -24,7 +24,7 @@ The archive contains:
 The `backups/` directory itself is excluded so backup archives do not
 recursively contain earlier backups.
 
-Phase 4 narrows the default archive boundary for document and Metabase
+V2 Phase 3 narrows the default archive boundary for document and Metabase
 capability state. The archive includes Maya document outputs/caches and
 Metabase provisioning metadata, but excludes customer analytics sources and
 Metabase application database state unless a future explicit contract opts

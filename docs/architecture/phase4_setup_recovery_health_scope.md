@@ -1,12 +1,12 @@
-# Phase 5 Scope: Setup, Recovery, Backup, and Health Experience
+# Phase 4 Scope: Setup, Recovery, Backup, and Health Experience
 
 ## Status
 
-Approved implementation scope for Phase 5.
+Approved implementation scope for Product Spec V2 Phase 4.
 
 ## Objective
 
-Phase 5 turns existing Maya lifecycle primitives into an operator-friendly
+Product Spec V2 Phase 4 turns existing Maya lifecycle primitives into an operator-friendly
 experience for setup, recovery, backup, restore, update readiness, and health
 inspection.
 
@@ -22,7 +22,7 @@ contracts portable.
 - Backup archives with a redacted manifest and `maya backup inspect`.
 - Local update and rollback readiness diagnostics with no network use and no
   mutation.
-- Installed-package smoke coverage for the Phase 5 CLI surfaces.
+- Installed-package smoke coverage for the V2 Phase 4 CLI surfaces.
 
 ## Safety Boundaries
 
@@ -38,7 +38,7 @@ contracts portable.
 
 ## Non-Goals
 
-Phase 5 does not:
+V2 Phase 4 does not:
 
 - create a production installer;
 - create signed update artifacts;
@@ -50,7 +50,7 @@ Phase 5 does not:
 
 ## Exit Criteria
 
-Phase 5 exits when:
+V2 Phase 4 exits when:
 
 - setup and health modules ship in the wheel;
 - installed CLI smoke checks cover setup, health, backup inspect, restore

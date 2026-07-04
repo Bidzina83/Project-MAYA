@@ -9,7 +9,7 @@ from tests.test_phase0_contracts import valid_config_mapping
 
 
 class TestPhase4BackupBoundaries(unittest.TestCase):
-    def test_default_backup_includes_maya_phase4_artifacts_only(self):
+    def test_default_backup_includes_maya_phase3_artifacts_only(self):
         with tempfile.TemporaryDirectory() as tmp:
             data_dir = Path(tmp) / "maya-data"
             included_files = (
