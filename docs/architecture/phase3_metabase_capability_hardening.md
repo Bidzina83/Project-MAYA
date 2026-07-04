@@ -1,8 +1,8 @@
-# Phase 4 Metabase Capability Hardening
+# Phase 3 Metabase Capability Hardening
 
 ## Status
 
-Incremental hardening after the initial Phase 4 Metabase foundation.
+Incremental hardening after the initial V2 Phase 3 Metabase foundation.
 
 ## Decision
 

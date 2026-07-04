@@ -1,8 +1,8 @@
-# Phase 4 Document Capability Hardening
+# Phase 3 Document Capability Hardening
 
 ## Status
 
-Incremental hardening after the initial Phase 4 document foundation.
+Incremental hardening after the initial V2 Phase 3 document foundation.
 
 ## Decision
 

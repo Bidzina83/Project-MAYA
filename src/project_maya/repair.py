@@ -17,6 +17,9 @@ class RepairAction:
     path: Path
     action: str
     status: str
+    category: str = "filesystem"
+    severity: str = "info"
+    hint: str = "no action required"
 
 
 @dataclass(frozen=True)
@@ -50,13 +53,30 @@ def repair_local_state(config: MayaConfig, *, apply: bool = False) -> RepairResu
         if target.exists():
             if not target.is_dir():
                 raise RepairError(f"repair target exists but is not a directory: {target}")
-            planned.append(RepairAction(path=target, action="none", status="exists"))
+            planned.append(
+                RepairAction(
+                    path=target,
+                    action="none",
+                    status="exists",
+                    category=_repair_category(data_dir, target),
+                    severity="info",
+                    hint="directory already exists",
+                )
+            )
             continue
         planned.append(
             RepairAction(
                 path=target,
                 action="create_directory",
                 status="planned" if not apply else "created",
+                category=_repair_category(data_dir, target),
+                severity="warn" if not apply else "info",
+                hint=(
+                    "run maya setup init --apply or maya repair --apply "
+                    "to create this Maya-owned directory"
+                    if not apply
+                    else "created Maya-owned directory"
+                ),
             )
         )
         if apply:
@@ -71,3 +91,20 @@ def _ensure_repairable_root(data_dir: Path) -> None:
     parent = data_dir.parent
     if not parent.exists() or not parent.is_dir():
         raise RepairError("deployment.data_dir parent does not exist")
+
+
+def _repair_category(data_dir: Path, target: Path) -> str:
+    if target == data_dir:
+        return "filesystem"
+    try:
+        first = target.relative_to(data_dir).parts[0]
+    except (ValueError, IndexError):
+        return "filesystem"
+    return {
+        "memory": "memory",
+        "governance": "governance",
+        "backups": "backup",
+        "migrations": "migration",
+        "logs": "logs",
+        "cache": "cache",
+    }.get(first, "filesystem")

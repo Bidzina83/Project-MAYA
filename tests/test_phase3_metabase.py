@@ -193,7 +193,7 @@ class TestPhase4Metabase(unittest.TestCase):
             with self.assertRaises(MetabaseCapabilityError):
                 apply_metabase_provisioning(config, gateway=Gateway())
 
-    def test_doctor_reports_phase4_metabase_checks(self):
+    def test_doctor_reports_phase3_metabase_checks(self):
         with tempfile.TemporaryDirectory() as tmp:
             report = run_doctor(
                 _config(Path(tmp) / "maya-data"),

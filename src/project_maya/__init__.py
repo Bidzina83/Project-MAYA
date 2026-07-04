@@ -15,10 +15,13 @@ from .agent import (
 from .audit import AuditRecord, AuditSink, LocalJsonlAuditSink, NullAuditSink
 from .backup import (
     BackupError,
+    BackupInspection,
+    BackupManifest,
     BackupResult,
     RestoreError,
     RestoreResult,
     create_local_backup,
+    inspect_backup_archive,
     restore_local_backup,
 )
 from .config import (
@@ -46,6 +49,7 @@ from .connectors import (
     validate_connector,
 )
 from .doctor import DoctorCheck, DoctorReport, DoctorStatus, run_doctor
+from .health import HealthCategory, HealthStatus, HealthSummary, summarize_health
 from .dependencies import (
     DependencyCategory,
     DependencyContract,
@@ -123,6 +127,7 @@ from .repair import (
     RepairResult,
     repair_local_state,
 )
+from .setup import SetupAction, SetupPlan, SetupSeverity, plan_setup
 from .memory import (
     GovernedMemoryRetriever,
     HermesMemoryProvider,
@@ -169,6 +174,8 @@ __all__ = [
     "AuditRecord",
     "AuditSink",
     "BackupError",
+    "BackupInspection",
+    "BackupManifest",
     "BackupResult",
     "BrokerMode",
     "BearerTokenAuthenticator",
@@ -199,6 +206,9 @@ __all__ = [
     "GovernanceDecision",
     "GovernedAgentRuntime",
     "GovernedMemoryRetriever",
+    "HealthCategory",
+    "HealthStatus",
+    "HealthSummary",
     "HermesMemoryProvider",
     "IntegrationResetError",
     "IntegrationResetResult",
@@ -248,6 +258,9 @@ __all__ = [
     "SecretStoreError",
     "SecretStoreHealth",
     "SecretStoreStatus",
+    "SetupAction",
+    "SetupPlan",
+    "SetupSeverity",
     "SkillContractError",
     "SkillOrigin",
     "UpdateError",
@@ -255,6 +268,7 @@ __all__ = [
     "WindowsDPAPISecretStore",
     "build_platform_secret_store",
     "create_local_backup",
+    "inspect_backup_archive",
     "restore_local_backup",
     "repair_local_state",
     "reset_integration_state",
@@ -285,6 +299,8 @@ __all__ = [
     "require_valid_model_config",
     "rollback_update",
     "run_doctor",
+    "summarize_health",
+    "plan_setup",
     "apply_metabase_provisioning",
     "validate_configured_connectors",
     "validate_local_model_endpoint",

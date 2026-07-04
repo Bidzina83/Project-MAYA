@@ -8,7 +8,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .backup import BackupError, RestoreError, create_local_backup, restore_local_backup
+from .backup import (
+    BackupError,
+    RestoreError,
+    create_local_backup,
+    inspect_backup_archive,
+    restore_local_backup,
+)
 from .bootstrap import build_local_product
 from .config import config_from_mapping, config_to_mapping
 from .doctor import DoctorStatus, run_doctor
@@ -32,6 +38,7 @@ from .metabase import (
     write_metabase_provisioning_plan,
 )
 from .repair import RepairError, repair_local_state
+from .health import summarize_health
 from .secrets import (
     SecretRef,
     SecretReferenceError,
@@ -39,6 +46,7 @@ from .secrets import (
     build_platform_secret_store,
 )
 from .update import UpdateError, check_updates, rollback_update
+from .setup import plan_setup
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -66,6 +74,53 @@ def main(argv: list[str] | None = None) -> int:
         "--apply",
         action="store_true",
         help="Create missing local state directories. Default is dry-run.",
+    )
+    setup_parser = subparsers.add_parser(
+        "setup",
+        help="Plan or initialize safe local Maya setup.",
+    )
+    setup_subparsers = setup_parser.add_subparsers(
+        dest="setup_command",
+        required=True,
+    )
+    for setup_command in ("plan", "init"):
+        setup_child = setup_subparsers.add_parser(
+            setup_command,
+            help=(
+                "Report setup requirements."
+                if setup_command == "plan"
+                else "Initialize safe Maya-owned local state."
+            ),
+        )
+        setup_child.add_argument("--config", type=Path, required=True)
+        setup_child.add_argument(
+            "--format",
+            choices=("json", "text"),
+            default="json",
+        )
+        if setup_command == "init":
+            setup_child.add_argument(
+                "--apply",
+                action="store_true",
+                help="Create safe Maya-owned directories. Default is dry-run.",
+            )
+    health_parser = subparsers.add_parser(
+        "health",
+        help="Report operator-oriented Maya health.",
+    )
+    health_subparsers = health_parser.add_subparsers(
+        dest="health_command",
+        required=True,
+    )
+    health_summary = health_subparsers.add_parser(
+        "summary",
+        help="Summarize Maya health from existing diagnostics.",
+    )
+    health_summary.add_argument("--config", type=Path, required=True)
+    health_summary.add_argument(
+        "--format",
+        choices=("json", "text"),
+        default="json",
     )
     reset_integration_parser = subparsers.add_parser(
         "reset-integration",
@@ -198,10 +253,23 @@ def main(argv: list[str] | None = None) -> int:
         help="Create a local backup archive of Maya state.",
     )
     backup_parser.add_argument(
+        "backup_command",
+        nargs="?",
+        default="create",
+        help="Use 'inspect' to inspect an existing backup archive.",
+    )
+    backup_parser.add_argument(
         "--config",
         type=Path,
-        required=True,
+        required=False,
         help="Path to a JSON Maya configuration file.",
+    )
+    backup_parser.add_argument(
+        "--from",
+        dest="archive_path",
+        type=Path,
+        default=None,
+        help="Backup archive to inspect.",
     )
     backup_parser.add_argument(
         "--to",
@@ -431,6 +499,15 @@ def main(argv: list[str] | None = None) -> int:
         return _doctor(args.config)
     if args.command == "repair":
         return _repair(args.config, apply=args.apply)
+    if args.command == "setup":
+        return _setup(
+            args.config,
+            command=args.setup_command,
+            apply=getattr(args, "apply", False),
+            output_format=args.format,
+        )
+    if args.command == "health":
+        return _health_summary(args.config, output_format=args.format)
     if args.command == "reset-integration":
         return _reset_integration(
             args.config,
@@ -459,6 +536,21 @@ def main(argv: list[str] | None = None) -> int:
             allow_overwrite=args.allow_overwrite,
         )
     if args.command == "backup":
+        if args.backup_command == "inspect":
+            return _backup_inspect(args.archive_path, output_format="json")
+        if args.config is None:
+            print(
+                json.dumps(
+                    {
+                        "error": {
+                            "code": "backup_failed",
+                            "message": "backup failed",
+                        }
+                    },
+                    sort_keys=True,
+                )
+            )
+            return 1
         return _backup(args.config, args.destination)
     if args.command == "restore":
         return _restore(
@@ -534,7 +626,10 @@ def _repair(config_path: Path, *, apply: bool = False) -> int:
                 "actions": [
                     {
                         "action": action.action,
+                        "category": action.category,
+                        "hint": action.hint,
                         "path": str(action.path),
+                        "severity": action.severity,
                         "status": action.status,
                     }
                     for action in result.actions
@@ -544,6 +639,62 @@ def _repair(config_path: Path, *, apply: bool = False) -> int:
         )
     )
     return 0
+
+
+def _setup(
+    config_path: Path,
+    *,
+    command: str,
+    apply: bool = False,
+    output_format: str = "json",
+) -> int:
+    try:
+        config = _load_config(config_path)
+        result = plan_setup(config, apply=apply if command == "init" else False)
+    except (RepairError, OSError, ValueError):
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "setup_failed",
+                        "message": "setup failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+    payload = result.redacted_summary()
+    payload["operation"] = command
+    _print_payload(payload, output_format=output_format)
+    return 0
+
+
+def _health_summary(config_path: Path, *, output_format: str = "json") -> int:
+    try:
+        config = _load_config(config_path)
+        product = build_local_product(config)
+        result = summarize_health(
+            config,
+            product.runtime,
+            lifecycle_state=product.agent.state,
+            secret_store=product.secret_store,
+        )
+    except Exception:
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "health_summary_failed",
+                        "message": "health summary failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+    _print_payload(result.redacted_summary(), output_format=output_format)
+    return 0 if result.status.value in {"ready", "degraded"} else 1
 
 
 def _reset_integration(
@@ -808,10 +959,37 @@ def _backup(config_path: Path, destination: Path | None = None) -> int:
                 "status": "backed_up",
                 "archive": str(result.archive_path),
                 "files": result.files,
+                "manifest": result.manifest.redacted_summary(),
             },
             sort_keys=True,
         )
     )
+    return 0
+
+
+def _backup_inspect(
+    archive_path: Path | None,
+    *,
+    output_format: str = "json",
+) -> int:
+    try:
+        if archive_path is None:
+            raise RestoreError("backup archive is required")
+        result = inspect_backup_archive(archive_path)
+    except (RestoreError, OSError, ValueError):
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "backup_inspect_failed",
+                        "message": "backup inspect failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+    _print_payload(result.redacted_summary(), output_format=output_format)
     return 0
 
 
@@ -927,6 +1105,7 @@ def _update(config_path: Path, *, rollback: bool = False) -> int:
                 "signed_manifest": result.signed_manifest,
                 "network_used": result.network_used,
                 "action_required": result.action_required,
+                "mutation": result.mutation,
             },
             sort_keys=True,
         )
@@ -1065,6 +1244,25 @@ def _redacted_data_ref(config, path: Path) -> str:
     except ValueError:
         relative = "external"
     return f"maya-data/{relative}"
+
+
+def _print_payload(payload: dict[str, object], *, output_format: str = "json") -> None:
+    if output_format == "text":
+        print(_text_payload(payload))
+        return
+    print(json.dumps(payload, sort_keys=True))
+
+
+def _text_payload(payload: dict[str, object]) -> str:
+    lines = []
+    for key, value in sorted(payload.items()):
+        if isinstance(value, list):
+            lines.append(f"{key}: {len(value)} item(s)")
+        elif isinstance(value, dict):
+            lines.append(f"{key}: " + ", ".join(sorted(value.keys())))
+        else:
+            lines.append(f"{key}: {value}")
+    return "\n".join(lines)
 
 
 def _load_config(config_path: Path):
