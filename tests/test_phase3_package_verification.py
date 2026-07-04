@@ -100,7 +100,7 @@ class TestPhase3PackageVerification(unittest.TestCase):
             "Phase 3 Closure Audit",
             "Approved Step Evidence",
             "Acceptance Evidence",
-            "Non-Goals Still Deferred",
+            "Readiness Foundation Limits",
             "Exit Statement",
         ):
             self.assertIn(expected, closure)
@@ -108,7 +108,7 @@ class TestPhase3PackageVerification(unittest.TestCase):
             "project-maya[documents]",
             "project-maya[documents-preview]",
             "Hermes-Agent-Maya-Skills",
-            "does not package trained Maya skills",
+            "packages the approved `documents/pdf` skill artifact",
         ):
             self.assertIn(expected, documents)
         for expected in (

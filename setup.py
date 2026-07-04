@@ -26,7 +26,7 @@ setup(
     packages=packages,
     package_dir={"": "src"},
     include_package_data=False,
-    package_data={'': ['plugin.yaml']},
+    package_data={'': ['plugin.yaml', 'packaged_skills/pdf/SKILL.md']},
     python_requires='>=3.11,<3.14',
     install_requires=[
         HERMES_RUNTIME_REQUIREMENT,

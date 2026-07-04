@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from importlib import resources
 import re
 from dataclasses import dataclass
 from enum import Enum
@@ -62,16 +63,39 @@ class MayaSkillArtifact:
                 )
 
 
+@dataclass(frozen=True)
+class SkillPackageStatus:
+    skill_id: str
+    status: str
+    packaged: bool
+    allowlisted: bool
+    discoverable: bool
+    loaded: bool = False
+    metadata: tuple[tuple[str, str], ...] = ()
+
+    def redacted_summary(self) -> dict[str, object]:
+        return {
+            "skill_id": self.skill_id,
+            "status": self.status,
+            "packaged": self.packaged,
+            "allowlisted": self.allowlisted,
+            "discoverable": self.discoverable,
+            "loaded": self.loaded,
+            "metadata": dict(self.metadata),
+        }
+
+
 DOCUMENT_SKILL_ALLOWLIST: tuple[MayaSkillArtifact, ...] = (
     MayaSkillArtifact(
         skill_id="documents/pdf",
         origin=SkillOrigin.MAYA_TRAINED,
         version="0.1.0",
-        source_path="skills/pdf/SKILL.md",
+        source_path="packaged_skills/pdf/SKILL.md",
         capabilities=(
             "documents.inspect",
             "documents.extract-text",
             "documents.create-pdf",
+            "documents.convert",
         ),
     ),
 )
@@ -104,6 +128,47 @@ def validate_skill_text_is_sanitized(text: str) -> None:
             raise SkillContractError(
                 "skill artifact contains personal, secret, or machine-specific data"
             )
+
+
+def packaged_document_skill_status() -> tuple[SkillPackageStatus, ...]:
+    """Return honest packaged status for curated document skills."""
+
+    statuses: list[SkillPackageStatus] = []
+    for artifact in document_skill_allowlist():
+        packaged, sanitized = _packaged_skill_state(artifact)
+        status = "packaged" if packaged and sanitized else "blocked"
+        statuses.append(
+            SkillPackageStatus(
+                skill_id=artifact.skill_id,
+                status=status,
+                packaged=packaged,
+                allowlisted=True,
+                discoverable=packaged and sanitized,
+                loaded=False,
+                metadata=(
+                    ("origin", artifact.origin.value),
+                    ("version", artifact.version),
+                    ("source_path", artifact.source_path),
+                ),
+            )
+        )
+    return tuple(statuses)
+
+
+def _packaged_skill_state(artifact: MayaSkillArtifact) -> tuple[bool, bool]:
+    try:
+        text = (
+            resources.files("project_maya")
+            .joinpath(artifact.source_path)
+            .read_text(encoding="utf-8")
+        )
+    except (FileNotFoundError, ModuleNotFoundError):
+        return False, False
+    try:
+        validate_skill_text_is_sanitized(text)
+    except SkillContractError:
+        return True, False
+    return True, True
 
 
 def _validate_relative_source_path(source_path: str) -> None:

@@ -5,6 +5,7 @@ from project_maya import (
     SkillContractError,
     SkillOrigin,
     document_skill_allowlist,
+    packaged_document_skill_status,
     validate_skill_artifacts,
     validate_skill_text_is_sanitized,
 )
@@ -81,9 +82,21 @@ class TestHermesSkillsBoundary(unittest.TestCase):
         artifact = allowlist[0]
         self.assertEqual(artifact.skill_id, "documents/pdf")
         self.assertEqual(artifact.origin, SkillOrigin.MAYA_TRAINED)
-        self.assertEqual(artifact.source_path, "skills/pdf/SKILL.md")
+        self.assertEqual(artifact.source_path, "packaged_skills/pdf/SKILL.md")
         self.assertIn("documents.extract-text", artifact.capabilities)
+        self.assertIn("documents.convert", artifact.capabilities)
         self.assertNotIn("secret", artifact.source_path)
+
+    def test_packaged_document_skill_status_is_discoverable_but_not_loaded(self):
+        statuses = packaged_document_skill_status()
+
+        self.assertEqual(len(statuses), 1)
+        self.assertEqual(statuses[0].skill_id, "documents/pdf")
+        self.assertEqual(statuses[0].status, "packaged")
+        self.assertTrue(statuses[0].packaged)
+        self.assertTrue(statuses[0].allowlisted)
+        self.assertTrue(statuses[0].discoverable)
+        self.assertFalse(statuses[0].loaded)
 
 
 if __name__ == "__main__":

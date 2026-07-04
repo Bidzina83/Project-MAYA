@@ -6,8 +6,10 @@ from pathlib import Path
 from project_maya import (
     ActionRequest,
     AuthorizationResult,
+    GovernedMetabaseViewSpec,
     GovernanceDecision,
     LocalJsonlAuditSink,
+    MetabaseDashboardSpec,
     MetabaseCapabilityError,
     apply_metabase_provisioning,
     config_from_mapping,
@@ -95,8 +97,9 @@ class TestPhase4Metabase(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             health = validate_metabase_health(_config(Path(tmp) / "maya-data"), live=True)
 
-        self.assertEqual(health.status, "live_check_deferred")
-        self.assertFalse(health.network_used)
+        self.assertIn(health.status, {"ready", "live_unavailable"})
+        self.assertTrue(health.network_used)
+        self.assertNotIn("127.0.0.1", json.dumps(health.redacted_summary()))
 
     def test_provisioning_plan_excludes_memory_prompts_secrets_and_files(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -104,10 +107,15 @@ class TestPhase4Metabase(unittest.TestCase):
             summary = json.dumps(plan.redacted_summary(), sort_keys=True)
 
         self.assertEqual(plan.status, "planned")
+        self.assertTrue(plan.views)
+        self.assertTrue(plan.dashboards)
+        self.assertIsInstance(plan.views[0], GovernedMetabaseViewSpec)
+        self.assertIsInstance(plan.dashboards[0], MetabaseDashboardSpec)
         self.assertIn('"raw_memory": "excluded"', summary)
         self.assertIn('"prompts": "excluded"', summary)
         self.assertIn('"secrets": "excluded"', summary)
         self.assertIn('"files": "excluded"', summary)
+        self.assertIn('"least_privilege": "true"', summary)
         self.assertNotIn("secret://metabase", summary)
 
     def test_write_provisioning_plan_persists_redacted_metadata_under_maya_data(self):
@@ -158,9 +166,14 @@ class TestPhase4Metabase(unittest.TestCase):
                 / "last-applied-plan.json"
             )
             applied_exists = applied_path.is_file()
+            dashboards_path = data_dir / "metabase" / "provisioning" / "dashboards.json"
+            dashboards_exists = dashboards_path.is_file()
 
         self.assertEqual(result.status, "applied")
         self.assertTrue(applied_exists)
+        self.assertTrue(dashboards_exists)
+        self.assertTrue(result.dashboards)
+        self.assertEqual(result.dashboards[0].status, "applied")
         self.assertEqual(gateway.requests[0].capability, "metabase.apply-provision")
         self.assertEqual(record["event_type"], "authorization.metabase")
         self.assertNotIn("secret://metabase", audit_text)
@@ -205,6 +218,20 @@ class TestPhase4Metabase(unittest.TestCase):
         self.assertIn("metabase.lifecycle", checks)
         self.assertIn("metabase.provisioning", checks)
         self.assertNotIn("secret://metabase", checks["metabase.health"].message)
+
+    def test_provisioning_blocks_dashboard_without_approved_sources(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data = valid_config_mapping()
+            data["runtime"]["enabled_profiles"] = ["maya-core", "maya-metabase"]
+            data["deployment"]["data_dir"] = str(Path(tmp) / "maya-data")
+            data["metabase"]["analytics_sources"] = []
+            config = config_from_mapping(data)
+
+            plan = plan_metabase_provisioning(config)
+
+        self.assertEqual(plan.status, "blocked")
+        self.assertFalse(plan.views)
+        self.assertFalse(plan.dashboards)
 
 
 if __name__ == "__main__":

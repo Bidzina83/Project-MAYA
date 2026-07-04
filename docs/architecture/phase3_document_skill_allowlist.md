@@ -2,26 +2,27 @@
 
 ## Status
 
-Metadata-only allowlist for future document/PDF skill packaging.
+Packaged trained document/PDF skill artifact.
 
 ## Decision
 
-Project MAYA now declares an approved document skill allowlist through
+Project MAYA declares and packages an approved document skill artifact through
 `project_maya.skills`.
 
 The initial allowlist contains one eligible trained skill artifact:
 
 | Skill | Origin | Source path | Capabilities |
 | --- | --- | --- | --- |
-| `documents/pdf` | `maya_trained` | `skills/pdf/SKILL.md` | `documents.inspect`, `documents.extract-text`, `documents.create-pdf` |
+| `documents/pdf` | `maya_trained` | `packaged_skills/pdf/SKILL.md` | `documents.inspect`, `documents.extract-text`, `documents.create-pdf`, `documents.convert` |
 
-This is product metadata only. It does not copy the skill from
-`Bidzina83/Hermes-Agent-Maya-Skills`, bundle it in the wheel, load it through
-Hermes, or report the skill as installed.
+The curated artifact is packaged in the Project MAYA wheel and is tied to the
+approved `Bidzina83/Hermes-Agent-Maya-Skills` trained-skill source role. Maya
+reports it as packaged and discoverable. It is not reported as runtime-loaded
+or healthy until the Hermes adapter verifies actual loading.
 
 ## Boundary
 
-Future packaging of this skill must still verify:
+Packaging verifies:
 
 - sanitized `SKILL.md` content;
 - portable helper scripts;
@@ -32,5 +33,7 @@ Future packaging of this skill must still verify:
 
 ## Verification
 
-The clean package verifier imports `document_skill_allowlist()` from the built
-wheel and validates the metadata without requiring a local skills checkout.
+The clean package verifier imports `document_skill_allowlist()` and
+`packaged_document_skill_status()` from the built wheel, validates the bundled
+artifact metadata, and verifies that skill status is discoverable without
+requiring a local skills checkout.

@@ -21,19 +21,21 @@ System commands and local applications remain readiness checks, not silent
 install actions:
 
 - Poppler `pdftoppm` is optional for PDF preview rendering.
-- LibreOffice `soffice` is optional for Office document conversion.
+- LibreOffice `soffice` is required when the `maya-documents` profile performs
+  governed Office/document conversion.
 - Microsoft Office is customer-managed and may be detected or validated by
   later setup flows, but Maya does not install it.
 
 ## Skill Boundary
 
-This slice does not package trained Maya skills from
-`Hermes-Agent-Maya-Skills`. It defines the runtime dependency surface those
-skills can rely on when the `maya-documents` profile is enabled.
+This readiness slice defined the runtime dependency surface for trained Maya
+document skills from `Hermes-Agent-Maya-Skills`. Final Phase 3 capability work
+packages the approved `documents/pdf` skill artifact through
+`project_maya.packaged_skills` and reports it as packaged, allowlisted, and
+discoverable only after product validation.
 
-Skill inclusion remains a later product decision. Any skill packaged later must
-use these dependency contracts and must not hardcode machine-specific paths,
-customer accounts, or operating-system assumptions.
+Packaged skills must use these dependency contracts and must not hardcode
+machine-specific paths, customer accounts, or operating-system assumptions.
 
 ## Verification
 
@@ -48,6 +50,7 @@ The clean package verifier checks that:
 
 ## Known Limits
 
-This slice does not implement PDF extraction, PDF rendering, document
-conversion, trained skill packaging, or installer-level system dependency
-installation.
+This readiness slice does not install system dependencies or implement
+installer-level dependency setup. Final Phase 3 document capability covers
+governed extraction, PDF creation, LibreOffice conversion, and the packaged
+approved trained document skill while preserving these readiness boundaries.

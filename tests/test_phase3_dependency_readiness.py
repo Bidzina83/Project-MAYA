@@ -92,10 +92,15 @@ class TestPhase3DependencyReadiness(unittest.TestCase):
         self.assertIn("python.markdown", by_id)
         self.assertIn("python.pillow", by_id)
         self.assertIn("command.pdftoppm", by_id)
+        self.assertIn("command.soffice", by_id)
         self.assertIn("application.ms-office", by_id)
         self.assertEqual(
             by_id["command.pdftoppm"].status,
             DependencyReadinessStatus.MISSING_OPTIONAL,
+        )
+        self.assertEqual(
+            by_id["command.soffice"].status,
+            DependencyReadinessStatus.MISSING_REQUIRED,
         )
         self.assertEqual(
             by_id["application.ms-office"].status,
@@ -280,10 +285,15 @@ class TestPhase3DependencyReadiness(unittest.TestCase):
         self.assertIn("dependencies.profile.maya-documents", checks)
         self.assertIn("dependencies.python.reportlab", checks)
         self.assertIn("dependencies.command.pdftoppm", checks)
+        self.assertIn("dependencies.command.soffice", checks)
         self.assertIn("dependencies.application.ms-office", checks)
         self.assertEqual(
             checks["dependencies.command.pdftoppm"].status,
             DoctorStatus.WARN,
+        )
+        self.assertEqual(
+            checks["dependencies.command.soffice"].status,
+            DoctorStatus.FAIL,
         )
         self.assertNotIn("secret://", checks["dependencies.profile.maya-documents"].message)
 

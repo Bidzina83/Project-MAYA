@@ -20,6 +20,7 @@ from .governance import load_policy_gateway
 from .metabase import metabase_capability_checks
 from .model_config import validate_model_config
 from .secrets import SecretStore, SecretStoreStatus
+from .skills import packaged_document_skill_status
 
 
 class DoctorStatus(str, Enum):
@@ -73,6 +74,7 @@ def run_doctor(
     checks.extend(_dependency_readiness_checks(config))
     checks.extend(_document_capability_checks(config))
     checks.extend(_metabase_capability_checks(config))
+    checks.extend(_skill_package_checks())
     checks.append(_model_config_check(config))
     checks.append(_connector_config_check(config))
 
@@ -455,6 +457,20 @@ def _metabase_capability_checks(config: MayaConfig) -> list[DoctorCheck]:
                 name,
                 status,
                 _summary_message(summary),
+            )
+        )
+    return checks
+
+
+def _skill_package_checks() -> list[DoctorCheck]:
+    checks: list[DoctorCheck] = []
+    for result in packaged_document_skill_status():
+        status = DoctorStatus.PASS if result.discoverable else DoctorStatus.FAIL
+        checks.append(
+            DoctorCheck(
+                f"skills.{result.skill_id.replace('/', '.')}",
+                status,
+                _summary_message(result.redacted_summary()),
             )
         )
     return checks

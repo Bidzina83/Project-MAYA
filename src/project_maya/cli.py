@@ -21,6 +21,7 @@ from .doctor import DoctorStatus, run_doctor
 from .documents import (
     DocumentCapabilityError,
     DocumentDependencyUnavailable,
+    convert_document,
     create_pdf,
     extract_pdf_text,
     inspect_document,
@@ -47,6 +48,7 @@ from .secrets import (
 )
 from .update import UpdateError, check_updates, rollback_update
 from .setup import plan_setup
+from .skills import packaged_document_skill_status
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -448,6 +450,25 @@ def main(argv: list[str] | None = None) -> int:
         default="plain",
     )
     documents_create.add_argument("--data-classification", default="internal")
+    documents_convert = documents_subparsers.add_parser(
+        "convert",
+        help="Convert a governed document through LibreOffice.",
+    )
+    documents_convert.add_argument("--config", type=Path, required=True)
+    documents_convert.add_argument("--source", type=Path, required=True)
+    documents_convert.add_argument(
+        "--to",
+        dest="output",
+        type=Path,
+        required=True,
+        help="Output filename or path under maya-data/documents/outputs.",
+    )
+    documents_convert.add_argument(
+        "--format",
+        choices=("pdf", "txt", "docx"),
+        required=True,
+    )
+    documents_convert.add_argument("--data-classification", default="internal")
     metabase_parser = subparsers.add_parser(
         "metabase",
         help="Validate and plan governed Metabase integration.",
@@ -493,6 +514,24 @@ def main(argv: list[str] | None = None) -> int:
         help="Required confirmation for Phase 4 provisioning apply.",
     )
     metabase_apply.add_argument("--data-classification", default="internal")
+    skills_parser = subparsers.add_parser(
+        "skills",
+        help="Report packaged Maya skill artifact status.",
+    )
+    skills_subparsers = skills_parser.add_subparsers(
+        dest="skills_command",
+        required=True,
+    )
+    skills_status = skills_subparsers.add_parser(
+        "status",
+        help="Report packaged and allowlisted skill status.",
+    )
+    skills_status.add_argument("--config", type=Path, required=True)
+    skills_status.add_argument(
+        "--format",
+        choices=("json", "text"),
+        default="json",
+    )
 
     args = parser.parse_args(argv)
     if args.command == "doctor":
@@ -576,6 +615,8 @@ def main(argv: list[str] | None = None) -> int:
         return _documents(args)
     if args.command == "metabase":
         return _metabase(args)
+    if args.command == "skills":
+        return _skills(args)
     parser.error(f"unknown command: {args.command}")
     return 2
 
@@ -1154,6 +1195,18 @@ def _documents(args) -> int:
             )
             print(json.dumps(result.redacted_summary(), sort_keys=True))
             return 0
+        if args.documents_command == "convert":
+            result = convert_document(
+                config,
+                args.source,
+                output=args.output,
+                output_format=args.format,
+                gateway=gateway,
+                audit_sink=audit_sink,
+                data_classification=args.data_classification,
+            )
+            print(json.dumps(result.redacted_summary(), sort_keys=True))
+            return 0
     except (
         DocumentCapabilityError,
         DocumentDependencyUnavailable,
@@ -1176,13 +1229,42 @@ def _documents(args) -> int:
     return 2
 
 
+def _skills(args) -> int:
+    try:
+        _load_config(args.config)
+        statuses = packaged_document_skill_status()
+        payload = {
+            "status": (
+                "ready"
+                if all(status.discoverable for status in statuses)
+                else "blocked"
+            ),
+            "skills": [status.redacted_summary() for status in statuses],
+        }
+        _print_payload(payload, output_format=args.format)
+        return 0 if payload["status"] == "ready" else 1
+    except (OSError, ValueError):
+        print(
+            json.dumps(
+                {
+                    "error": {
+                        "code": "skills_status_failed",
+                        "message": "skills status failed",
+                    }
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+
+
 def _metabase(args) -> int:
     try:
         config = _load_config(args.config)
         if args.metabase_command == "health":
             result = validate_metabase_health(config, live=args.live)
             print(json.dumps(result.redacted_summary(), sort_keys=True))
-            return 0 if result.status in {"ready", "live_check_deferred"} else 1
+            return 0 if result.status in {"ready", "live_unavailable"} else 1
         if args.metabase_command == "lifecycle":
             result = inspect_metabase_lifecycle(config)
             print(json.dumps(result.redacted_summary(), sort_keys=True))

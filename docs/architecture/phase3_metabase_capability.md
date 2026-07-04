@@ -2,12 +2,13 @@
 
 ## Status
 
-Initial Metabase integration and provisioning foundation.
+Final V2 Phase 3 Metabase integration and dashboard provisioning capability.
 
 ## Decision
 
 Project MAYA now owns a `project_maya.metabase` capability layer for
-Metabase health and provisioning plans.
+Metabase health, governed views, dashboard specifications, and provisioning
+plans.
 
 The layer supports two deployment modes:
 
@@ -39,24 +40,30 @@ Metabase health validation is secret-safe and local by default. It validates:
 - credential-reference presence;
 - analytics source declaration count.
 
+Opt-in live health checks are timeout-bounded and redact endpoint and
+credential details. Unreachable endpoints report `live_unavailable` rather
+than leaking network or credential state.
+
 Lifecycle reporting is separate from health. Customer-managed deployments
 report customer ownership. Managed-local deployments report whether the local
 service artifact is present without claiming start/stop support.
 
-Provisioning is plan-first. Redacted plans may be written under:
+Provisioning is plan-first. Plans include governed views, cards, and dashboard
+specifications for approved analytics sources. Redacted plans may be written
+under:
 
 ```text
 maya-data/metabase/provisioning/
 ```
 
-`apply-provision` requires local governance authorization and currently records
-the governed apply event plus a redacted applied-plan file without live
-Metabase mutations.
+`apply-provision` requires local governance authorization and records the
+governed apply event plus redacted applied-plan and dashboard files. These
+artifacts prove the approved dashboard/view boundary without exposing memory,
+prompts, files, secrets, or unapproved records.
 
 ## Deferred Work
 
-- live HTTP Metabase health checks;
-- dashboard, user, collection, and permission creation;
+- live Metabase user, collection, and permission creation;
 - managed-local Metabase start/stop/upgrade/backup lifecycle;
 - bundled Metabase runtime artifacts;
 - analytics database migrations;

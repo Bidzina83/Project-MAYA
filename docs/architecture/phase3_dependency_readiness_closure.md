@@ -54,8 +54,8 @@ verification, and tests.
   `maya-core`, `maya-documents`, `maya-metabase`, `maya-browser`,
   `maya-messaging`, and `maya-local-models`.
 - Document/PDF readiness covers `reportlab`, `pypdf`, `Markdown`, `Pillow`,
-  optional `PyMuPDF`, optional Poppler `pdftoppm`, optional LibreOffice
-  `soffice`, and customer-managed Microsoft Office.
+  optional `PyMuPDF`, optional Poppler `pdftoppm`, required LibreOffice
+  `soffice` for governed conversion, and customer-managed Microsoft Office.
 - Package metadata declares `project-maya[documents]` and
   `project-maya[documents-preview]` extras without making document tooling a
   hidden core dependency.
@@ -100,17 +100,13 @@ python scripts/validate_project_maya_context.py
 git diff --check
 ```
 
-## Non-Goals Still Deferred
+## Readiness Foundation Limits
 
-Phase 3 intentionally does not implement:
+This readiness-foundation checkpoint intentionally did not implement:
 
 - automatic installation of Poppler, Java, LibreOffice, browsers, Metabase,
   Docker, Ollama, LM Studio, vLLM, Microsoft Office, browser drivers, or
   system packages;
-- trained Maya skill packaging from `Hermes-Agent-Maya-Skills`;
-- full document extraction, rendering, conversion, or workflow execution;
-- full Metabase service lifecycle, dashboard provisioning, migration, backup,
-  restore, or upgrade;
 - browser launch, browser automation workflows, or browser profile/session
   inspection;
 - local model runtime installation, model pulls, endpoint probing, or live
@@ -121,6 +117,13 @@ Phase 3 intentionally does not implement:
 - signed installers, SBOMs, release provenance, or automatic updates;
 - platform support claims for Windows, macOS, Linux, servers, or containers.
 
+Final V2 Phase 3 capability work supersedes this foundation-only boundary for
+governed document extraction, PDF creation, LibreOffice conversion, packaged
+approved trained document skill discovery, bounded Metabase live health, and
+governed Metabase view/card/dashboard provisioning. It still does not silently
+install dependencies, expose memory or secrets, claim platform support, or
+perform production installer/update work.
+
 ## Exit Statement
 
 Phase 3 exits with a cross-profile dependency/readiness foundation in place.
@@ -129,7 +132,7 @@ available, missing, optional, customer-managed, disabled, unsupported, or
 unknown, and can do so from a clean installed package without leaking secrets
 or silently installing software.
 
-The next product phase can begin implementing real Metabase and document
-capability workflows on top of these readiness contracts while preserving the
-Phase 3 boundaries: explicit dependencies, local governance, customer control,
-secret-safe diagnostics, package verification, and no false support claims.
+Final V2 Phase 3 builds real Metabase and document capability workflows on top
+of these readiness contracts while preserving the same boundaries: explicit
+dependencies, local governance, customer control, secret-safe diagnostics,
+package verification, and no false support claims.

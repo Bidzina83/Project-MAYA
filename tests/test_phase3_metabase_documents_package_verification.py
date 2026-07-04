@@ -17,9 +17,16 @@ class TestPhase3MetabaseDocumentsPackageVerification(unittest.TestCase):
             "documents.documents-outputs",
             "documents.pdf-extraction",
             "documents.pdf-creation",
+            "documents.libreoffice-conversion",
+            "convert_document",
             "metabase.lifecycle",
             "last-applied-plan.json",
+            "dashboards.json",
             "metabase.provisioning",
+            "GovernedMetabaseViewSpec",
+            "MetabaseDashboardSpec",
+            "packaged_document_skill_status",
+            "skills.documents.pdf",
         ):
             self.assertIn(expected, verifier)
 

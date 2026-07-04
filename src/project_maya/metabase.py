@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping
@@ -15,6 +17,59 @@ from .governance import ActionAuthorizationGateway, ActionDeniedError, ActionReq
 
 class MetabaseCapabilityError(RuntimeError):
     """Raised when a Metabase capability operation cannot be completed."""
+
+
+@dataclass(frozen=True)
+class GovernedMetabaseViewSpec:
+    name: str
+    source_name: str
+    engine: str
+    status: str = "planned"
+
+    def redacted_summary(self) -> dict[str, str]:
+        return {
+            "name": self.name,
+            "source_name": self.source_name,
+            "engine": self.engine,
+            "status": self.status,
+            "least_privilege": "true",
+            "raw_memory": "excluded",
+            "prompts": "excluded",
+            "secrets": "excluded",
+            "files": "excluded",
+        }
+
+
+@dataclass(frozen=True)
+class MetabaseDashboardCardSpec:
+    name: str
+    view_name: str
+    visualization: str
+    status: str = "planned"
+
+    def redacted_summary(self) -> dict[str, str]:
+        return {
+            "name": self.name,
+            "view_name": self.view_name,
+            "visualization": self.visualization,
+            "status": self.status,
+        }
+
+
+@dataclass(frozen=True)
+class MetabaseDashboardSpec:
+    name: str
+    collection: str
+    cards: tuple[MetabaseDashboardCardSpec, ...]
+    status: str = "planned"
+
+    def redacted_summary(self) -> dict[str, object]:
+        return {
+            "name": self.name,
+            "collection": self.collection,
+            "status": self.status,
+            "cards": [card.redacted_summary() for card in self.cards],
+        }
 
 
 @dataclass(frozen=True)
@@ -55,6 +110,8 @@ class MetabaseProvisioningPlan:
     deployment: str
     apply: bool
     steps: tuple[MetabaseProvisioningStep, ...]
+    views: tuple[GovernedMetabaseViewSpec, ...] = ()
+    dashboards: tuple[MetabaseDashboardSpec, ...] = ()
     network_used: bool = False
 
     def redacted_summary(self) -> dict[str, object]:
@@ -71,6 +128,10 @@ class MetabaseProvisioningPlan:
                     "metadata": dict(step.metadata),
                 }
                 for step in self.steps
+            ],
+            "views": [view.redacted_summary() for view in self.views],
+            "dashboards": [
+                dashboard.redacted_summary() for dashboard in self.dashboards
             ],
         }
 
@@ -99,6 +160,7 @@ def validate_metabase_health(
     config: MayaConfig,
     *,
     live: bool = False,
+    timeout_seconds: float = 2.0,
 ) -> MetabaseHealth:
     _require_metabase_profile(config)
     metabase = config.metabase
@@ -117,17 +179,27 @@ def validate_metabase_health(
         status = "not_ready"
     else:
         status = "ready"
-    live_check = "disabled"
+    live_check = "not_requested"
+    network_used = False
+    live_metadata: dict[str, str] = {}
     if live:
-        live_check = "deferred"
-        status = "live_check_deferred" if status == "ready" else status
+        network_used = True
+        if status == "ready":
+            live_status, live_metadata = _bounded_live_health(
+                metabase.endpoint,
+                timeout_seconds=timeout_seconds,
+            )
+            live_check = live_status
+            status = "ready" if live_status == "reachable" else "live_unavailable"
+        else:
+            live_check = "skipped_not_ready"
     return MetabaseHealth(
         status=status,
         deployment=metabase.deployment,
         endpoint_state=endpoint_state,
         application_database=app_db_state,
         analytics_sources=len(metabase.analytics_sources),
-        network_used=False,
+        network_used=network_used,
         live_check=live_check,
         metadata={
             "memory_exposed": "false",
@@ -137,6 +209,7 @@ def validate_metabase_health(
                 and metabase.application_database.credential_ref
                 else "missing"
             ),
+            **live_metadata,
         },
     )
 
@@ -167,6 +240,8 @@ def inspect_metabase_lifecycle(config: MayaConfig) -> MetabaseLifecycleState:
 def plan_metabase_provisioning(config: MayaConfig) -> MetabaseProvisioningPlan:
     health = validate_metabase_health(config)
     steps: list[MetabaseProvisioningStep] = []
+    views = _governed_views(config)
+    dashboards = _dashboard_specs(views)
     steps.append(
         MetabaseProvisioningStep(
             action="validate-application-database",
@@ -199,10 +274,26 @@ def plan_metabase_provisioning(config: MayaConfig) -> MetabaseProvisioningPlan:
         )
     steps.append(
         MetabaseProvisioningStep(
+            action="plan-governed-views",
+            target="views:approved-analytics-sources",
+            status="planned" if views else "blocked",
+            metadata={
+                "view_count": str(len(views)),
+                "least_privilege": "true",
+                "raw_memory": "excluded",
+                "prompts": "excluded",
+                "secrets": "excluded",
+                "files": "excluded",
+            },
+        )
+    )
+    steps.append(
+        MetabaseProvisioningStep(
             action="plan-governed-dashboard",
             target="collection:maya-operational",
-            status="planned" if health.status in {"ready", "live_check_deferred"} else "blocked",
+            status="planned" if health.status == "ready" and dashboards else "blocked",
             metadata={
+                "dashboard_count": str(len(dashboards)),
                 "raw_memory": "excluded",
                 "prompts": "excluded",
                 "secrets": "excluded",
@@ -218,6 +309,8 @@ def plan_metabase_provisioning(config: MayaConfig) -> MetabaseProvisioningPlan:
         deployment=config.metabase.deployment,
         apply=False,
         steps=tuple(steps),
+        views=views,
+        dashboards=dashboards,
         network_used=False,
     )
 
@@ -277,9 +370,36 @@ def apply_metabase_provisioning(
             )
             for step in plan.steps
         ),
+        views=tuple(
+            GovernedMetabaseViewSpec(
+                name=view.name,
+                source_name=view.source_name,
+                engine=view.engine,
+                status="applied",
+            )
+            for view in plan.views
+        ),
+        dashboards=tuple(
+            MetabaseDashboardSpec(
+                name=dashboard.name,
+                collection=dashboard.collection,
+                cards=tuple(
+                    MetabaseDashboardCardSpec(
+                        name=card.name,
+                        view_name=card.view_name,
+                        visualization=card.visualization,
+                        status="applied",
+                    )
+                    for card in dashboard.cards
+                ),
+                status="applied",
+            )
+            for dashboard in plan.dashboards
+        ),
         network_used=False,
     )
     write_metabase_provisioning_plan(config, applied, filename="last-applied-plan.json")
+    write_metabase_provisioning_plan(config, applied, filename="dashboards.json")
     return applied
 
 
@@ -310,6 +430,67 @@ def _endpoint_state(endpoint: str | None) -> str:
     if host in {"127.0.0.1", "localhost", "::1"}:
         return "loopback_configured"
     return "remote_configured"
+
+
+def _bounded_live_health(
+    endpoint: str | None,
+    *,
+    timeout_seconds: float,
+) -> tuple[str, dict[str, str]]:
+    if not endpoint:
+        return "skipped_not_ready", {"live_error": "endpoint_missing"}
+    url = endpoint.rstrip("/") + "/api/health"
+    try:
+        with urllib.request.urlopen(url, timeout=timeout_seconds) as response:
+            status = getattr(response, "status", 0)
+            if 200 <= int(status) < 500:
+                return "reachable", {"live_endpoint": "configured"}
+    except (OSError, urllib.error.URLError, ValueError):
+        return "unreachable", {"live_endpoint": "configured"}
+    return "unreachable", {"live_endpoint": "configured"}
+
+
+def _governed_views(config: MayaConfig) -> tuple[GovernedMetabaseViewSpec, ...]:
+    return tuple(
+        GovernedMetabaseViewSpec(
+            name=f"maya_{_safe_identifier(source.name)}_governed",
+            source_name=source.name,
+            engine=source.engine,
+        )
+        for source in config.metabase.analytics_sources
+    )
+
+
+def _dashboard_specs(
+    views: tuple[GovernedMetabaseViewSpec, ...],
+) -> tuple[MetabaseDashboardSpec, ...]:
+    if not views:
+        return ()
+    cards = tuple(
+        MetabaseDashboardCardSpec(
+            name=f"{view.source_name} overview",
+            view_name=view.name,
+            visualization="table",
+        )
+        for view in views
+    )
+    return (
+        MetabaseDashboardSpec(
+            name="Maya Operational Overview",
+            collection="maya-operational",
+            cards=cards,
+        ),
+    )
+
+
+def _safe_identifier(value: str) -> str:
+    normalized = "".join(
+        char.lower() if char.isalnum() else "_"
+        for char in value.strip()
+    ).strip("_")
+    if not normalized:
+        raise MetabaseCapabilityError("analytics source name is required")
+    return normalized
 
 
 def _path_state(path: Path) -> str:

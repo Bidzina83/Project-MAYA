@@ -47,6 +47,7 @@ REQUIRED_COMMANDS = (
     "metabase",
     "setup",
     "health",
+    "skills",
 )
 
 
@@ -564,8 +565,9 @@ def _verify_installed_skill_allowlist_surfaces(
                 "assert len(skills) == 1; "
                 "skill = skills[0]; "
                 "assert skill.skill_id == 'documents/pdf'; "
-                "assert skill.source_path == 'skills/pdf/SKILL.md'; "
+                "assert skill.source_path == 'packaged_skills/pdf/SKILL.md'; "
                 "assert 'documents.extract-text' in skill.capabilities; "
+                "assert 'documents.convert' in skill.capabilities; "
                 "print('document-skill-allowlist-ready')"
             ),
         ],
@@ -610,6 +612,11 @@ def _verify_installed_phase3_metabase_document_surfaces(
                         "decision": "allow",
                     },
                     {
+                        "capability": "documents.convert",
+                        "operation": "convert",
+                        "decision": "allow",
+                    },
+                    {
                         "capability": "metabase.apply-provision",
                         "operation": "apply-provision",
                         "decision": "allow",
@@ -628,10 +635,17 @@ def _verify_installed_phase3_metabase_document_surfaces(
             str(python),
             "-c",
             (
-                "from project_maya.documents import inspect_document; "
-                "from project_maya.metabase import plan_metabase_provisioning; "
+                "from project_maya.documents import inspect_document, convert_document; "
+                "from project_maya.metabase import ("
+                "GovernedMetabaseViewSpec, MetabaseDashboardSpec, "
+                "plan_metabase_provisioning); "
+                "from project_maya.skills import packaged_document_skill_status; "
                 "assert callable(inspect_document); "
+                "assert callable(convert_document); "
+                "assert GovernedMetabaseViewSpec; "
+                "assert MetabaseDashboardSpec; "
                 "assert callable(plan_metabase_provisioning); "
+                "assert packaged_document_skill_status()[0].discoverable; "
                 "print('phase3-metabase-documents-importable')"
             ),
         ],
@@ -793,8 +807,13 @@ def _verify_installed_phase3_metabase_document_surfaces(
     applied_path = data_dir / "metabase" / "provisioning" / "last-applied-plan.json"
     if not applied_path.is_file():
         raise RuntimeError("installed Metabase applied plan file missing")
+    dashboard_path = data_dir / "metabase" / "provisioning" / "dashboards.json"
+    if not dashboard_path.is_file():
+        raise RuntimeError("installed Metabase dashboards.json file missing")
     if "secret://metabase" in applied_path.read_text(encoding="utf-8"):
         raise RuntimeError("installed Metabase applied plan printed a secret ref")
+    if "secret://metabase" in dashboard_path.read_text(encoding="utf-8"):
+        raise RuntimeError("installed Metabase dashboard plan printed a secret ref")
     doctor_result = _run_allow_exit(
         [
             str(python),
@@ -814,14 +833,31 @@ def _verify_installed_phase3_metabase_document_surfaces(
         "documents.documents-outputs",
         "documents.pdf-extraction",
         "documents.pdf-creation",
+        "documents.libreoffice-conversion",
         "metabase.health",
         "metabase.lifecycle",
         "metabase.provisioning",
+        "skills.documents.pdf",
     ):
         if expected not in doctor_result.stdout:
             raise RuntimeError(f"installed doctor missing V2 Phase 3 check: {expected}")
     if "secret://metabase" in doctor_result.stdout:
         raise RuntimeError("installed V2 Phase 3 doctor printed a secret ref")
+    skills_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "skills",
+            "status",
+            "--config",
+            str(config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    if "documents/pdf" not in skills_result.stdout:
+        raise RuntimeError("installed skills status omitted packaged document skill")
 
 
 def _verify_installed_reset_integration_cli(python: Path, work_dir: Path) -> None:

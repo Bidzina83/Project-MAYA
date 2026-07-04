@@ -13,10 +13,10 @@ class TestPhase3MetabaseDocumentsClosure(unittest.TestCase):
             "2. Document capability core",
             "3. Document governance and audit",
             "4. Document CLI/API surface",
-            "5. Skill inclusion boundary for documents",
+            "5. Packaged trained document skill",
             "6. Metabase integration contract",
             "7. Metabase client and health",
-            "8. Metabase provisioning foundation",
+            "8. Governed Metabase dashboard provisioning",
             "9. Metabase CLI surface",
             "10. Doctor, repair, backup, and package verification",
             "11. Documentation and closure",
@@ -26,6 +26,7 @@ class TestPhase3MetabaseDocumentsClosure(unittest.TestCase):
         for expected in (
             "src/project_maya/documents.py",
             "src/project_maya/metabase.py",
+            "src/project_maya/packaged_skills/pdf/SKILL.md",
             "docs/architecture/phase3_document_capability.md",
             "docs/architecture/phase3_document_capability_hardening.md",
             "docs/architecture/phase3_document_skill_allowlist.md",
@@ -39,18 +40,28 @@ class TestPhase3MetabaseDocumentsClosure(unittest.TestCase):
         ):
             self.assertIn(expected, closure)
 
-    def test_phase3_metabase_documents_scope_preserves_non_goals(self):
+    def test_phase3_metabase_documents_scope_preserves_v2_core_capabilities(self):
         scope = Path("docs/architecture/phase3_metabase_documents_scope.md").read_text(
+            encoding="utf-8"
+        )
+        closure = Path("docs/architecture/phase3_metabase_documents_closure.md").read_text(
             encoding="utf-8"
         )
 
         for expected in (
-            "silently install",
-            "bulk-package trained Maya skills",
-            "live Metabase dashboard creation",
+            "governed views",
+            "dashboards",
+            "LibreOffice",
+            "trained document skill",
             "claim platform support",
         ):
-            self.assertIn(expected, scope)
+            self.assertIn(expected, scope + closure)
+        for forbidden in (
+            "package trained Maya skills;",
+            "automate Microsoft Office or LibreOffice conversion",
+            "perform live Metabase dashboard creation by default",
+        ):
+            self.assertNotIn(forbidden, scope + closure)
 
     def test_phase3_metabase_documents_closure_records_local_api_deferral(self):
         closure = Path("docs/architecture/phase3_metabase_documents_closure.md").read_text(

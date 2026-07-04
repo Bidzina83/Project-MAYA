@@ -5,6 +5,8 @@ from __future__ import annotations
 import html
 import importlib
 import importlib.util
+import shutil
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping
@@ -217,6 +219,87 @@ def create_pdf(
     )
 
 
+def convert_document(
+    config: MayaConfig,
+    source: Path,
+    *,
+    output: Path,
+    output_format: str,
+    gateway: ActionAuthorizationGateway,
+    actor_id: str = "local-user",
+    audit_sink: AuditSink | None = None,
+    data_classification: str = "internal",
+    idempotency_key: str | None = None,
+) -> DocumentOperationResult:
+    _require_documents_profile(config)
+    source_path = _resolve_document_path(config, source)
+    _require_supported_source(source_path)
+    normalized_format = output_format.lower()
+    if normalized_format not in {"pdf", "txt", "docx"}:
+        raise DocumentCapabilityError("convert output format must be pdf, txt, or docx")
+    output_path = _resolve_document_path(
+        config,
+        output,
+        must_exist=False,
+        default_subdir="outputs",
+    )
+    if output_path.suffix.lower().removeprefix(".") != normalized_format:
+        raise DocumentCapabilityError("convert output extension must match format")
+    _authorize_document_action(
+        gateway,
+        audit_sink or NullAuditSink(),
+        actor_id=actor_id,
+        operation="convert",
+        source_ref=_redacted_ref(config, source_path),
+        output_ref=_redacted_ref(config, output_path),
+        file_type=_file_type(source_path),
+        data_classification=data_classification,
+        idempotency_key=idempotency_key,
+        mutation=True,
+    )
+    soffice = shutil.which("soffice") or shutil.which("libreoffice")
+    if soffice is None:
+        raise DocumentDependencyUnavailable(
+            "LibreOffice soffice is required for document conversion"
+        )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    completed = subprocess.run(
+        [
+            soffice,
+            "--headless",
+            "--convert-to",
+            normalized_format,
+            "--outdir",
+            str(output_path.parent),
+            str(source_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    if completed.returncode != 0:
+        raise DocumentCapabilityError("LibreOffice conversion failed")
+    generated = output_path.parent / f"{source_path.stem}.{normalized_format}"
+    if generated != output_path and generated.exists():
+        generated.replace(output_path)
+    if not output_path.is_file():
+        raise DocumentCapabilityError("LibreOffice conversion did not produce output")
+    return DocumentOperationResult(
+        operation="convert",
+        status="converted",
+        source_ref=_redacted_ref(config, source_path),
+        output_ref=_redacted_ref(config, output_path),
+        file_type=_file_type(source_path),
+        bytes_read=source_path.stat().st_size,
+        bytes_written=output_path.stat().st_size,
+        metadata={
+            "backend": "libreoffice",
+            "format": normalized_format,
+        },
+    )
+
+
 def document_capability_checks(config: MayaConfig) -> tuple[DocumentOperationResult, ...]:
     if ComponentProfile.DOCUMENTS not in config.runtime.enabled_profiles:
         return ()
@@ -260,6 +343,16 @@ def document_capability_checks(config: MayaConfig) -> tuple[DocumentOperationRes
             },
         )
     )
+    results.append(
+        DocumentOperationResult(
+            operation="libreoffice-conversion",
+            status="available" if _soffice_available() else "missing_required",
+            metadata={
+                "dependency": "soffice",
+                "profile": ComponentProfile.DOCUMENTS.value,
+            },
+        )
+    )
     return tuple(results)
 
 
@@ -296,8 +389,21 @@ def _dependency_status(module_name: str) -> str:
     return "available" if importlib.util.find_spec(module_name) is not None else "missing_required"
 
 
+def _soffice_available() -> bool:
+    return shutil.which("soffice") is not None or shutil.which("libreoffice") is not None
+
+
 def _require_supported_source(path: Path) -> None:
-    if _file_type(path) not in {"pdf", "txt", "md", "markdown"}:
+    if _file_type(path) not in {
+        "pdf",
+        "txt",
+        "md",
+        "markdown",
+        "doc",
+        "docx",
+        "odt",
+        "rtf",
+    }:
         raise DocumentCapabilityError("unsupported document type")
 
 

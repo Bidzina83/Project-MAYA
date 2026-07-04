@@ -13,6 +13,7 @@ from project_maya import (
     GovernanceDecision,
     LocalJsonlAuditSink,
     config_from_mapping,
+    convert_document,
     create_pdf,
     extract_pdf_text,
     inspect_document,
@@ -136,6 +137,66 @@ class TestPhase4Documents(unittest.TestCase):
 
             self.assertFalse(output.exists())
 
+    def test_convert_document_rejects_paths_outside_documents_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp) / "maya-data"
+            outside = Path(tmp) / "outside.docx"
+            outside.write_text("outside", encoding="utf-8")
+
+            with self.assertRaises(DocumentCapabilityError):
+                convert_document(
+                    _config(data_dir),
+                    outside,
+                    output=Path("out.pdf"),
+                    output_format="pdf",
+                    gateway=Gateway(),
+                )
+
+    def test_convert_document_denied_before_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp) / "maya-data"
+            source = data_dir / "documents" / "input.docx"
+            source.parent.mkdir(parents=True)
+            source.write_text("content", encoding="utf-8")
+            output = data_dir / "documents" / "outputs" / "out.pdf"
+
+            with self.assertRaises(PermissionError):
+                convert_document(
+                    _config(data_dir),
+                    source,
+                    output=Path("out.pdf"),
+                    output_format="pdf",
+                    gateway=Gateway(GovernanceDecision.DENY),
+                )
+
+            self.assertFalse(output.exists())
+
+    def test_convert_document_uses_libreoffice_and_writes_outputs_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp) / "maya-data"
+            source = data_dir / "documents" / "input.docx"
+            source.parent.mkdir(parents=True)
+            source.write_text("content", encoding="utf-8")
+
+            def fake_run(command, **kwargs):
+                output_dir = Path(command[command.index("--outdir") + 1])
+                (output_dir / "input.pdf").write_bytes(b"%PDF-1.4\n")
+                return mock.Mock(returncode=0)
+
+            with mock.patch("project_maya.documents.shutil.which", return_value="soffice"):
+                with mock.patch("project_maya.documents.subprocess.run", side_effect=fake_run):
+                    result = convert_document(
+                        _config(data_dir),
+                        source,
+                        output=Path("converted.pdf"),
+                        output_format="pdf",
+                        gateway=Gateway(),
+                    )
+
+        self.assertEqual(result.status, "converted")
+        self.assertIn("documents/outputs/converted.pdf", result.output_ref)
+        self.assertEqual(result.metadata["backend"], "libreoffice")
+
     @unittest.skipUnless(
         importlib.util.find_spec("pypdf") is not None
         and importlib.util.find_spec("reportlab") is not None,
@@ -214,6 +275,7 @@ class TestPhase4Documents(unittest.TestCase):
         self.assertIn("documents.documents-outputs", checks)
         self.assertIn("documents.pdf-extraction", checks)
         self.assertIn("documents.pdf-creation", checks)
+        self.assertIn("documents.libreoffice-conversion", checks)
         self.assertNotIn("secret://", checks["documents.pdf-extraction"].message)
 
 
