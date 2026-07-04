@@ -25,6 +25,7 @@ class UpdateStatus:
     rollback_version: str | None = None
     signed_manifest: bool = False
     network_used: bool = False
+    mutation: bool = False
     action_required: str | None = None
 
 

@@ -7,6 +7,7 @@ import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from .config import MayaConfig, config_to_mapping
 
@@ -23,6 +24,31 @@ class RestoreError(RuntimeError):
 class BackupResult:
     archive_path: Path
     files: int
+    manifest: "BackupManifest"
+
+
+@dataclass(frozen=True)
+class BackupManifest:
+    schema_version: int
+    created_at: str
+    instance_id: str
+    files: int
+    included_roots: tuple[str, ...]
+    excluded_roots: tuple[str, ...]
+    package_version: str | None = None
+    runtime_version: str | None = None
+
+    def redacted_summary(self) -> dict[str, object]:
+        return {
+            "schema_version": self.schema_version,
+            "created_at": self.created_at,
+            "instance_id": self.instance_id,
+            "files": self.files,
+            "included_roots": list(self.included_roots),
+            "excluded_roots": list(self.excluded_roots),
+            "package_version": self.package_version,
+            "runtime_version": self.runtime_version,
+        }
 
 
 @dataclass(frozen=True)
@@ -31,6 +57,20 @@ class RestoreResult:
     destination: Path
     files: int
     dry_run: bool
+
+
+@dataclass(frozen=True)
+class BackupInspection:
+    archive_path: Path
+    manifest: BackupManifest
+    members: int
+
+    def redacted_summary(self) -> dict[str, object]:
+        return {
+            "archive": str(self.archive_path),
+            "members": self.members,
+            "manifest": self.manifest.redacted_summary(),
+        }
 
 
 def create_local_backup(
@@ -52,6 +92,7 @@ def create_local_backup(
     archive_path.parent.mkdir(parents=True, exist_ok=True)
 
     files = 0
+    archived_files: list[Path] = []
     temporary = archive_path.with_suffix(archive_path.suffix + ".tmp")
     try:
         with zipfile.ZipFile(
@@ -68,6 +109,14 @@ def create_local_backup(
             for path in _iter_backup_files(data_dir):
                 archive.write(path, _archive_name(data_dir, path))
                 files += 1
+                archived_files.append(path)
+            manifest = _build_manifest(config, archived_files, files + 1)
+            archive.writestr(
+                "maya-backup-manifest.json",
+                json.dumps(manifest.redacted_summary(), indent=2, sort_keys=True)
+                + "\n",
+            )
+            files += 1
         temporary.replace(archive_path)
     except Exception as exc:
         try:
@@ -76,7 +125,22 @@ def create_local_backup(
             pass
         raise BackupError("backup creation failed") from exc
 
-    return BackupResult(archive_path=archive_path, files=files)
+    return BackupResult(archive_path=archive_path, files=files, manifest=manifest)
+
+
+def inspect_backup_archive(archive_path: Path) -> BackupInspection:
+    """Inspect a local Maya backup archive without extracting it."""
+
+    source = archive_path.resolve()
+    if not source.is_file():
+        raise RestoreError("backup archive does not exist")
+    try:
+        with zipfile.ZipFile(source) as archive:
+            members = _restore_members(archive)
+            manifest = _read_manifest(archive)
+    except zipfile.BadZipFile as exc:
+        raise RestoreError("backup archive is unreadable") from exc
+    return BackupInspection(archive_path=source, manifest=manifest, members=len(members))
 
 
 def restore_local_backup(
@@ -167,6 +231,8 @@ def _restore_members(archive: zipfile.ZipFile) -> list[str]:
         if name == "maya-config.json":
             members.append(name)
             continue
+        if name == "maya-backup-manifest.json":
+            continue
         if name.startswith("maya-data/"):
             _validate_relative_archive_name(name.removeprefix("maya-data/"))
             members.append(name)
@@ -174,12 +240,16 @@ def _restore_members(archive: zipfile.ZipFile) -> list[str]:
         raise RestoreError("backup archive contains unsupported paths")
     if "maya-config.json" not in members:
         raise RestoreError("backup archive is missing maya-config.json")
+    if "maya-backup-manifest.json" not in archive.namelist():
+        raise RestoreError("backup archive is missing maya-backup-manifest.json")
     return members
 
 
 def _restore_target(destination: Path, name: str) -> Path:
     if name == "maya-config.json":
         relative = Path("config") / "maya-config.json"
+    elif name == "maya-backup-manifest.json":
+        relative = Path("backup") / "maya-backup-manifest.json"
     else:
         relative = Path(name.removeprefix("maya-data/"))
     path = (destination / relative).resolve()
@@ -193,3 +263,66 @@ def _validate_relative_archive_name(name: str) -> None:
     parts = Path(name).parts
     if not parts or any(part in {"", ".", ".."} for part in parts):
         raise RestoreError("backup archive contains unsafe paths")
+
+
+def _build_manifest(
+    config: MayaConfig,
+    archived_files: list[Path],
+    files: int,
+) -> BackupManifest:
+    roots = sorted(
+        {
+            f"maya-data/{path.relative_to(config.deployment.data_dir.resolve()).parts[0]}"
+            for path in archived_files
+            if path.relative_to(config.deployment.data_dir.resolve()).parts
+        }
+    )
+    return BackupManifest(
+        schema_version=1,
+        created_at=datetime.now(timezone.utc).isoformat(),
+        instance_id=config.product.instance_id,
+        files=files,
+        included_roots=("maya-config.json", *roots),
+        excluded_roots=_excluded_roots(),
+        package_version=None,
+        runtime_version=config.runtime.hermes_runtime_version,
+    )
+
+
+def _read_manifest(archive: zipfile.ZipFile) -> BackupManifest:
+    if "maya-backup-manifest.json" not in archive.namelist():
+        raise RestoreError("backup archive is missing maya-backup-manifest.json")
+    try:
+        raw: Any = json.loads(
+            archive.read("maya-backup-manifest.json").decode("utf-8")
+        )
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RestoreError("backup manifest is unreadable") from exc
+    if not isinstance(raw, dict):
+        raise RestoreError("backup manifest must be a JSON object")
+    return BackupManifest(
+        schema_version=int(raw.get("schema_version", 0)),
+        created_at=str(raw.get("created_at", "")),
+        instance_id=str(raw.get("instance_id", "")),
+        files=int(raw.get("files", 0)),
+        included_roots=tuple(str(item) for item in raw.get("included_roots", ())),
+        excluded_roots=tuple(str(item) for item in raw.get("excluded_roots", ())),
+        package_version=(
+            str(raw["package_version"])
+            if raw.get("package_version") is not None
+            else None
+        ),
+        runtime_version=(
+            str(raw["runtime_version"])
+            if raw.get("runtime_version") is not None
+            else None
+        ),
+    )
+
+
+def _excluded_roots() -> tuple[str, ...]:
+    return (
+        "maya-data/backups",
+        "maya-data/analytics/sources",
+        "maya-data/metabase/application",
+    )

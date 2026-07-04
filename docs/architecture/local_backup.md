@@ -16,6 +16,9 @@ and file count. Callers may provide an explicit destination with `--to`.
 The archive contains:
 
 - normalized `maya-config.json` with secret references, not secret values;
+- `maya-backup-manifest.json` with schema version, created time, instance id,
+  file count, included roots, excluded roots, and runtime/package version
+  metadata when available;
 - Maya-owned files under the configured local Maya data directory.
 
 The `backups/` directory itself is excluded so backup archives do not

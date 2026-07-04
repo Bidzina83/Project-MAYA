@@ -45,6 +45,8 @@ REQUIRED_COMMANDS = (
     "update",
     "documents",
     "metabase",
+    "setup",
+    "health",
 )
 
 
@@ -133,6 +135,7 @@ def main(argv: list[str] | None = None) -> int:
         _verify_installed_dependency_contract_surfaces(python, work_dir)
         _verify_installed_skill_allowlist_surfaces(python, work_dir)
         _verify_installed_phase4_capability_surfaces(python, work_dir)
+        _verify_installed_phase5_operator_surfaces(python, work_dir)
         _verify_installed_enterprise_byo_surfaces(python, work_dir)
         _verify_installed_phase2_profile_model_and_secret_surfaces(
             python,
@@ -873,6 +876,154 @@ def _verify_installed_update_cli(python: Path, work_dir: Path) -> None:
         raise RuntimeError("installed update CLI did not run check")
     if payload.get("network_used"):
         raise RuntimeError("installed update CLI used network")
+    if payload.get("mutation"):
+        raise RuntimeError("installed update CLI reported mutation")
+
+
+def _verify_installed_phase5_operator_surfaces(
+    python: Path,
+    work_dir: Path,
+) -> None:
+    data_dir = work_dir / "phase5-maya-data"
+    runtime_module = work_dir / "phase5_runtime.py"
+    runtime_module.write_text(
+        "\n".join(
+            [
+                "class Runtime:",
+                "    def __init__(self, **kwargs):",
+                "        self.session_id = 'phase5-runtime'",
+                "        self._memory_manager = type('MemoryManager', (), {'provider': type('Provider', (), {'shutdown': lambda self: None})()})()",
+                "    def chat(self, message):",
+                "        return 'phase5-ok'",
+                "    def shutdown_memory_provider(self):",
+                "        self._memory_manager.provider.shutdown()",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    config_path = work_dir / "phase5-config.json"
+    _write_minimal_config(
+        config_path,
+        data_dir,
+        hermes_factory="phase5_runtime:Runtime",
+    )
+    import_result = _run(
+        [
+            str(python),
+            "-c",
+            (
+                "from project_maya import plan_setup, summarize_health, "
+                "inspect_backup_archive; "
+                "print('phase5-operator-surfaces-importable')"
+            ),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    if "phase5-operator-surfaces-importable" not in import_result.stdout:
+        raise RuntimeError("installed Phase 5 surfaces were not importable")
+    setup_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "setup",
+            "plan",
+            "--config",
+            str(config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    setup_payload = json.loads(setup_result.stdout)
+    if setup_payload.get("operation") != "plan":
+        raise RuntimeError("installed setup plan did not run")
+    if "secret://" in setup_result.stdout:
+        raise RuntimeError("installed setup plan printed a secret ref")
+    init_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "setup",
+            "init",
+            "--config",
+            str(config_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    if not json.loads(init_result.stdout).get("dry_run"):
+        raise RuntimeError("installed setup init was not dry-run by default")
+    data_dir.mkdir(parents=True, exist_ok=True)
+    health_result = _run_allow_exit(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "health",
+            "summary",
+            "--config",
+            str(config_path),
+        ],
+        expected_exit=1,
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    health_payload = json.loads(health_result.stdout)
+    if "categories" not in health_payload:
+        raise RuntimeError("installed health summary omitted categories")
+    if health_payload.get("network_used"):
+        raise RuntimeError("installed health summary used network")
+    backup_path = work_dir / "phase5-backup.zip"
+    backup_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "backup",
+            "--config",
+            str(config_path),
+            "--to",
+            str(backup_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    if "maya-backup-manifest" in backup_result.stdout:
+        raise RuntimeError("installed backup printed archive internals")
+    inspect_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "backup",
+            "inspect",
+            "--from",
+            str(backup_path),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    inspect_payload = json.loads(inspect_result.stdout)
+    if inspect_payload["manifest"]["schema_version"] != 1:
+        raise RuntimeError("installed backup inspect omitted manifest")
+    restore_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "restore",
+            "--from",
+            str(backup_path),
+            "--to",
+            str(work_dir / "phase5-restore"),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    if json.loads(restore_result.stdout).get("status") != "dry_run":
+        raise RuntimeError("installed restore was not dry-run")
 
 
 def _verify_installed_enterprise_byo_surfaces(
@@ -1114,6 +1265,7 @@ def _write_minimal_config(
     include_metabase: bool = False,
     include_local_model: bool = False,
     include_messaging: bool = False,
+    hermes_factory: str | None = None,
 ) -> None:
     integrations = {}
     if include_google:
@@ -1198,6 +1350,7 @@ def _write_minimal_config(
                 "runtime": {
                     "hermes_compatibility": "phase1-test",
                     "enabled_profiles": list(enabled_profiles),
+                    "hermes_factory": hermes_factory,
                 },
                 "broker": {"mode": "disabled", "endpoint": None},
                 "llm": llm,

@@ -10,6 +10,7 @@ from project_maya import (
     RestoreError,
     config_from_mapping,
     create_local_backup,
+    inspect_backup_archive,
     restore_local_backup,
 )
 from project_maya.cli import main as maya_cli
@@ -41,13 +42,19 @@ class TestPhase1Backup(unittest.TestCase):
                 config_export = json.loads(
                     archive.read("maya-config.json").decode("utf-8")
                 )
+                manifest = json.loads(
+                    archive.read("maya-backup-manifest.json").decode("utf-8")
+                )
 
         self.assertEqual(result.archive_path, destination.resolve())
-        self.assertEqual(result.files, 2)
+        self.assertEqual(result.files, 3)
         self.assertIn("maya-config.json", names)
+        self.assertIn("maya-backup-manifest.json", names)
         self.assertIn("maya-data/memory/records.json", names)
         self.assertNotIn("maya-data/backups/old.zip", names)
         self.assertEqual(config_export["schema_version"], 2)
+        self.assertEqual(manifest["files"], 3)
+        self.assertIn("maya-data/backups", manifest["excluded_roots"])
         self.assertNotIn("token", json.dumps(config_export).lower())
 
     def test_create_local_backup_rejects_existing_destination(self):
@@ -96,9 +103,21 @@ class TestPhase1Backup(unittest.TestCase):
             payload = json.loads(output)
             self.assertEqual(payload["status"], "backed_up")
             self.assertEqual(payload["archive"], str(destination.resolve()))
+            self.assertEqual(payload["manifest"]["schema_version"], 1)
             self.assertTrue(destination.is_file())
             self.assertNotIn("sensitive memory", output)
             self.assertNotIn("secret://", output)
+
+            with patch("builtins.print") as printed:
+                inspect_code = maya_cli(["backup", "inspect", "--from", str(destination)])
+
+            self.assertEqual(inspect_code, 0)
+            inspect_payload = json.loads(printed.call_args.args[0])
+            self.assertEqual(
+                inspect_payload["manifest"]["schema_version"],
+                1,
+            )
+            self.assertNotIn("sensitive memory", printed.call_args.args[0])
 
     def test_backup_cli_reports_secret_safe_failure(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -175,6 +194,14 @@ class TestPhase1Backup(unittest.TestCase):
 
             with self.assertRaises(RestoreError):
                 restore_local_backup(archive_path, Path(tmp) / "restore")
+
+    def test_backup_inspect_rejects_malformed_archive(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            archive_path = Path(tmp) / "bad.zip"
+            archive_path.write_text("not a zip", encoding="utf-8")
+
+            with self.assertRaises(RestoreError):
+                inspect_backup_archive(archive_path)
 
     def test_restore_cli_dry_run_and_apply_are_secret_safe(self):
         with tempfile.TemporaryDirectory() as tmp:

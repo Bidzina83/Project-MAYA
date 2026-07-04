@@ -45,6 +45,10 @@ class TestPhase1Closure(unittest.TestCase):
             "restore",
             "migrate",
             "update",
+            "documents",
+            "metabase",
+            "setup",
+            "health",
         )
 
         self.assertEqual(REQUIRED_COMMANDS, expected)

@@ -25,6 +25,7 @@ class TestPhase1Update(unittest.TestCase):
             self.assertFalse(result.supported)
             self.assertEqual(result.status, "unavailable")
             self.assertFalse(result.network_used)
+            self.assertFalse(result.mutation)
 
     def test_check_updates_accepts_signed_local_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -50,6 +51,7 @@ class TestPhase1Update(unittest.TestCase):
             self.assertEqual(result.current_version, "1.0.0")
             self.assertEqual(result.available_version, "1.0.1")
             self.assertTrue(result.signed_manifest)
+            self.assertFalse(result.mutation)
 
     def test_check_updates_rejects_unsigned_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -67,6 +69,7 @@ class TestPhase1Update(unittest.TestCase):
             self.assertFalse(result.supported)
             self.assertEqual(result.status, "unsigned_manifest_rejected")
             self.assertFalse(result.network_used)
+            self.assertFalse(result.mutation)
 
     def test_rollback_update_reports_ready_for_signed_metadata(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -92,6 +95,7 @@ class TestPhase1Update(unittest.TestCase):
             self.assertEqual(result.status, "ready")
             self.assertEqual(result.rollback_version, "1.0.0")
             self.assertFalse(result.network_used)
+            self.assertFalse(result.mutation)
 
     def test_update_metadata_must_be_object(self):
         with tempfile.TemporaryDirectory() as tmp:
