@@ -22,6 +22,7 @@ from .backup import (
     RestoreResult,
     create_local_backup,
     inspect_backup_archive,
+    plan_restore_backup,
     restore_local_backup,
 )
 from .config import (
@@ -279,6 +280,7 @@ __all__ = [
     "build_platform_secret_store",
     "create_local_backup",
     "inspect_backup_archive",
+    "plan_restore_backup",
     "restore_local_backup",
     "repair_local_state",
     "reset_integration_state",

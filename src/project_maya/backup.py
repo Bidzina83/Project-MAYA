@@ -57,6 +57,21 @@ class RestoreResult:
     destination: Path
     files: int
     dry_run: bool
+    conflicts: int = 0
+    overwrite_required: bool = False
+    manifest_status: str = "valid"
+    destination_ref: str = "restore-destination"
+
+    def redacted_summary(self) -> dict[str, object]:
+        return {
+            "archive": "backup-archive",
+            "destination": self.destination_ref,
+            "files": self.files,
+            "dry_run": self.dry_run,
+            "conflicts": self.conflicts,
+            "overwrite_required": self.overwrite_required,
+            "manifest_status": self.manifest_status,
+        }
 
 
 @dataclass(frozen=True)
@@ -67,10 +82,49 @@ class BackupInspection:
 
     def redacted_summary(self) -> dict[str, object]:
         return {
-            "archive": str(self.archive_path),
+            "archive": "backup-archive",
             "members": self.members,
             "manifest": self.manifest.redacted_summary(),
         }
+
+
+def plan_restore_backup(
+    archive_path: Path,
+    destination: Path,
+    *,
+    allow_overwrite: bool = False,
+) -> RestoreResult:
+    """Plan a local Maya restore without extracting archive contents."""
+
+    source = archive_path.resolve()
+    target = destination.resolve()
+    if not source.is_file():
+        raise RestoreError("backup archive does not exist")
+    if target.exists() and not target.is_dir():
+        raise RestoreError("restore destination is not a directory")
+    try:
+        with zipfile.ZipFile(source) as archive:
+            members = _restore_members(archive)
+            _read_manifest(archive)
+            restore_plan = [
+                (_restore_target(target, name), name)
+                for name in members
+            ]
+    except zipfile.BadZipFile as exc:
+        raise RestoreError("backup archive is unreadable") from exc
+    conflicts = [
+        path for path, _ in restore_plan if path.exists() and not allow_overwrite
+    ]
+    return RestoreResult(
+        archive_path=source,
+        destination=target,
+        files=len(restore_plan),
+        dry_run=True,
+        conflicts=len(conflicts),
+        overwrite_required=bool(conflicts),
+        manifest_status="valid",
+        destination_ref="restore-destination",
+    )
 
 
 def create_local_backup(
@@ -161,6 +215,7 @@ def restore_local_backup(
 
     with zipfile.ZipFile(source) as archive:
         members = _restore_members(archive)
+        _read_manifest(archive)
         restore_plan = [
             (_restore_target(target, name), name)
             for name in members
@@ -176,6 +231,9 @@ def restore_local_backup(
                 destination=target,
                 files=len(restore_plan),
                 dry_run=True,
+                conflicts=len(conflicts),
+                overwrite_required=bool(conflicts),
+                manifest_status="valid",
             )
         for path, name in restore_plan:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -187,6 +245,9 @@ def restore_local_backup(
         destination=target,
         files=len(restore_plan),
         dry_run=False,
+        conflicts=0,
+        overwrite_required=False,
+        manifest_status="valid",
     )
 
 

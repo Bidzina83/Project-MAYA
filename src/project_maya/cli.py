@@ -13,6 +13,7 @@ from .backup import (
     RestoreError,
     create_local_backup,
     inspect_backup_archive,
+    plan_restore_backup,
     restore_local_backup,
 )
 from .bootstrap import build_local_product
@@ -669,7 +670,7 @@ def _repair(config_path: Path, *, apply: bool = False) -> int:
                         "action": action.action,
                         "category": action.category,
                         "hint": action.hint,
-                        "path": str(action.path),
+                        "target": _repair_target_ref(config, action.path),
                         "severity": action.severity,
                         "status": action.status,
                     }
@@ -1042,6 +1043,13 @@ def _restore(
     allow_overwrite: bool = False,
 ) -> int:
     try:
+        plan = plan_restore_backup(
+            archive_path,
+            destination,
+            allow_overwrite=allow_overwrite,
+        )
+        if plan.overwrite_required and not (apply and allow_overwrite):
+            raise RestoreError("restore destination contains existing files")
         result = restore_local_backup(
             archive_path,
             destination,
@@ -1061,17 +1069,9 @@ def _restore(
             )
         )
         return 1
-    print(
-        json.dumps(
-            {
-                "status": "dry_run" if result.dry_run else "restored",
-                "archive": str(result.archive_path),
-                "destination": str(result.destination),
-                "files": result.files,
-            },
-            sort_keys=True,
-        )
-    )
+    payload = result.redacted_summary()
+    payload["status"] = "dry_run" if result.dry_run else "restored"
+    print(json.dumps(payload, sort_keys=True))
     return 0
 
 
@@ -1152,6 +1152,16 @@ def _update(config_path: Path, *, rollback: bool = False) -> int:
         )
     )
     return 0
+
+
+def _repair_target_ref(config, path: Path) -> str:
+    root = config.deployment.data_dir.resolve()
+    resolved = path.resolve()
+    try:
+        relative = resolved.relative_to(root).as_posix()
+    except ValueError:
+        return "maya-data" if resolved == root else "external"
+    return f"maya-data/{relative}" if relative else "maya-data"
 
 
 def _documents(args) -> int:

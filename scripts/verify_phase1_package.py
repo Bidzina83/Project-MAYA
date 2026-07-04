@@ -949,7 +949,8 @@ def _verify_installed_phase4_operator_surfaces(
             "-c",
             (
                 "from project_maya import plan_setup, summarize_health, "
-                "inspect_backup_archive; "
+                "inspect_backup_archive, plan_restore_backup; "
+                "assert callable(plan_restore_backup); "
                 "print('phase4-operator-surfaces-importable')"
             ),
         ],
@@ -1060,6 +1061,71 @@ def _verify_installed_phase4_operator_surfaces(
     )
     if json.loads(restore_result.stdout).get("status") != "dry_run":
         raise RuntimeError("installed restore was not dry-run")
+    conflict_destination = work_dir / "phase4-restore-conflict"
+    conflict_file = conflict_destination / "config" / "maya-config.json"
+    conflict_file.parent.mkdir(parents=True, exist_ok=True)
+    conflict_file.write_text("existing", encoding="utf-8")
+    conflict_result = _run_allow_exit(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "restore",
+            "--from",
+            str(backup_path),
+            "--to",
+            str(conflict_destination),
+        ],
+        expected_exit=1,
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    if "restore_failed" not in conflict_result.stdout:
+        raise RuntimeError("installed restore conflict did not fail safely")
+    if str(conflict_destination) in conflict_result.stdout:
+        raise RuntimeError("installed restore conflict leaked destination path")
+    update_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "update",
+            "--config",
+            str(config_path),
+            "--check",
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    update_payload = json.loads(update_result.stdout)
+    if update_payload.get("network_used") or update_payload.get("mutation"):
+        raise RuntimeError("installed update readiness used network or mutation")
+    legacy_db = work_dir / "phase4-legacy-memory.sqlite"
+    migrated_db = work_dir / "phase4-migrated-memory.sqlite"
+    with closing(sqlite3.connect(legacy_db)) as conn:
+        conn.execute("CREATE TABLE memory_kv (key TEXT PRIMARY KEY, value TEXT)")
+        conn.execute("INSERT INTO memory_kv(key, value) VALUES (?, ?)", ("k", "v"))
+        conn.commit()
+    migrate_result = _run(
+        [
+            str(python),
+            "-m",
+            "project_maya.cli",
+            "migrate",
+            "--from",
+            str(legacy_db),
+            "--to",
+            str(migrated_db),
+            "--dry-run",
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+    migrate_payload = json.loads(migrate_result.stdout)
+    if not migrate_payload.get("dry_run"):
+        raise RuntimeError("installed Phase 4 migration was not dry-run")
+    if migrated_db.exists():
+        raise RuntimeError("installed Phase 4 migration dry-run wrote destination")
 
 
 def _verify_installed_enterprise_byo_surfaces(

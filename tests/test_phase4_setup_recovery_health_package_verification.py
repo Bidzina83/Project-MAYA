@@ -16,6 +16,11 @@ class TestPhase4SetupRecoveryHealthPackageVerification(unittest.TestCase):
             "backup",
             "inspect",
             "restore",
+            "plan_restore_backup",
+            "restore_failed",
+            "migrate",
+            "update",
+            "network_used",
             "mutation",
         ):
             self.assertIn(expected, verifier)

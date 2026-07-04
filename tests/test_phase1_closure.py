@@ -49,6 +49,7 @@ class TestPhase1Closure(unittest.TestCase):
             "metabase",
             "setup",
             "health",
+            "skills",
         )
 
         self.assertEqual(REQUIRED_COMMANDS, expected)
