@@ -1531,9 +1531,11 @@ def _redacted_data_ref(config, path: Path) -> str:
 def _print_payload(payload: dict[str, object], *, output_format: str = "json") -> None:
     redacted_payload = _redact_payload_for_output(payload)
     if output_format == "text":
-        sys.stdout.write(_text_payload(redacted_payload) + "\n")
+        redacted_output = _text_payload(redacted_payload)
+        print(redacted_output)
         return
-    sys.stdout.write(json.dumps(redacted_payload, sort_keys=True) + "\n")
+    redacted_output = json.dumps(redacted_payload, sort_keys=True)
+    print(redacted_output)
 
 
 def _redact_payload_for_output(value: Any) -> Any:
