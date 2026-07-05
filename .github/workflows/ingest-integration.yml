@@ -1,5 +1,11 @@
 name: ingest-integration
-on: [workflow_dispatch, pull_request]
+on:
+  workflow_dispatch:
+  pull_request:
+  workflow_call:
+    secrets:
+      OPENAI_API_KEY:
+        required: false
 
 permissions:
   contents: read

@@ -6,5 +6,7 @@ __pycache__/
 build/
 dist/
 .package_verify/
+.vscode/
+.gh-alerts/
 *.migration.report.json
 *.backup.sqlite

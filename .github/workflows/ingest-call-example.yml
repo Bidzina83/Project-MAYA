@@ -7,7 +7,5 @@ permissions:
 jobs:
   call-ingest:
     uses: Bidzina83/Project-MAYA/.github/workflows/ingest-integration.yml@main
-    with:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

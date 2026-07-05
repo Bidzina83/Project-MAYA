@@ -37,4 +37,4 @@ for root,_,files in os.walk('.github/workflows'):
                 errs+=1
 if errs:
     sys.exit(1)
-PY'
+PY
