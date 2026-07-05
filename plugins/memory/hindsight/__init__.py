@@ -71,6 +71,21 @@ _PROVIDER_DEFAULT_MODELS = {
     "openai_compatible": "your-model-name",
 }
 _SECRET_ENV_NAME_TERMS = ("key", "secret", "token", "password", "credential")
+_NON_SECRET_PROFILE_ENV_KEYS = frozenset(
+    {
+        "HINDSIGHT_API_LLM_PROVIDER",
+        "HINDSIGHT_API_LLM_MODEL",
+        "HINDSIGHT_API_LOG_LEVEL",
+        "HINDSIGHT_API_LLM_BASE_URL",
+        "HINDSIGHT_EMBED_DAEMON_IDLE_TIMEOUT",
+    }
+)
+_NON_SECRET_SETUP_ENV_KEYS = frozenset(
+    {
+        "HINDSIGHT_TIMEOUT",
+        "HINDSIGHT_IDLE_TIMEOUT",
+    }
+)
 
 
 def _parse_int_setting(value: Any, default: int) -> int:
@@ -88,31 +103,26 @@ def _is_secret_env_name(name: str) -> bool:
     return any(term in name.lower() for term in _SECRET_ENV_NAME_TERMS)
 
 
-def _non_secret_env_values(values: dict[str, str]) -> dict[str, str]:
+def _non_secret_env_values(
+    values: dict[str, str],
+    *,
+    allowed_keys: frozenset[str] | None = None,
+) -> dict[str, str]:
     return {
         key: value
         for key, value in values.items()
         if not _is_secret_env_name(key)
+        and (allowed_keys is None or key in allowed_keys)
     }
 
 
 def _merge_non_secret_env_lines(existing_lines: list[str], env_writes: dict[str, str]) -> list[str]:
-    env_writes = _non_secret_env_values(env_writes)
-    updated_keys = set()
-    new_lines = []
-    for line in existing_lines:
-        key_match = line.split("=", 1)[0].strip() if "=" in line and not line.startswith("#") else None
-        if key_match and key_match in env_writes:
-            new_lines.append(f"{key_match}={env_writes[key_match]}")
-            updated_keys.add(key_match)
-        elif key_match and _is_secret_env_name(key_match):
-            continue
-        else:
-            new_lines.append(line)
-    for key, value in env_writes.items():
-        if key not in updated_keys:
-            new_lines.append(f"{key}={value}")
-    return new_lines
+    del existing_lines
+    env_writes = _non_secret_env_values(
+        env_writes,
+        allowed_keys=_NON_SECRET_SETUP_ENV_KEYS,
+    )
+    return [f"{key}={value}" for key, value in env_writes.items()]
 
 
 def _check_local_runtime() -> tuple[bool, str | None]:
@@ -459,7 +469,10 @@ def _build_embedded_profile_env(config: dict[str, Any], *, llm_api_key: str | No
         env_values["HINDSIGHT_EMBED_DAEMON_IDLE_TIMEOUT"] = str(
             _parse_int_setting(idle_timeout, _DEFAULT_IDLE_TIMEOUT)
         )
-    return _non_secret_env_values(env_values)
+    return _non_secret_env_values(
+        env_values,
+        allowed_keys=_NON_SECRET_PROFILE_ENV_KEYS,
+    )
 
 
 def _embedded_profile_env_path(config: dict[str, Any]):
@@ -473,7 +486,8 @@ def _materialize_embedded_profile_env(config: dict[str, Any], *, llm_api_key: st
     profile_env = _embedded_profile_env_path(config)
     profile_env.parent.mkdir(parents=True, exist_ok=True)
     env_values = _non_secret_env_values(
-        _build_embedded_profile_env(config, llm_api_key=llm_api_key)
+        _build_embedded_profile_env(config, llm_api_key=llm_api_key),
+        allowed_keys=_NON_SECRET_PROFILE_ENV_KEYS,
     )
     profile_env.write_text(
         "".join(f"{key}={value}\n" for key, value in env_values.items()),

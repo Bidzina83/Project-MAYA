@@ -52,7 +52,7 @@ def test_embedded_profile_env_filters_secret_shaped_names(monkeypatch):
     assert env_values == {"HINDSIGHT_API_LLM_PROVIDER": "openai"}
 
 
-def test_env_merge_omits_existing_and_new_secret_shaped_names(monkeypatch):
+def test_env_merge_writes_only_allowed_non_secret_settings(monkeypatch):
     hindsight = _load_hindsight_plugin(monkeypatch)
 
     merged = hindsight._merge_non_secret_env_lines(
@@ -65,11 +65,11 @@ def test_env_merge_omits_existing_and_new_secret_shaped_names(monkeypatch):
             "HINDSIGHT_TIMEOUT": "120",
             "HINDSIGHT_LLM_TOKEN": "new-token",
             "HINDSIGHT_IDLE_TIMEOUT": "300",
+            "HINDSIGHT_API_LLM_PROVIDER": "openai",
         },
     )
 
     assert merged == [
-        "# existing comment",
         "HINDSIGHT_TIMEOUT=120",
         "HINDSIGHT_IDLE_TIMEOUT=300",
     ]

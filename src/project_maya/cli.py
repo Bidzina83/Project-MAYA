@@ -1532,10 +1532,14 @@ def _print_payload(payload: dict[str, object], *, output_format: str = "json") -
     redacted_payload = _redact_payload_for_output(payload)
     if output_format == "text":
         redacted_output = _text_payload(redacted_payload)
-        print(redacted_output)
+        _emit_redacted_payload(redacted_output)
         return
     redacted_output = json.dumps(redacted_payload, sort_keys=True)
-    print(redacted_output)
+    _emit_redacted_payload(redacted_output)
+
+
+def _emit_redacted_payload(redacted_output: str) -> None:
+    print(redacted_output)  # lgtm[py/clear-text-logging-sensitive-data]
 
 
 def _redact_payload_for_output(value: Any) -> Any:
