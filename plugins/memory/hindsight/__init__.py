@@ -96,6 +96,25 @@ def _non_secret_env_values(values: dict[str, str]) -> dict[str, str]:
     }
 
 
+def _merge_non_secret_env_lines(existing_lines: list[str], env_writes: dict[str, str]) -> list[str]:
+    env_writes = _non_secret_env_values(env_writes)
+    updated_keys = set()
+    new_lines = []
+    for line in existing_lines:
+        key_match = line.split("=", 1)[0].strip() if "=" in line and not line.startswith("#") else None
+        if key_match and key_match in env_writes:
+            new_lines.append(f"{key_match}={env_writes[key_match]}")
+            updated_keys.add(key_match)
+        elif key_match and _is_secret_env_name(key_match):
+            continue
+        else:
+            new_lines.append(line)
+    for key, value in env_writes.items():
+        if key not in updated_keys:
+            new_lines.append(f"{key}={value}")
+    return new_lines
+
+
 def _check_local_runtime() -> tuple[bool, str | None]:
     """Return whether local embedded Hindsight imports cleanly.
 
@@ -785,18 +804,7 @@ class HindsightMemoryProvider(MemoryProvider):
             existing_lines = []
             if env_path.exists():
                 existing_lines = env_path.read_text().splitlines()
-            updated_keys = set()
-            new_lines = []
-            for line in existing_lines:
-                key_match = line.split("=", 1)[0].strip() if "=" in line and not line.startswith("#") else None
-                if key_match and key_match in env_writes:
-                    new_lines.append(f"{key_match}={env_writes[key_match]}")
-                    updated_keys.add(key_match)
-                else:
-                    new_lines.append(line)
-            for k, v in env_writes.items():
-                if k not in updated_keys:
-                    new_lines.append(f"{k}={v}")
+            new_lines = _merge_non_secret_env_lines(existing_lines, env_writes)
             env_path.write_text("\n".join(new_lines) + "\n")
 
         if mode == "local_embedded":
@@ -1184,15 +1192,10 @@ class HindsightMemoryProvider(MemoryProvider):
             _client_version = pkg_version("hindsight-client")
         except Exception:
             pass
-        logger.info("Hindsight initialized: mode=%s, api_url=%s, budget=%s, memory_mode=%s, prefetch_method=%s, client=%s",
-                     self._mode, self._api_url, self._budget, self._memory_mode, self._prefetch_method, _client_version)
+        logger.info("Hindsight initialized with secret-safe runtime summary; client=%s", _client_version)
         if self._bank_id_template:
             logger.debug("Hindsight bank resolved from configured template")
-        logger.debug("Hindsight config: auto_retain=%s, auto_recall=%s, retain_every_n=%d, "
-                     "retain_async=%s, retain_context_present=%s, recall_max_tokens=%d, recall_max_input_chars=%d",
-                     self._auto_retain, self._auto_recall, self._retain_every_n_turns,
-                     self._retain_async, bool(self._retain_context),
-                     self._recall_max_tokens, self._recall_max_input_chars)
+        logger.debug("Hindsight runtime config loaded; sensitive values omitted")
 
         # For local mode, start the embedded daemon in the background so it
         # doesn't block the chat. Redirect stdout/stderr to a log file to

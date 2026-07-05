@@ -52,6 +52,29 @@ def test_embedded_profile_env_filters_secret_shaped_names(monkeypatch):
     assert env_values == {"HINDSIGHT_API_LLM_PROVIDER": "openai"}
 
 
+def test_env_merge_omits_existing_and_new_secret_shaped_names(monkeypatch):
+    hindsight = _load_hindsight_plugin(monkeypatch)
+
+    merged = hindsight._merge_non_secret_env_lines(
+        [
+            "# existing comment",
+            "HINDSIGHT_API_KEY=old-secret",
+            "HINDSIGHT_TIMEOUT=60",
+        ],
+        {
+            "HINDSIGHT_TIMEOUT": "120",
+            "HINDSIGHT_LLM_TOKEN": "new-token",
+            "HINDSIGHT_IDLE_TIMEOUT": "300",
+        },
+    )
+
+    assert merged == [
+        "# existing comment",
+        "HINDSIGHT_TIMEOUT=120",
+        "HINDSIGHT_IDLE_TIMEOUT=300",
+    ]
+
+
 def test_materialized_profile_env_never_writes_secret_shaped_names(monkeypatch, tmp_path):
     hindsight = _load_hindsight_plugin(monkeypatch)
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -81,4 +104,4 @@ def test_hindsight_debug_log_does_not_emit_retain_context_value(monkeypatch):
     source = Path(hindsight.__file__).read_text(encoding="utf-8")
 
     assert "retain_context=%s" not in source
-    assert "retain_context_present=%s" in source
+    assert "api_url=%s" not in source

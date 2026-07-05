@@ -655,8 +655,6 @@ def cmd_status(args) -> None:
         print(f"  Config error: {e}\n")
         return
 
-    api_key_state = "configured" if hcfg.api_key else "not configured"
-
     profile = _active_profile_name()
     profile_label = f" [{hcfg.host}]" if profile != "default" else ""
 
@@ -665,7 +663,7 @@ def cmd_status(args) -> None:
         print(f"  Profile:        {profile}")
     print(f"  Host:           {hcfg.host}")
     print(f"  Enabled:        {hcfg.enabled}")
-    print(f"  API key:        {api_key_state}")
+    print("  API key:        redacted")
     print(f"  Workspace:      {hcfg.workspace_id}")
 
     # Config paths — show where config was read from and where writes go
