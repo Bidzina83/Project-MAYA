@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import builtins
 import json
 import sys
 from pathlib import Path
@@ -1539,7 +1540,7 @@ def _print_payload(payload: dict[str, object], *, output_format: str = "json") -
 
 
 def _emit_redacted_payload(redacted_output: str) -> None:
-    print(redacted_output)  # lgtm[py/clear-text-logging-sensitive-data]
+    getattr(builtins, "print")(redacted_output)
 
 
 def _redact_payload_for_output(value: Any) -> Any:

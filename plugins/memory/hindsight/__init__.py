@@ -122,7 +122,17 @@ def _merge_non_secret_env_lines(existing_lines: list[str], env_writes: dict[str,
         env_writes,
         allowed_keys=_NON_SECRET_SETUP_ENV_KEYS,
     )
-    return [f"{key}={value}" for key, value in env_writes.items()]
+    new_lines = []
+    if "HINDSIGHT_TIMEOUT" in env_writes:
+        timeout = _parse_int_setting(env_writes.get("HINDSIGHT_TIMEOUT"), _DEFAULT_TIMEOUT)
+        new_lines.append(f"HINDSIGHT_TIMEOUT={timeout}")
+    if "HINDSIGHT_IDLE_TIMEOUT" in env_writes:
+        idle_timeout = _parse_int_setting(
+            env_writes.get("HINDSIGHT_IDLE_TIMEOUT"),
+            _DEFAULT_IDLE_TIMEOUT,
+        )
+        new_lines.append(f"HINDSIGHT_IDLE_TIMEOUT={idle_timeout}")
+    return new_lines
 
 
 def _check_local_runtime() -> tuple[bool, str | None]:
