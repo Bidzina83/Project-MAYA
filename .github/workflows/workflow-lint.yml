@@ -13,6 +13,8 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
+      - name: Install workflow lint dependency
+        run: python -m pip install pyyaml
       - name: Lint workflows
         run: |
           python - <<'PY'

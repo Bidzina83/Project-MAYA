@@ -28,7 +28,8 @@ jobs:
           python - <<PY
           import tomllib,sys
           try:
-              tomllib.loads(open('pyproject.toml','rb').read())
+              with open('pyproject.toml','rb') as fh:
+                  tomllib.load(fh)
               print('pyproject.toml is valid TOML')
           except Exception as e:
               print('TOML parse failed:', e, file=sys.stderr)
