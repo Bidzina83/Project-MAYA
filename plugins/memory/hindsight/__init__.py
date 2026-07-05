@@ -70,6 +70,7 @@ _PROVIDER_DEFAULT_MODELS = {
     "lmstudio": "local-model",
     "openai_compatible": "your-model-name",
 }
+_SECRET_ENV_NAME_TERMS = ("key", "secret", "token", "password", "credential")
 
 
 def _parse_int_setting(value: Any, default: int) -> int:
@@ -79,8 +80,20 @@ def _parse_int_setting(value: Any, default: int) -> int:
     try:
         return int(value)
     except (TypeError, ValueError):
-        logger.warning("Invalid integer Hindsight setting %r; using default %s", value, default)
+        logger.warning("Invalid integer Hindsight setting; using default %s", default)
         return default
+
+
+def _is_secret_env_name(name: str) -> bool:
+    return any(term in name.lower() for term in _SECRET_ENV_NAME_TERMS)
+
+
+def _non_secret_env_values(values: dict[str, str]) -> dict[str, str]:
+    return {
+        key: value
+        for key, value in values.items()
+        if not _is_secret_env_name(key)
+    }
 
 
 def _check_local_runtime() -> tuple[bool, str | None]:
@@ -427,7 +440,7 @@ def _build_embedded_profile_env(config: dict[str, Any], *, llm_api_key: str | No
         env_values["HINDSIGHT_EMBED_DAEMON_IDLE_TIMEOUT"] = str(
             _parse_int_setting(idle_timeout, _DEFAULT_IDLE_TIMEOUT)
         )
-    return env_values
+    return _non_secret_env_values(env_values)
 
 
 def _embedded_profile_env_path(config: dict[str, Any]):
@@ -440,7 +453,9 @@ def _materialize_embedded_profile_env(config: dict[str, Any], *, llm_api_key: st
     """Write the profile-scoped env file that standalone hindsight-embed uses."""
     profile_env = _embedded_profile_env_path(config)
     profile_env.parent.mkdir(parents=True, exist_ok=True)
-    env_values = _build_embedded_profile_env(config, llm_api_key=llm_api_key)
+    env_values = _non_secret_env_values(
+        _build_embedded_profile_env(config, llm_api_key=llm_api_key)
+    )
     profile_env.write_text(
         "".join(f"{key}={value}\n" for key, value in env_values.items()),
         encoding="utf-8",
@@ -1174,9 +1189,10 @@ class HindsightMemoryProvider(MemoryProvider):
         if self._bank_id_template:
             logger.debug("Hindsight bank resolved from configured template")
         logger.debug("Hindsight config: auto_retain=%s, auto_recall=%s, retain_every_n=%d, "
-                     "retain_async=%s, retain_context=%s, recall_max_tokens=%d, recall_max_input_chars=%d",
+                     "retain_async=%s, retain_context_present=%s, recall_max_tokens=%d, recall_max_input_chars=%d",
                      self._auto_retain, self._auto_recall, self._retain_every_n_turns,
-                     self._retain_async, self._retain_context, self._recall_max_tokens, self._recall_max_input_chars)
+                     self._retain_async, bool(self._retain_context),
+                     self._recall_max_tokens, self._recall_max_input_chars)
 
         # For local mode, start the embedded daemon in the background so it
         # doesn't block the chat. Redirect stdout/stderr to a log file to
