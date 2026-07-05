@@ -301,7 +301,7 @@ class TestHermesRuntimeInclusionScope(unittest.TestCase):
             "test_maya_run_cli_emits_runtime_and_model_egress_audit",
             "authorization.runtime",
             "authorization.model_egress",
-            "tests.test_hermes_governed_execution_smoke:SmokeAIAgent",
+            'f"{__name__}:SmokeAIAgent"',
         ):
             self.assertIn(expected, test_source)
 

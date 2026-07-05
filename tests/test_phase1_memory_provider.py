@@ -108,7 +108,7 @@ class TestPhase1MemoryProvider(unittest.TestCase):
                 self._memory_manager.provider.shutdown()
 
         with tempfile.TemporaryDirectory() as tmp:
-            module_path = "tests.test_phase1_memory_provider:FakeAIAgent"
+            module_path = f"{__name__}:FakeAIAgent"
             config_data = valid_config_mapping()
             config_data["deployment"]["data_dir"] = str(Path(tmp) / "maya-data")
             config_data["runtime"]["enabled_profiles"] = ["maya-core"]

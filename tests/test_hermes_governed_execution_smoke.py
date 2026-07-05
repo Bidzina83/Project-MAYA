@@ -141,9 +141,7 @@ def _write_smoke_config(tmp: Path) -> tuple[Path, Path]:
     config = valid_config_mapping()
     config["deployment"]["data_dir"] = str(data_dir)
     config["runtime"]["enabled_profiles"] = ["maya-core"]
-    config["runtime"][
-        "hermes_factory"
-    ] = "tests.test_hermes_governed_execution_smoke:SmokeAIAgent"
+    config["runtime"]["hermes_factory"] = f"{__name__}:SmokeAIAgent"
     config["runtime"]["hermes_runtime_version"] = "smoke-hermes"
     config["memory"]["retriever"] = "local_json"
     config["governance"]["policy_file"] = str(policy_path)

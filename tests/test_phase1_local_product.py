@@ -142,9 +142,7 @@ class TestPhase1LocalProduct(unittest.TestCase):
             config = valid_config_mapping()
             config["deployment"]["data_dir"] = str(data_dir)
             config["runtime"]["enabled_profiles"] = ["maya-core"]
-            config["runtime"][
-                "hermes_factory"
-            ] = "tests.test_phase1_local_product:FakeAIAgent"
+            config["runtime"]["hermes_factory"] = f"{__name__}:FakeAIAgent"
             config["memory"]["retriever"] = "local_json"
             config["governance"]["policy_file"] = str(policy_path)
             config_path = Path(tmp) / "maya.json"
@@ -282,7 +280,7 @@ class TestPhase1LocalProduct(unittest.TestCase):
                 self._memory_manager.provider.shutdown()
 
         with tempfile.TemporaryDirectory() as tmp:
-            module_path = "tests.test_phase1_local_product:FakeAIAgent"
+            module_path = f"{__name__}:FakeAIAgent"
             config_data = valid_config_mapping()
             config_data["deployment"]["data_dir"] = str(Path(tmp) / "maya-data")
             config_data["runtime"]["enabled_profiles"] = ["maya-core"]
@@ -347,7 +345,7 @@ class TestPhase1LocalProduct(unittest.TestCase):
                 self._memory_manager.provider.shutdown()
 
         with tempfile.TemporaryDirectory() as tmp:
-            module_path = "tests.test_phase1_local_product:FakeAIAgent"
+            module_path = f"{__name__}:FakeAIAgent"
             config_data = valid_config_mapping()
             config_data["deployment"]["data_dir"] = str(Path(tmp) / "maya-data")
             config_data["runtime"]["enabled_profiles"] = ["maya-core"]

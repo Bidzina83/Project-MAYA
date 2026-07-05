@@ -40,33 +40,34 @@ jobs:
             echo "No update needed"; exit 0
           else
             echo "same=false" >> $GITHUB_OUTPUT
-            echo "Need update: ${ { steps.getsha.outputs.sha } }"
+            echo "Need update: ${{ steps.getsha.outputs.sha }}"
           fi
 
-      - name: Run tests against new SHA
+      - name: Setup Python for candidate tests
         if: steps.compare.outputs.same == 'false'
-        runs-on: ubuntu-latest
-        steps:
-          - name: Checkout
-            uses: actions/checkout@v4
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-          - name: Setup Python
-            uses: actions/setup-python@v4
-            with:
-              python-version: '3.11'
+      - name: Install hermes-agent from candidate SHA
+        if: steps.compare.outputs.same == 'false'
+        run: |
+          python -m pip install --upgrade pip
+          pip install "git+https://github.com/Bidzina83/hermes-agent.git@${{ steps.getsha.outputs.sha }}#egg=hermes-agent" || exit 1
+          pip install -e ".[test]" || pip install -e .
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt || true; fi
 
-          - name: Install hermes_state from candidate SHA
-            run: |
-              python -m pip install --upgrade pip
-              pip install "git+https://github.com/Bidzina83/hermes-agent.git@${{ steps.getsha.outputs.sha }}#egg=hermes_state" || exit 1
-              pip install -e ".[test]" || pip install -e .
-              if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt || true; fi
+      - name: Run pytest against candidate SHA
+        if: steps.compare.outputs.same == 'false'
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/.pytest_tmp
+          export PYTEST_ADDOPTS="--basetemp=$GITHUB_WORKSPACE/.pytest_tmp"
+          pytest -q
 
-          - name: Run pytest
-            run: |
-              mkdir -p $GITHUB_WORKSPACE/.pytest_tmp
-              export PYTEST_ADDOPTS="--basetemp=$GITHUB_WORKSPACE/.pytest_tmp"
-              pytest -q
+      - name: Update pinned SHA
+        if: steps.compare.outputs.same == 'false'
+        run: |
+          sed -i -E "s#hermes-agent.git@[0-9a-f]{7,40}#hermes-agent.git@${{ steps.getsha.outputs.sha }}#" .github/workflows/memory-ci.yml
 
       - name: Create PR to update pinned SHA
         if: steps.compare.outputs.same == 'false'

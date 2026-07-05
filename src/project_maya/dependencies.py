@@ -215,7 +215,6 @@ DEPENDENCY_CONTRACTS: tuple[DependencyContract, ...] = (
         requirement=DependencyRequirement.CUSTOMER_MANAGED,
         display_name="Microsoft Office",
         check_name="dependencies.application.ms-office",
-        supported_platforms=("Windows", "Darwin"),
         install_hints={
             "Windows": "customer-managed Microsoft Office installation",
             "Darwin": "customer-managed Microsoft Office installation",

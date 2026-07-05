@@ -15,6 +15,11 @@ from project_maya import (
 from tests.test_phase0_contracts import valid_config_mapping
 
 
+class FakeMemoryManager:
+    def add_provider(self, provider):
+        self.provider = provider
+
+
 class TestPhase1Policy(unittest.TestCase):
     def test_policy_gateway_allows_matching_rule(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -81,10 +86,15 @@ class TestPhase1Policy(unittest.TestCase):
             def __init__(self, **kwargs):
                 if "agent_name" in kwargs:
                     raise TypeError("unexpected agent_name")
+                self.session_id = "policy-test-session"
+                self._memory_manager = FakeMemoryManager()
 
             def chat(self, message):
                 events.append(("chat", message))
                 return "allowed"
+
+            def shutdown_memory_provider(self):
+                self._memory_manager.provider.shutdown()
 
         with tempfile.TemporaryDirectory() as tmp:
             data_dir = Path(tmp) / "maya-data"
@@ -114,9 +124,7 @@ class TestPhase1Policy(unittest.TestCase):
             config_data = valid_config_mapping()
             config_data["deployment"]["data_dir"] = str(data_dir)
             config_data["runtime"]["enabled_profiles"] = ["maya-core"]
-            config_data["runtime"][
-                "hermes_factory"
-            ] = "tests.test_phase1_policy:FakeAIAgent"
+            config_data["runtime"]["hermes_factory"] = f"{__name__}:FakeAIAgent"
             config_data["memory"]["retriever"] = "local_json"
             config_data["governance"]["policy_file"] = str(policy_path)
 
