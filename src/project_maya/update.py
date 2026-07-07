@@ -8,6 +8,13 @@ from pathlib import Path
 from typing import Any
 
 from .config import MayaConfig
+from .release import (
+    ReleaseMetadataError,
+    ReleaseSignatureError,
+    current_platform_id,
+    verify_rollback_manifest,
+    verify_update_manifest,
+)
 
 
 class UpdateError(RuntimeError):
@@ -24,6 +31,12 @@ class UpdateStatus:
     available_version: str | None = None
     rollback_version: str | None = None
     signed_manifest: bool = False
+    platform: str | None = None
+    sbom_ref: str | None = None
+    provenance_ref: str | None = None
+    artifact_sha256: str | None = None
+    migration_compatibility: str | None = None
+    release_manifest_ref: str | None = None
     network_used: bool = False
     mutation: bool = False
     action_required: str | None = None
@@ -42,16 +55,43 @@ def check_updates(config: MayaConfig) -> UpdateStatus:
             action_required="signed update manifest is not configured",
         )
     manifest = _read_json_object(manifest_path)
-    signed = bool(manifest.get("signed"))
+    try:
+        verified = verify_update_manifest(
+            manifest,
+            expected_platform=current_platform_id(),
+        )
+    except ReleaseSignatureError:
+        return UpdateStatus(
+            operation="check",
+            supported=False,
+            status="signature_rejected",
+            metadata_path=manifest_path,
+            signed_manifest=False,
+            action_required="provide trusted signed update metadata",
+        )
+    except ReleaseMetadataError:
+        return UpdateStatus(
+            operation="check",
+            supported=False,
+            status="metadata_rejected",
+            metadata_path=manifest_path,
+            signed_manifest=False,
+            action_required="provide complete Phase 6 update metadata",
+        )
     return UpdateStatus(
         operation="check",
-        supported=signed,
-        status="available" if signed else "unsigned_manifest_rejected",
+        supported=True,
+        status="available",
         metadata_path=manifest_path,
-        current_version=_string_or_none(manifest.get("current_version")),
-        available_version=_string_or_none(manifest.get("available_version")),
-        signed_manifest=signed,
-        action_required=None if signed else "provide a signed update manifest",
+        current_version=verified.current_version,
+        available_version=verified.available_version,
+        signed_manifest=True,
+        platform=verified.platform,
+        sbom_ref=verified.sbom_ref,
+        provenance_ref=verified.provenance_ref,
+        artifact_sha256=verified.artifact.sha256,
+        migration_compatibility=verified.migration_compatibility,
+        release_manifest_ref=verified.release_manifest_ref,
     )
 
 
@@ -68,16 +108,43 @@ def rollback_update(config: MayaConfig) -> UpdateStatus:
             action_required="rollback metadata is not available",
         )
     metadata = _read_json_object(rollback_path)
-    signed = bool(metadata.get("signed"))
+    try:
+        verified = verify_rollback_manifest(
+            metadata,
+            expected_platform=current_platform_id(),
+        )
+    except ReleaseSignatureError:
+        return UpdateStatus(
+            operation="rollback",
+            supported=False,
+            status="signature_rejected",
+            metadata_path=rollback_path,
+            signed_manifest=False,
+            action_required="provide trusted signed rollback metadata",
+        )
+    except ReleaseMetadataError:
+        return UpdateStatus(
+            operation="rollback",
+            supported=False,
+            status="metadata_rejected",
+            metadata_path=rollback_path,
+            signed_manifest=False,
+            action_required="provide complete Phase 6 rollback metadata",
+        )
     return UpdateStatus(
         operation="rollback",
-        supported=signed,
-        status="ready" if signed else "unsigned_rollback_rejected",
+        supported=True,
+        status="ready",
         metadata_path=rollback_path,
-        current_version=_string_or_none(metadata.get("current_version")),
-        rollback_version=_string_or_none(metadata.get("rollback_version")),
-        signed_manifest=signed,
-        action_required=None if signed else "provide signed rollback metadata",
+        current_version=verified.current_version,
+        rollback_version=verified.rollback_version,
+        signed_manifest=True,
+        platform=verified.platform,
+        sbom_ref=verified.sbom_ref,
+        provenance_ref=verified.provenance_ref,
+        artifact_sha256=verified.artifact.sha256,
+        migration_compatibility=verified.migration_compatibility,
+        release_manifest_ref=verified.release_manifest_ref,
     )
 
 
@@ -97,7 +164,3 @@ def _read_json_object(path: Path) -> dict[str, Any]:
     return value
 
 
-def _string_or_none(value: Any) -> str | None:
-    if value is None:
-        return None
-    return str(value)

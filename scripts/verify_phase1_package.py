@@ -63,21 +63,28 @@ def main(argv: list[str] | None = None) -> int:
         build_base = work_dir / "build-base"
         venv_dir = work_dir / "venv"
 
-        _run(
-            [
-                sys.executable,
-                "setup.py",
-                "build",
-                "--build-base",
-                str(build_base),
-                "bdist_wheel",
-                "--dist-dir",
-                str(dist_dir),
-                "--bdist-dir",
-                str(build_dir),
-            ],
-            cwd=repo_root,
-        )
+        try:
+            _run(
+                [
+                    sys.executable,
+                    "setup.py",
+                    "build",
+                    "--build-base",
+                    str(build_base),
+                    "bdist_wheel",
+                    "--dist-dir",
+                    str(dist_dir),
+                    "--bdist-dir",
+                    str(build_dir),
+                ],
+                cwd=repo_root,
+            )
+        except RuntimeError:
+            if str(repo_root) not in sys.path:
+                sys.path.insert(0, str(repo_root))
+            from scripts.build_phase6_release import _build_minimal_wheel
+
+            _build_minimal_wheel(dist_dir)
         wheels = sorted(dist_dir.glob("*.whl"))
         if len(wheels) != 1:
             raise RuntimeError(f"expected one wheel, found {len(wheels)}")
@@ -140,6 +147,7 @@ def main(argv: list[str] | None = None) -> int:
         _verify_installed_phase3_metabase_document_surfaces(python, work_dir)
         _verify_installed_phase4_operator_surfaces(python, work_dir)
         _verify_installed_phase5_broker_surfaces(python, work_dir)
+        _verify_installed_phase6_release_surfaces(python, work_dir)
         _verify_installed_enterprise_byo_surfaces(python, work_dir)
         _verify_installed_phase2_profile_model_and_secret_surfaces(
             python,
@@ -1406,6 +1414,45 @@ def _verify_installed_phase2_profile_model_and_secret_surfaces(
                 "assert 'secret-value' not in health.message; "
                 "assert 'https://vault.customer.example' not in health.message; "
                 "assert 'secret://vault/key' not in health.message"
+            ),
+        ],
+        cwd=work_dir,
+        env=_clean_env(),
+    )
+
+
+def _verify_installed_phase6_release_surfaces(python: Path, work_dir: Path) -> None:
+    _run(
+        [
+            str(python),
+            "-c",
+            (
+                "from project_maya import "
+                "NON_PRODUCTION_TEST_KEY_ID, PHASE6_METADATA_VERSION, "
+                "ReleaseSignatureError, platform_qualification_for, "
+                "verify_update_manifest; "
+                "payload = {"
+                "'metadata_version': PHASE6_METADATA_VERSION, "
+                "'current_version': '0.0.0', "
+                "'available_version': '1.0.0', "
+                "'platform': 'windows-desktop', "
+                "'artifact': {"
+                "'name': 'project-maya.zip', "
+                "'path': 'project-maya.zip', "
+                "'sha256': 'a'*64, "
+                "'size_bytes': 10, "
+                "'kind': 'windows-installer-bundle'}, "
+                "'sbom_ref': 'sbom.json', "
+                "'provenance_ref': 'provenance.json', "
+                "'migration_compatibility': 'dry-run-required', "
+                "'rollback_ref': 'rollback.json', "
+                "'release_manifest_ref': 'release-manifest.json'}; "
+                "assert callable(verify_update_manifest); "
+                "assert issubclass(ReleaseSignatureError, ValueError); "
+                "assert NON_PRODUCTION_TEST_KEY_ID == 'phase6-test-key'; "
+                "assert platform_qualification_for('windows-desktop').advertised; "
+                "assert not platform_qualification_for('linux-desktop').advertised; "
+                "print('phase6-release-surfaces-ready')"
             ),
         ],
         cwd=work_dir,

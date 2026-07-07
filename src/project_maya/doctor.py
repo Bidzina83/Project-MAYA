@@ -19,6 +19,7 @@ from .documents import document_capability_checks
 from .governance import load_policy_gateway
 from .metabase import metabase_capability_checks
 from .model_config import validate_model_config
+from .release import platform_qualification_for
 from .secrets import SecretStore, SecretStoreStatus
 from .skills import packaged_document_skill_status
 
@@ -70,6 +71,7 @@ def run_doctor(
     checks.append(_managed_directory_check(config, "backup.state", "backups"))
     checks.append(_managed_directory_check(config, "migration.state", "migrations"))
     checks.append(_lifecycle_state_check(lifecycle_state))
+    checks.append(_platform_support_check())
     checks.append(_enabled_profiles_check(config))
     checks.extend(_dependency_readiness_checks(config))
     checks.extend(_document_capability_checks(config))
@@ -373,6 +375,21 @@ def _enabled_profiles_check(config: MayaConfig) -> DoctorCheck:
         "profiles.enabled",
         DoctorStatus.PASS,
         "enabled profiles: " + ", ".join(profiles),
+    )
+
+
+def _platform_support_check() -> DoctorCheck:
+    qualification = platform_qualification_for()
+    status = DoctorStatus.PASS if qualification.advertised else DoctorStatus.WARN
+    return DoctorCheck(
+        "release.platform",
+        status,
+        (
+            f"platform={qualification.platform}; "
+            f"advertised={str(qualification.advertised).lower()}; "
+            f"status={qualification.status}; "
+            f"boundary={qualification.boundary}"
+        ),
     )
 
 

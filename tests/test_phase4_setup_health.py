@@ -130,6 +130,7 @@ class TestPhase4SetupHealth(unittest.TestCase):
             payload = json.loads(printed.call_args.args[0])
             category_names = {item["name"] for item in payload["categories"]}
             self.assertIn("setup", category_names)
+            self.assertIn("platform", category_names)
             self.assertIn("recovery", category_names)
             self.assertIn("configuration", category_names)
             self.assertIn("runtime", category_names)

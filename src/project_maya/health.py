@@ -61,6 +61,7 @@ class HealthSummary:
 
 CHECK_CATEGORIES = (
     ("configuration", ("config", "profiles.")),
+    ("platform", ("release.platform",)),
     ("filesystem", ("filesystem.",)),
     ("governance", ("governance.",)),
     ("memory", ("memory.",)),
