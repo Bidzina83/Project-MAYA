@@ -111,8 +111,13 @@ class TestPhase6Release(unittest.TestCase):
             self.assertTrue((release_dir / verified.sbom_ref).is_file())
             self.assertTrue((release_dir / verified.provenance_ref).is_file())
             contents = "\n".join(
-                path.name for path in release_dir.iterdir() if path.is_file()
+                path.relative_to(release_dir).as_posix()
+                for path in release_dir.rglob("*")
+                if path.is_file()
             )
+            self.assertIn("inno/project-maya-standard.iss", contents)
+            self.assertIn("inno/project-maya-enterprise.iss", contents)
+            self.assertIn("inno/inno-installer-manifest.json", contents)
             self.assertNotIn("secret://", contents)
             self.assertNotIn("__pycache__", contents)
 

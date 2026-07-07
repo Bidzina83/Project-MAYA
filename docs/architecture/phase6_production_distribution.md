@@ -42,12 +42,19 @@ scripts/verify_phase6_release.py --release-dir <dir> --platform windows-desktop
 ```
 
 The builder creates a deterministic release directory containing a built wheel,
-a Windows installer bundle, SBOM, provenance, signed release manifest, signed
+a Windows payload bundle, Standard and Enterprise Inno Setup installer sources,
+an Inno installer manifest, SBOM, provenance, signed release manifest, signed
 update manifest, and signed rollback manifest.
 
-The verifier checks signatures, checksums, SBOM/provenance presence, installer
-bundle boundaries, and that the bundle installs from built artifacts without
-silently installing system dependencies or creating customer tenant resources.
+If `ISCC.exe` is supplied through `--inno-compiler`, the builder may also
+compile native Inno Setup `.exe` installers. The builder never installs Inno
+Setup, Python, system dependencies, services, OAuth grants, or customer tenant
+resources.
+
+The verifier checks signatures, checksums, SBOM/provenance presence, Inno
+installer products, installer-bundle boundaries, and that the installer
+products are built from release artifacts without silently installing system
+dependencies or creating customer tenant resources.
 
 ## Boundaries
 

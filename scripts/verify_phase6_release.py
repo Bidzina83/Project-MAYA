@@ -72,12 +72,19 @@ def _verify_artifacts(release_dir: Path, manifest) -> None:
         raise RuntimeError("release does not include a wheel artifact")
     if not any(name.endswith(".zip") for name in names):
         raise RuntimeError("release does not include a Windows installer bundle")
+    if not any(name.endswith("project-maya-standard.iss") for name in names):
+        raise RuntimeError("release does not include Standard Inno Setup source")
+    if not any(name.endswith("project-maya-enterprise.iss") for name in names):
+        raise RuntimeError("release does not include Enterprise Inno Setup source")
+    if not any(name.endswith("inno-installer-manifest.json") for name in names):
+        raise RuntimeError("release does not include Inno installer manifest")
     for artifact in manifest.artifacts:
         path = release_dir / artifact.path
         _require_file(path)
         _verify_artifact_checksum(path, artifact.sha256)
         if any(fragment in artifact.path for fragment in FORBIDDEN_ARTIFACT_FRAGMENTS):
             raise RuntimeError("release artifact path contains forbidden content")
+    _verify_inno_products(release_dir)
 
 
 def _verify_artifact_checksum(path: Path, expected: str) -> None:
@@ -106,6 +113,37 @@ def _verify_installer_bundle(path: Path) -> None:
         raise RuntimeError("installer bundle silently installs system dependencies")
     if manifest.get("customer_tenant_resources_created"):
         raise RuntimeError("installer bundle creates customer tenant resources")
+
+
+def _verify_inno_products(release_dir: Path) -> None:
+    inno_dir = release_dir / "inno"
+    manifest = json.loads(
+        (inno_dir / "inno-installer-manifest.json").read_text(encoding="utf-8")
+    )
+    if manifest.get("installer_family") != "inno-setup":
+        raise RuntimeError("Inno installer manifest has unexpected family")
+    if manifest.get("silent_system_dependency_install"):
+        raise RuntimeError("Inno installer silently installs system dependencies")
+    if manifest.get("customer_tenant_resources_created"):
+        raise RuntimeError("Inno installer creates customer tenant resources")
+    if not manifest.get("installs_from_built_artifact"):
+        raise RuntimeError("Inno installer does not install from built artifacts")
+    for edition in ("standard", "enterprise"):
+        script = inno_dir / f"project-maya-{edition}.iss"
+        _require_file(script)
+        text = script.read_text(encoding="utf-8")
+        for expected in (
+            "AppName=Project MAYA {#MayaEdition}",
+            "PrivilegesRequired=lowest",
+            "Source: \"..\\",
+            "release-manifest.json",
+            "update-manifest.json",
+            "rollback.json",
+            "No system software, credentials, OAuth grants",
+            "MAYA_HOME and MAYA_DATA_DIR are never deleted",
+        ):
+            if expected not in text:
+                raise RuntimeError(f"Inno script missing required boundary: {expected}")
 
 
 def _require_file(path: Path) -> None:

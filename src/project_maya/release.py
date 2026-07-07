@@ -494,11 +494,17 @@ def write_canonical_json(path: Path, data: Mapping[str, Any]) -> None:
     path.write_bytes(canonical_json_bytes(data) + b"\n")
 
 
-def artifact_from_file(path: Path, *, name: str | None = None, kind: str) -> ReleaseArtifact:
+def artifact_from_file(
+    path: Path,
+    *,
+    name: str | None = None,
+    path_ref: str | None = None,
+    kind: str,
+) -> ReleaseArtifact:
     stat = path.stat()
     return ReleaseArtifact(
         name=name or path.name,
-        path=path.name,
+        path=path_ref or path.name,
         sha256=sha256_file(path),
         size_bytes=stat.st_size,
         kind=kind,

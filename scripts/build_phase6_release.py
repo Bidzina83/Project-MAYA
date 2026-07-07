@@ -50,6 +50,14 @@ def main(argv: list[str] | None = None) -> int:
         wheel,
         version=args.version,
     )
+    inno_artifacts = _build_inno_setup_products(
+        out_dir,
+        wheel,
+        installer,
+        version=args.version,
+        platform=args.platform,
+        compiler=args.inno_compiler,
+    )
     sbom_path = out_dir / "sbom.json"
     provenance_path = out_dir / "provenance.json"
     release_manifest_path = out_dir / "release-manifest.json"
@@ -58,8 +66,20 @@ def main(argv: list[str] | None = None) -> int:
 
     wheel_artifact = artifact_from_file(wheel, kind="python-wheel")
     installer_artifact = artifact_from_file(installer, kind="windows-installer-bundle")
+    inno_release_artifacts = tuple(
+        artifact_from_file(
+            path,
+            path_ref=path.relative_to(out_dir).as_posix(),
+            kind=_inno_artifact_kind(path),
+        )
+        for path in inno_artifacts
+    )
 
-    sbom = _sbom(args.version, args.platform, (wheel_artifact, installer_artifact))
+    sbom = _sbom(
+        args.version,
+        args.platform,
+        (wheel_artifact, installer_artifact, *inno_release_artifacts),
+    )
     write_canonical_json(sbom_path, sbom)
 
     provenance = ReleaseProvenance(
@@ -76,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
         product="project_maya",
         version=args.version,
         platform=args.platform,
-        artifacts=(wheel_artifact, installer_artifact),
+        artifacts=(wheel_artifact, installer_artifact, *inno_release_artifacts),
         sbom_ref=sbom_path.name,
         provenance_ref=provenance_path.name,
         provenance=provenance,
@@ -131,6 +151,15 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--platform", required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--current-version", default="0.0.0")
+    parser.add_argument(
+        "--inno-compiler",
+        type=Path,
+        default=None,
+        help=(
+            "Optional path to ISCC.exe. If omitted or unavailable, the release "
+            "contains verified .iss installer products without compiling .exe files."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -245,6 +274,130 @@ def _build_windows_installer_bundle(out_dir: Path, wheel: Path, *, version: str)
         _write_zip_entry(archive, manifest_path, manifest_path.name)
     manifest_path.unlink()
     return bundle_path
+
+
+def _build_inno_setup_products(
+    out_dir: Path,
+    wheel: Path,
+    installer_bundle: Path,
+    *,
+    version: str,
+    platform: str,
+    compiler: Path | None,
+) -> tuple[Path, ...]:
+    inno_dir = out_dir / "inno"
+    inno_dir.mkdir(parents=True, exist_ok=True)
+    inno_manifest = {
+        "installer_family": "inno-setup",
+        "platform": platform,
+        "version": version,
+        "editions": ["standard", "enterprise"],
+        "compiler": str(compiler) if compiler is not None else None,
+        "compiler_available": bool(compiler and compiler.is_file()),
+        "silent_system_dependency_install": False,
+        "customer_tenant_resources_created": False,
+        "installs_from_built_artifact": True,
+        "signing": "external-release-signing-required",
+    }
+    manifest_path = inno_dir / "inno-installer-manifest.json"
+    write_canonical_json(manifest_path, inno_manifest)
+    products: list[Path] = [manifest_path]
+    for edition in ("standard", "enterprise"):
+        script_path = inno_dir / f"project-maya-{edition}.iss"
+        script_path.write_text(
+            _inno_script(
+                edition=edition,
+                version=version,
+                wheel=wheel,
+                installer_bundle=installer_bundle,
+            ),
+            encoding="utf-8",
+        )
+        products.append(script_path)
+        compiled = _compile_inno_script(script_path, compiler)
+        if compiled is not None:
+            products.append(compiled)
+    return tuple(products)
+
+
+def _inno_script(
+    *,
+    edition: str,
+    version: str,
+    wheel: Path,
+    installer_bundle: Path,
+) -> str:
+    title = "Standard" if edition == "standard" else "Enterprise"
+    app_id = (
+        "{{6D7C7B14-5273-4D6E-A1E4-6D5D87F0A501}"
+        if edition == "standard"
+        else "{{A24877A0-9D25-4336-BD58-CBDF06242774}"
+    )
+    return "\n".join(
+        [
+            "#define MayaVersion \"" + version + "\"",
+            "#define MayaEdition \"" + title + "\"",
+            "",
+            "[Setup]",
+            f"AppId={app_id}",
+            "AppName=Project MAYA {#MayaEdition}",
+            "AppVersion={#MayaVersion}",
+            "AppPublisher=Project MAYA",
+            "DefaultDirName={autopf}\\Project MAYA",
+            "DefaultGroupName=Project MAYA",
+            "DisableProgramGroupPage=yes",
+            "PrivilegesRequired=lowest",
+            "ArchitecturesAllowed=x64compatible",
+            "ArchitecturesInstallIn64BitMode=x64compatible",
+            "Compression=lzma2",
+            "SolidCompression=yes",
+            "UninstallDisplayName=Project MAYA {#MayaEdition}",
+            "OutputDir=.",
+            f"OutputBaseFilename=Project-MAYA-{version}-{title}-Setup",
+            "",
+            "[Files]",
+            f'Source: "..\\{wheel.name}"; DestDir: "{{app}}\\release"; Flags: ignoreversion',
+            f'Source: "..\\{installer_bundle.name}"; DestDir: "{{app}}\\release"; Flags: ignoreversion',
+            'Source: "..\\release-manifest.json"; DestDir: "{app}\\release"; Flags: ignoreversion',
+            'Source: "..\\update-manifest.json"; DestDir: "{app}\\release"; Flags: ignoreversion',
+            'Source: "..\\rollback.json"; DestDir: "{app}\\release"; Flags: ignoreversion',
+            'Source: "..\\sbom.json"; DestDir: "{app}\\release"; Flags: ignoreversion',
+            'Source: "..\\provenance.json"; DestDir: "{app}\\release"; Flags: ignoreversion',
+            "",
+            "[Icons]",
+            'Name: "{group}\\Project MAYA Documentation"; Filename: "{app}\\release\\release-manifest.json"',
+            "",
+            "[Run]",
+            "; No system software, credentials, OAuth grants, tenant resources, or services are installed silently.",
+            "",
+            "[UninstallDelete]",
+            "; Customer-controlled MAYA_HOME and MAYA_DATA_DIR are never deleted by the installer.",
+            "",
+        ]
+    )
+
+
+def _compile_inno_script(script_path: Path, compiler: Path | None) -> Path | None:
+    if compiler is None or not compiler.is_file():
+        return None
+    subprocess.run(
+        [str(compiler), str(script_path)],
+        cwd=script_path.parent.parent,
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    candidates = sorted(script_path.parent.glob("Project-MAYA-*-Setup.exe"))
+    return candidates[-1] if candidates else None
+
+
+def _inno_artifact_kind(path: Path) -> str:
+    if path.suffix.lower() == ".exe":
+        return "inno-setup-installer"
+    if path.suffix.lower() == ".iss":
+        return "inno-setup-source"
+    return "inno-setup-manifest"
 
 
 def _write_zip_entry(archive: zipfile.ZipFile, source: Path, arcname: str) -> None:
