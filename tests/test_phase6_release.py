@@ -121,7 +121,11 @@ class TestPhase6Release(unittest.TestCase):
             self.assertIn("windows-app-payload/app/project_maya/__init__.py", contents)
             self.assertIn("windows-app-payload/runtime/runtime-manifest.json", contents)
             self.assertIn("windows-app-payload/runtime/component-readiness.json", contents)
+            self.assertIn("windows-app-payload/runtime/python/python.cmd", contents)
             self.assertIn("windows-app-payload/wheels/requirements-pinned.txt", contents)
+            self.assertIn("windows-app-payload/wheels/wheelhouse-manifest.json", contents)
+            self.assertIn("windows-app-payload/skills/skills-manifest.json", contents)
+            self.assertIn("windows-app-payload/services/managed-services.json", contents)
             self.assertIn(
                 "windows-app-payload/config-templates/standard.json.template",
                 contents,
@@ -169,9 +173,27 @@ class TestPhase6Release(unittest.TestCase):
                 runtime_manifest["hermes_agent"]["commit"],
                 build_release_module.HERMES_RUNTIME_COMMIT,
             )
+            self.assertEqual(runtime_manifest["qualification_mode"], "local_smoke_blocked")
+            self.assertEqual(
+                runtime_manifest["python"]["status"],
+                "local_smoke_external_fallback",
+            )
+            self.assertEqual(
+                runtime_manifest["hermes_agent"]["artifact_status"],
+                "missing_blocked",
+            )
             self.assertFalse(
                 runtime_manifest["boundaries"]["silent_system_dependency_install"]
             )
+            services_manifest = json.loads(
+                (
+                    release_dir
+                    / "windows-app-payload"
+                    / "services"
+                    / "managed-services.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertFalse(services_manifest["production_ready"])
             standard_template = (
                 release_dir
                 / "windows-app-payload"
@@ -197,6 +219,10 @@ class TestPhase6Release(unittest.TestCase):
                     archive.namelist(),
                 )
                 self.assertIn(
+                    "windows-app-payload/services/managed-services.json",
+                    archive.namelist(),
+                )
+                self.assertIn(
                     "windows-app-payload/scripts/maya_qualification.py",
                     archive.namelist(),
                 )
@@ -208,6 +234,102 @@ class TestPhase6Release(unittest.TestCase):
                     "windows-app-payload/bin/maya-console.cmd",
                     archive.namelist(),
                 )
+
+    def test_release_builder_accepts_prepared_production_payload_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            release_dir = root / "release"
+            runtime_dir = root / "python-runtime"
+            runtime_dir.mkdir()
+            (runtime_dir / "python.cmd").write_text(
+                "@echo off\r\npython %*\r\n",
+                encoding="utf-8",
+            )
+            hermes_wheel = root / (
+                "hermes_agent-0.17.0-py3-none-any.whl"
+            )
+            with zipfile.ZipFile(hermes_wheel, "w") as archive:
+                archive.writestr("run_agent.py", "class AIAgent: pass\n")
+            deps_dir = root / "deps"
+            deps_dir.mkdir()
+            for name in (
+                "metabase.jar",
+                "java-runtime.zip",
+                "libreoffice-portable.zip",
+                "poppler-runtime.zip",
+            ):
+                (deps_dir / name).write_bytes(name.encode("utf-8"))
+            skills_source = root / "skills-source"
+            skill = skills_source / "skills" / "maya-identity"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                "---\nname: maya-identity\n---\nMaya identity.\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                build_phase6_release(
+                    [
+                        "--version",
+                        "1.0.0",
+                        "--platform",
+                        "windows-desktop",
+                        "--out",
+                        str(release_dir),
+                        "--managed-python-runtime",
+                        str(runtime_dir),
+                        "--hermes-agent-wheel",
+                        str(hermes_wheel),
+                        "--dependency-artifacts-dir",
+                        str(deps_dir),
+                        "--skills-overlay-source",
+                        str(skills_source),
+                        "--skills-allowlist",
+                        "skills/maya-identity",
+                    ]
+                ),
+                0,
+            )
+            self.assertEqual(
+                verify_phase6_release(
+                    [
+                        "--release-dir",
+                        str(release_dir),
+                        "--platform",
+                        "windows-desktop",
+                    ]
+                ),
+                0,
+            )
+            runtime_manifest = json.loads(
+                (
+                    release_dir
+                    / "windows-app-payload"
+                    / "runtime"
+                    / "runtime-manifest.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(runtime_manifest["qualification_mode"], "production")
+            self.assertEqual(runtime_manifest["python"]["status"], "included")
+            self.assertTrue(runtime_manifest["hermes_agent"]["included"])
+            services_manifest = json.loads(
+                (
+                    release_dir
+                    / "windows-app-payload"
+                    / "services"
+                    / "managed-services.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertTrue(services_manifest["production_ready"])
+            skills_manifest = json.loads(
+                (
+                    release_dir
+                    / "windows-app-payload"
+                    / "skills"
+                    / "skills-manifest.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(len(skills_manifest["skills"]), 1)
 
     def test_release_builder_rejects_unadvertised_platform(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -155,6 +155,14 @@ execution core of the current supported product. Portable Maya identity,
 skills, policies, procedures, connector definitions, and durable knowledge
 must survive future runtime replacement.
 
+Production installers may bundle pinned, curated, disclosed,
+license-compatible, Maya-managed runtime artifacts, including managed Python,
+the compatible Hermes runtime, Metabase, Java, LibreOffice, and Poppler, when
+those artifacts are produced or consumed through the Maya release process with
+hashes and provenance. This is distinct from silently installing uncontrolled
+system software. Missing managed artifacts must block readiness and platform
+support claims rather than being reported as healthy operation.
+
 ## Authority Model
 
 Authoritative state must exist outside the LLM. Depending on its domain, it

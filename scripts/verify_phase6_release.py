@@ -115,7 +115,16 @@ def _verify_installer_bundle(path: Path) -> None:
         raise RuntimeError("installer bundle does not install from a built artifact")
     if manifest.get("payload_root") != "windows-app-payload":
         raise RuntimeError("installer bundle does not declare installed app payload")
-    for required_layout in ("app", "runtime", "wheels", "config-templates", "scripts", "release"):
+    for required_layout in (
+        "app",
+        "runtime",
+        "wheels",
+        "skills",
+        "services",
+        "config-templates",
+        "scripts",
+        "release",
+    ):
         if required_layout not in manifest.get("payload_layout", []):
             raise RuntimeError(f"installer bundle lacks managed payload layout: {required_layout}")
     for entry_point in (
@@ -143,9 +152,14 @@ def _verify_installer_bundle(path: Path) -> None:
 def _verify_payload_entries(names: list[str]) -> None:
     required = (
         "windows-app-payload/app/project_maya/__init__.py",
+        "windows-app-payload/app/sitecustomize.py",
         "windows-app-payload/runtime/runtime-manifest.json",
         "windows-app-payload/runtime/component-readiness.json",
+        "windows-app-payload/runtime/python/python.cmd",
         "windows-app-payload/wheels/requirements-pinned.txt",
+        "windows-app-payload/wheels/wheelhouse-manifest.json",
+        "windows-app-payload/skills/skills-manifest.json",
+        "windows-app-payload/services/managed-services.json",
         "windows-app-payload/config-templates/standard.json.template",
         "windows-app-payload/config-templates/default-governance-policy.json",
         "windows-app-payload/scripts/maya_first_run.py",
@@ -207,14 +221,63 @@ def _verify_inno_products(release_dir: Path) -> None:
             if expected not in text:
                 raise RuntimeError(f"Inno script missing required boundary: {expected}")
     _verify_compiled_installers_are_signed(inno_dir)
+    _verify_managed_runtime_payload(release_dir / "windows-app-payload")
     _verify_packaged_payload_starts(release_dir / "windows-app-payload")
     _verify_product_launchers(release_dir / "windows-app-payload")
     _verify_installed_qualification(release_dir / "windows-app-payload")
 
 
+def _verify_managed_runtime_payload(payload_dir: Path) -> None:
+    runtime_manifest = json.loads(
+        (payload_dir / "runtime" / "runtime-manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    mode = runtime_manifest.get("qualification_mode")
+    if mode not in {"production", "local_smoke_blocked"}:
+        raise RuntimeError("runtime manifest lacks explicit qualification mode")
+    python = runtime_manifest.get("python", {})
+    executable = python.get("executable")
+    if not executable:
+        raise RuntimeError("runtime manifest lacks managed Python executable")
+    executable_path = payload_dir / executable
+    _require_file(executable_path)
+    if python.get("silent_system_install"):
+        raise RuntimeError("managed Python runtime silently installs system software")
+    hermes = runtime_manifest.get("hermes_agent", {})
+    if hermes.get("artifact_status") == "pinned_requirement_recorded":
+        raise RuntimeError("Hermes runtime is only recorded as a Git requirement")
+    if mode == "production":
+        if python.get("status") != "included":
+            raise RuntimeError("production payload lacks included managed Python")
+        if not hermes.get("included") or not hermes.get("artifact"):
+            raise RuntimeError("production payload lacks bundled Hermes runtime")
+    wheelhouse = json.loads(
+        (payload_dir / "wheels" / "wheelhouse-manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    for wheel in wheelhouse.get("wheels", []):
+        path = payload_dir / wheel["path"]
+        _require_file(path)
+        _verify_artifact_checksum(path, wheel["sha256"])
+    services = json.loads(
+        (payload_dir / "services" / "managed-services.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    if services.get("silent_system_dependency_install"):
+        raise RuntimeError("managed services silently install system dependencies")
+    for name, artifact in services.get("artifacts", {}).items():
+        if artifact.get("included"):
+            path = payload_dir / "services" / artifact["path"]
+            _require_file(path)
+            _verify_artifact_checksum(path, artifact["sha256"])
+
+
 def _verify_product_launchers(payload_dir: Path) -> None:
     launchers = {
-        "setup-maya.cmd": ("maya_first_run.py", "MAYA_DATA_DIR"),
+        "setup-maya.cmd": ("maya_first_run.py", "MAYA_DATA_DIR", "MAYA_RUNTIME_PYTHON"),
         "maya.cmd": ("health summary", "Blocked items must be resolved"),
         "maya-doctor.cmd": ("doctor --config", "setup-maya.cmd"),
         "maya-self-check.cmd": ("maya_qualification.py", "installed qualification"),
@@ -229,6 +292,10 @@ def _verify_product_launchers(payload_dir: Path) -> None:
     menu_text = (payload_dir / "bin" / "maya.cmd").read_text(encoding="utf-8")
     if "Choose an option" in menu_text or re.search(r"\b--help\b", menu_text):
         raise RuntimeError("Start Maya is still a thin menu/help wrapper")
+    for launcher_name in ("maya-cli.cmd", "setup-maya.cmd", "maya-self-check.cmd"):
+        text = (payload_dir / "bin" / launcher_name).read_text(encoding="utf-8")
+        if "MAYA_RUNTIME_PYTHON" not in text:
+            raise RuntimeError(f"{launcher_name} does not use managed runtime")
     first_run = (payload_dir / "scripts" / "maya_first_run.py").read_text(
         encoding="utf-8"
     )
@@ -326,8 +393,13 @@ def _verify_installed_qualification(payload_dir: Path) -> None:
     required_commands = {
         "setup_plan",
         "setup_init_dry_run",
+        "hermes_runtime",
         "doctor",
         "health_summary",
+        "local_api_contract",
+        "connector_authorization_readiness",
+        "metabase_readiness",
+        "document_conversion_readiness",
         "update_check",
         "rollback_check",
         "migration_dry_run",

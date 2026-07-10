@@ -210,6 +210,16 @@ hints, but it does not silently install system software, create customer
 tenant resources, or claim support when lifecycle and recovery tests have not
 passed.
 
+This restriction does not prohibit a supported Maya Standard installer from
+bundling pinned, curated, disclosed, license-compatible, Maya-managed runtime
+artifacts such as a managed Python runtime, the compatible Hermes Agent
+runtime, Metabase, Java, LibreOffice, or Poppler. Those artifacts must come
+from the Maya release process or an explicitly declared artifact input, include
+hashes and provenance, install into Maya-owned locations where practical, and
+remain subject to setup, health, backup, restore, update, rollback, and
+readiness qualification. Missing bundled artifacts must be reported as blocked
+readiness rather than healthy operation.
+
 On-demand or customer-managed dependencies include:
 
 - optional Python extras such as document and preview packages installed into

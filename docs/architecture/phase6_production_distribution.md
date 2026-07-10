@@ -47,6 +47,15 @@ a managed Windows payload layout, Standard and Enterprise Inno Setup installer
 sources, an Inno installer manifest, SBOM, provenance, signed release manifest,
 signed update manifest, and signed rollback manifest.
 
+For production Standard qualification, the builder consumes prepared runtime
+artifacts rather than silently downloading or installing system software. The
+artifact inputs are a Maya-managed Python runtime directory, a pinned Hermes
+Agent wheel built from the compatible commit, optional curated Maya skills
+overlay source and allowlist, and a prepared heavy-dependency artifact
+directory for Metabase, Java, LibreOffice, and optional Poppler. The resulting
+payload records hashes, provenance-oriented manifests, and whether the build is
+`production` or `local_smoke_blocked`.
+
 The Windows Standard payload is required to contain product-level structure
 rather than thin command wrappers:
 
@@ -55,20 +64,22 @@ windows-app-payload/
   app/
   runtime/
   wheels/
+  skills/
+  services/
   config-templates/
   scripts/
   release/
   bin/
 ```
 
-The payload includes the built `project_maya` artifact, pinned Hermes Agent
-runtime metadata for the compatible commit, Maya-owned setup, doctor, health,
-backup, restore, migration, update, broker/messaging, Metabase/document
-integration code, starter Standard configuration templates, first-run setup
-scripts, qualification scripts, and release metadata. If the pinned Hermes
-runtime artifact or profile-specific heavy dependency is not actually present
-or configured, setup and doctor must report a blocked readiness item. They must
-not report the product as healthy.
+The payload includes the built `project_maya` artifact, the pinned Hermes Agent
+runtime artifact when supplied, Maya-owned setup, doctor, health, backup,
+restore, migration, update, broker/messaging, Metabase/document integration
+code, starter Standard configuration templates, first-run setup scripts,
+qualification scripts, curated skills metadata, managed-service metadata, and
+release metadata. If the pinned Hermes runtime artifact or profile-specific
+heavy dependency is not actually present or configured, setup and doctor must
+report a blocked readiness item. They must not report the product as healthy.
 
 If `ISCC.exe` is supplied through `--inno-compiler`, the builder may also
 compile native Inno Setup `.exe` installers. Production `.exe` installers

@@ -29,6 +29,7 @@ from project_maya.release import (  # noqa: E402
     artifact_from_file,
     non_production_test_private_key,
     platform_qualification_for,
+    sha256_file,
     sign_mapping_for_release,
     write_canonical_json,
 )
@@ -37,6 +38,25 @@ from project_maya.release import (  # noqa: E402
 HERMES_RUNTIME_COMMIT = "b13e2fd6948a59eeb59fe618914147d97a2ee90a"
 PRODUCT_DISPLAY_NAME = "Maya the Info Manager"
 WINDOWS_APP_PAYLOAD_DIR = "windows-app-payload"
+MAYA_SKILLS_REPO = "Bidzina83/Hermes-Agent-Maya-Skills"
+DEFAULT_SKILLS_ALLOWLIST = (
+    "skills/maya-identity",
+    "skills/business/ai-information-manager",
+    "skills/pdf",
+    "skills/metabase-operations",
+    "skills/productivity/metabase-free",
+    "skills/productivity/office-functionality",
+    "skills/google-account-mapping",
+    "skills/google-drive-folder-listing",
+    "skills/microsoft-graph",
+    "skills/autonomous-ai-agents/slack-gateway-integration",
+)
+HEAVY_DEPENDENCY_SLOTS = (
+    ("metabase", (".jar",)),
+    ("java", (".zip", ".7z", ".tar.gz", ".tgz")),
+    ("libreoffice", (".zip", ".7z", ".msi")),
+    ("poppler", (".zip", ".7z")),
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -53,6 +73,11 @@ def main(argv: list[str] | None = None) -> int:
         out_dir,
         wheel,
         version=args.version,
+        managed_python_runtime=args.managed_python_runtime,
+        hermes_agent_wheel=args.hermes_agent_wheel,
+        dependency_artifacts_dir=args.dependency_artifacts_dir,
+        skills_overlay_source=args.skills_overlay_source,
+        skills_allowlist=args.skills_allowlist,
     )
     installer = _build_windows_installer_bundle(
         out_dir,
@@ -213,6 +238,49 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
             "qualification."
         ),
     )
+    parser.add_argument(
+        "--managed-python-runtime",
+        type=Path,
+        default=None,
+        help=(
+            "Prepared Maya-managed Python runtime directory. It must contain "
+            "python.exe or python.cmd for production qualification."
+        ),
+    )
+    parser.add_argument(
+        "--hermes-agent-wheel",
+        type=Path,
+        default=None,
+        help=(
+            "Prepared hermes-agent wheel built from the pinned compatible "
+            "Hermes runtime commit."
+        ),
+    )
+    parser.add_argument(
+        "--dependency-artifacts-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Directory containing prepared heavy dependency artifacts such as "
+            "Metabase, Java, LibreOffice, and Poppler. Artifacts are copied "
+            "and hashed; they are never installed silently."
+        ),
+    )
+    parser.add_argument(
+        "--skills-overlay-source",
+        type=Path,
+        default=None,
+        help="Path to the Maya skills overlay repository to curate into payload.",
+    )
+    parser.add_argument(
+        "--skills-allowlist",
+        action="append",
+        default=None,
+        help=(
+            "Allowlisted skills-overlay path prefix. May be passed multiple "
+            "times. Defaults to the curated Maya Standard skills set."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -309,7 +377,17 @@ def _build_minimal_wheel(out_dir: Path) -> Path:
     return wheel_path
 
 
-def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> Path:
+def _build_windows_app_payload(
+    out_dir: Path,
+    wheel: Path,
+    *,
+    version: str,
+    managed_python_runtime: Path | None,
+    hermes_agent_wheel: Path | None,
+    dependency_artifacts_dir: Path | None,
+    skills_overlay_source: Path | None,
+    skills_allowlist: list[str] | None,
+) -> Path:
     payload_dir = out_dir / WINDOWS_APP_PAYLOAD_DIR
     if payload_dir.exists():
         shutil.rmtree(payload_dir)
@@ -317,6 +395,8 @@ def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> P
     bin_dir = payload_dir / "bin"
     runtime_dir = payload_dir / "runtime"
     wheels_dir = payload_dir / "wheels"
+    skills_dir = payload_dir / "skills"
+    services_dir = payload_dir / "services"
     config_templates_dir = payload_dir / "config-templates"
     scripts_dir = payload_dir / "scripts"
     release_dir = payload_dir / "release"
@@ -325,6 +405,8 @@ def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> P
         bin_dir,
         runtime_dir,
         wheels_dir,
+        skills_dir,
+        services_dir,
         config_templates_dir,
         scripts_dir,
         release_dir,
@@ -343,15 +425,35 @@ def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> P
             destination.write_bytes(archive.read(member))
 
     shutil.copy2(wheel, wheels_dir / wheel.name)
+    _write_sitecustomize_for_wheelhouse(app_dir)
+    python_manifest = _stage_managed_python_runtime(
+        runtime_dir,
+        managed_python_runtime,
+    )
+    hermes_manifest = _stage_hermes_runtime_wheel(
+        wheels_dir,
+        hermes_agent_wheel,
+    )
+    dependency_manifest = _stage_dependency_artifacts(
+        services_dir,
+        dependency_artifacts_dir,
+    )
+    skills_manifest = _stage_skills_overlay(
+        skills_dir,
+        skills_overlay_source,
+        skills_allowlist or list(DEFAULT_SKILLS_ALLOWLIST),
+    )
+    wheelhouse_manifest = _write_wheelhouse_manifest(wheels_dir)
+    production_qualified = (
+        python_manifest["status"] == "included"
+        and hermes_manifest["included"]
+        and all(item["included"] for item in dependency_manifest["artifacts"].values())
+    )
     (wheels_dir / "requirements-pinned.txt").write_text(
         "\n".join(
             [
                 f"project_maya @ file:///%MAYA_INSTALL_DIR%/wheels/{wheel.name}",
-                (
-                    "hermes-agent @ "
-                    "git+https://github.com/Bidzina83/hermes-agent.git"
-                    f"@{HERMES_RUNTIME_COMMIT}"
-                ),
+                _requirements_line_for_hermes(hermes_manifest),
                 "cryptography>=42",
                 "",
             ]
@@ -363,19 +465,27 @@ def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> P
         runtime_dir / "runtime-manifest.json",
         {
             "runtime_layout_version": 1,
-            "python": {
-                "managed_layout": "runtime/python",
-                "status": "external_or_bundled_by_release_infrastructure",
-                "requires_python": ">=3.11,<3.14",
-                "silent_system_install": False,
-            },
+            "qualification_mode": (
+                "production" if production_qualified else "local_smoke_blocked"
+            ),
+            "python": python_manifest,
             "hermes_agent": {
                 "package": "hermes-agent",
                 "source": "git+https://github.com/Bidzina83/hermes-agent.git",
                 "commit": HERMES_RUNTIME_COMMIT,
                 "factory": "run_agent:AIAgent",
-                "artifact_status": "pinned_requirement_recorded",
+                **hermes_manifest,
                 "readiness_if_unresolved": "blocked",
+            },
+            "wheelhouse": wheelhouse_manifest,
+            "skills": {
+                "manifest": "skills/skills-manifest.json",
+                "included_count": len(skills_manifest["skills"]),
+                "status": "included" if skills_manifest["skills"] else "empty_overlay",
+            },
+            "managed_services": {
+                "manifest": "services/managed-services.json",
+                "production_ready": dependency_manifest["production_ready"],
             },
             "profiles": [
                 "maya-core",
@@ -399,9 +509,17 @@ def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> P
                 "notes": "project_maya payload is installed from the built wheel",
             },
             "hermes-agent": {
-                "included": False,
-                "status": "blocked_until_runtime_artifact_available",
-                "notes": "pinned runtime contract is recorded; verifier must not report Hermes healthy unless importable",
+                "included": bool(hermes_manifest["included"]),
+                "status": (
+                    "installed"
+                    if hermes_manifest["included"]
+                    else "blocked_until_runtime_artifact_available"
+                ),
+                "notes": (
+                    "pinned runtime artifact is included in the wheelhouse"
+                    if hermes_manifest["included"]
+                    else "pinned runtime contract is recorded; verifier must not report Hermes healthy unless importable"
+                ),
             },
             "maya-messaging": {
                 "included": True,
@@ -410,13 +528,27 @@ def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> P
             },
             "maya-metabase": {
                 "included": True,
-                "status": "setup_required",
-                "notes": "integration and readiness code ships; Java/Metabase service artifacts are validated or supplied on demand",
+                "status": (
+                    "setup_required"
+                    if dependency_manifest["artifacts"]["metabase"]["included"]
+                    and dependency_manifest["artifacts"]["java"]["included"]
+                    else "blocked_until_managed_artifacts_available"
+                ),
+                "notes": "integration and readiness code ships; Java/Metabase service artifacts are required for production Standard qualification",
             },
             "maya-documents": {
                 "included": True,
-                "status": "setup_required",
-                "notes": "document integration code ships; native document tools are validated or supplied on demand",
+                "status": (
+                    "setup_required"
+                    if dependency_manifest["artifacts"]["libreoffice"]["included"]
+                    else "blocked_until_document_runtime_available"
+                ),
+                "notes": "document integration code ships; native document tools are required for production Standard qualification",
+            },
+            "maya-skills-overlay": {
+                "included": bool(skills_manifest["skills"]),
+                "status": "installed" if skills_manifest["skills"] else "empty_overlay",
+                "notes": "only allowlisted and secret-scanned skills may be installed",
             },
         },
     )
@@ -455,19 +587,13 @@ def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> P
             "setlocal",
             'set "MAYA_APP_DIR=%~dp0..\\app"',
             'set "MAYA_INSTALL_DIR=%~dp0.."',
+            'set "MAYA_RUNTIME_PYTHON=%~dp0..\\runtime\\python\\python.cmd"',
             'set "PYTHONPATH=%MAYA_APP_DIR%;%PYTHONPATH%"',
-            "where py >nul 2>nul",
-            "if %ERRORLEVEL%==0 goto run_py",
-            "where python >nul 2>nul",
-            "if %ERRORLEVEL%==0 goto run_python",
-            "echo Python 3 is required to run Maya the Info Manager.",
-            "echo Install Python 3, then run this command again.",
+            'if exist "%MAYA_RUNTIME_PYTHON%" goto run_managed',
+            "echo Maya managed Python runtime is missing.",
             "exit /b 1",
-            ":run_py",
-            "py -3 -m project_maya.cli %*",
-            "exit /b %ERRORLEVEL%",
-            ":run_python",
-            "python -m project_maya.cli %*",
+            ":run_managed",
+            '"%MAYA_RUNTIME_PYTHON%" -m project_maya.cli %*',
             "exit /b %ERRORLEVEL%",
             "",
         ]
@@ -499,20 +625,14 @@ def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> P
             'set "MAYA_DATA_DIR=%LOCALAPPDATA%\\Maya the Info Manager\\maya-data"',
             'set "MAYA_INSTALL_DIR=%~dp0.."',
             'set "MAYA_APP_DIR=%~dp0..\\app"',
+            'set "MAYA_RUNTIME_PYTHON=%~dp0..\\runtime\\python\\python.cmd"',
             'set "PYTHONPATH=%MAYA_APP_DIR%;%PYTHONPATH%"',
-            "where py >nul 2>nul",
-            "if %ERRORLEVEL%==0 goto setup_py",
-            "where python >nul 2>nul",
-            "if %ERRORLEVEL%==0 goto setup_python",
-            "echo Python 3 is required to set up Maya the Info Manager.",
+            'if exist "%MAYA_RUNTIME_PYTHON%" goto setup_managed',
+            "echo Maya managed Python runtime is missing.",
             "set MAYA_EXIT=1",
             "goto setup_done",
-            ":setup_py",
-            'py -3 "%~dp0..\\scripts\\maya_first_run.py" --install-dir "%~dp0.." --config "%MAYA_CONFIG%" --data-dir "%MAYA_DATA_DIR%" %*',
-            "set MAYA_EXIT=%ERRORLEVEL%",
-            "goto setup_done",
-            ":setup_python",
-            'python "%~dp0..\\scripts\\maya_first_run.py" --install-dir "%~dp0.." --config "%MAYA_CONFIG%" --data-dir "%MAYA_DATA_DIR%" %*',
+            ":setup_managed",
+            '"%MAYA_RUNTIME_PYTHON%" "%~dp0..\\scripts\\maya_first_run.py" --install-dir "%~dp0.." --config "%MAYA_CONFIG%" --data-dir "%MAYA_DATA_DIR%" %*',
             "set MAYA_EXIT=%ERRORLEVEL%",
             ":setup_done",
             "echo.",
@@ -544,20 +664,14 @@ def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> P
             "echo Maya the Info Manager installed qualification",
             "echo.",
             'set "MAYA_APP_DIR=%~dp0..\\app"',
+            'set "MAYA_RUNTIME_PYTHON=%~dp0..\\runtime\\python\\python.cmd"',
             'set "PYTHONPATH=%MAYA_APP_DIR%;%PYTHONPATH%"',
-            "where py >nul 2>nul",
-            "if %ERRORLEVEL%==0 goto qualification_py",
-            "where python >nul 2>nul",
-            "if %ERRORLEVEL%==0 goto qualification_python",
-            "echo Python 3 is required to qualify Maya the Info Manager.",
+            'if exist "%MAYA_RUNTIME_PYTHON%" goto qualification_managed',
+            "echo Maya managed Python runtime is missing.",
             "set MAYA_EXIT=1",
             "goto qualification_done",
-            ":qualification_py",
-            'py -3 "%~dp0..\\scripts\\maya_qualification.py" --install-dir "%~dp0.."',
-            "set MAYA_EXIT=%ERRORLEVEL%",
-            "goto qualification_done",
-            ":qualification_python",
-            'python "%~dp0..\\scripts\\maya_qualification.py" --install-dir "%~dp0.."',
+            ":qualification_managed",
+            '"%MAYA_RUNTIME_PYTHON%" "%~dp0..\\scripts\\maya_qualification.py" --install-dir "%~dp0.."',
             "set MAYA_EXIT=%ERRORLEVEL%",
             ":qualification_done",
             "echo.",
@@ -605,6 +719,292 @@ def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> P
     _verify_windows_app_payload(payload_dir)
     _remove_python_caches(payload_dir)
     return payload_dir
+
+
+def _write_sitecustomize_for_wheelhouse(app_dir: Path) -> None:
+    (app_dir / "sitecustomize.py").write_text(
+        "\n".join(
+            [
+                '"""Installed Maya wheelhouse path bootstrap."""',
+                "from __future__ import annotations",
+                "",
+                "import sys",
+                "from pathlib import Path",
+                "",
+                "install_dir = Path(__file__).resolve().parents[1]",
+                "wheels_dir = install_dir / 'wheels'",
+                "if wheels_dir.is_dir():",
+                "    for wheel in sorted(wheels_dir.glob('*.whl')):",
+                "        wheel_path = str(wheel)",
+                "        if wheel_path not in sys.path:",
+                "            sys.path.append(wheel_path)",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
+def _stage_managed_python_runtime(
+    runtime_dir: Path,
+    source: Path | None,
+) -> dict[str, object]:
+    python_dir = runtime_dir / "python"
+    python_dir.mkdir(parents=True, exist_ok=True)
+    if source is not None:
+        source = source.resolve()
+        if not source.is_dir():
+            raise RuntimeError("--managed-python-runtime must be a directory")
+        shutil.copytree(source, python_dir, dirs_exist_ok=True)
+        executable = _find_managed_python_executable(python_dir)
+        if executable is None:
+            raise RuntimeError(
+                "managed Python runtime must contain python.exe or python.cmd"
+            )
+        return {
+            "managed_layout": "runtime/python",
+            "status": "included",
+            "requires_python": ">=3.11,<3.14",
+            "executable": executable.relative_to(runtime_dir.parent).as_posix(),
+            "sha256": _tree_sha256(python_dir),
+            "silent_system_install": False,
+        }
+    wrapper = python_dir / "python.cmd"
+    wrapper.write_text(
+        "\r\n".join(
+            [
+                "@echo off",
+                "setlocal",
+                "where py >nul 2>nul",
+                "if %ERRORLEVEL%==0 goto run_py",
+                "where python >nul 2>nul",
+                "if %ERRORLEVEL%==0 goto run_python",
+                "echo Maya managed Python runtime is missing.",
+                "echo This local-smoke payload cannot run without system Python.",
+                "exit /b 1",
+                ":run_py",
+                "py -3 %*",
+                "exit /b %ERRORLEVEL%",
+                ":run_python",
+                "python %*",
+                "exit /b %ERRORLEVEL%",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+        newline="",
+    )
+    return {
+        "managed_layout": "runtime/python",
+        "status": "local_smoke_external_fallback",
+        "requires_python": ">=3.11,<3.14",
+        "executable": "runtime/python/python.cmd",
+        "sha256": sha256_file(wrapper),
+        "silent_system_install": False,
+        "readiness_if_unresolved": "blocked",
+    }
+
+
+def _find_managed_python_executable(python_dir: Path) -> Path | None:
+    for name in ("python.exe", "python.cmd", "bin/python.exe", "bin/python"):
+        candidate = python_dir / name
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _stage_hermes_runtime_wheel(
+    wheels_dir: Path,
+    source: Path | None,
+) -> dict[str, object]:
+    if source is None:
+        return {
+            "included": False,
+            "artifact_status": "missing_blocked",
+            "artifact": None,
+            "sha256": None,
+        }
+    source = source.resolve()
+    if not source.is_file() or source.suffix.lower() != ".whl":
+        raise RuntimeError("--hermes-agent-wheel must point to a .whl file")
+    if "hermes" not in source.name.lower():
+        raise RuntimeError("--hermes-agent-wheel does not look like Hermes Agent")
+    destination = wheels_dir / source.name
+    shutil.copy2(source, destination)
+    return {
+        "included": True,
+        "artifact_status": "wheelhouse_artifact_included",
+        "artifact": destination.name,
+        "sha256": sha256_file(destination),
+    }
+
+
+def _requirements_line_for_hermes(hermes_manifest: dict[str, object]) -> str:
+    artifact = hermes_manifest.get("artifact")
+    if artifact:
+        return f"hermes-agent @ file:///%MAYA_INSTALL_DIR%/wheels/{artifact}"
+    return (
+        "# hermes-agent runtime artifact missing; pinned commit "
+        f"{HERMES_RUNTIME_COMMIT} must be supplied for production qualification"
+    )
+
+
+def _write_wheelhouse_manifest(wheels_dir: Path) -> dict[str, object]:
+    wheels = []
+    for wheel in sorted(wheels_dir.glob("*.whl")):
+        wheels.append(
+            {
+                "name": wheel.name,
+                "path": f"wheels/{wheel.name}",
+                "sha256": sha256_file(wheel),
+                "size_bytes": wheel.stat().st_size,
+            }
+        )
+    manifest = {
+        "schema_version": 1,
+        "wheels": wheels,
+        "all_wheels_hashed": True,
+    }
+    write_canonical_json(wheels_dir / "wheelhouse-manifest.json", manifest)
+    return manifest
+
+
+def _stage_dependency_artifacts(
+    services_dir: Path,
+    source_dir: Path | None,
+) -> dict[str, object]:
+    artifacts_dir = services_dir / "artifacts"
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    staged: dict[str, dict[str, object]] = {}
+    sources = tuple(source_dir.resolve().iterdir()) if source_dir and source_dir.is_dir() else ()
+    for slot, suffixes in HEAVY_DEPENDENCY_SLOTS:
+        match = _find_dependency_artifact(sources, slot, suffixes)
+        if match is None:
+            staged[slot] = {
+                "included": False,
+                "status": "blocked_until_artifact_supplied",
+                "path": None,
+                "sha256": None,
+            }
+            continue
+        destination = artifacts_dir / match.name
+        shutil.copy2(match, destination)
+        staged[slot] = {
+            "included": True,
+            "status": "artifact_included",
+            "path": destination.relative_to(services_dir).as_posix(),
+            "sha256": sha256_file(destination),
+            "size_bytes": destination.stat().st_size,
+        }
+    manifest = {
+        "schema_version": 1,
+        "silent_system_dependency_install": False,
+        "customer_tenant_resources_created": False,
+        "production_ready": all(item["included"] for item in staged.values()),
+        "artifacts": staged,
+    }
+    write_canonical_json(services_dir / "managed-services.json", manifest)
+    return manifest
+
+
+def _find_dependency_artifact(
+    sources: tuple[Path, ...],
+    slot: str,
+    suffixes: tuple[str, ...],
+) -> Path | None:
+    for path in sorted(sources):
+        name = path.name.lower()
+        if not path.is_file() or slot not in name:
+            continue
+        if any(name.endswith(suffix) for suffix in suffixes):
+            return path
+    return None
+
+
+def _stage_skills_overlay(
+    skills_dir: Path,
+    source_dir: Path | None,
+    allowlist: list[str],
+) -> dict[str, object]:
+    manifest = {
+        "schema_version": 1,
+        "source_repo": MAYA_SKILLS_REPO,
+        "source": str(source_dir.resolve()) if source_dir else None,
+        "allowlist": tuple(allowlist),
+        "skills": [],
+    }
+    if source_dir is None:
+        write_canonical_json(skills_dir / "skills-manifest.json", manifest)
+        return manifest
+    source_dir = source_dir.resolve()
+    if not source_dir.is_dir():
+        raise RuntimeError("--skills-overlay-source must be a directory")
+    for prefix in allowlist:
+        source_path = source_dir / Path(prefix)
+        if not source_path.is_dir():
+            continue
+        destination = skills_dir / Path(prefix).name
+        shutil.copytree(
+            source_path,
+            destination,
+            ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache", "*.pyc"),
+            dirs_exist_ok=True,
+        )
+        _scan_curated_skill(destination)
+        manifest["skills"].append(
+            {
+                "name": destination.name,
+                "source_path": prefix.replace("\\", "/"),
+                "installed_path": destination.relative_to(skills_dir).as_posix(),
+                "sha256": _tree_sha256(destination),
+                "approval_status": "allowlisted",
+            }
+        )
+    write_canonical_json(skills_dir / "skills-manifest.json", manifest)
+    return manifest
+
+
+def _scan_curated_skill(path: Path) -> None:
+    forbidden_name_fragments = (
+        "client_secret",
+        "private_key",
+        "recovery_code",
+        "browser_profile",
+        ".env",
+    )
+    forbidden_text_fragments = (
+        "-----BEGIN PRIVATE KEY-----",
+        "-----BEGIN OPENSSH PRIVATE KEY-----",
+        "xoxb-",
+        "xapp-",
+        "ghp_",
+        "ya29.",
+    )
+    for file_path in sorted(path.rglob("*")):
+        if not file_path.is_file():
+            continue
+        lower_name = file_path.name.lower()
+        if any(fragment in lower_name for fragment in forbidden_name_fragments):
+            raise RuntimeError(f"skill overlay contains forbidden file: {file_path}")
+        if file_path.suffix.lower() not in {".md", ".txt", ".json", ".yaml", ".yml", ".py", ".sh"}:
+            continue
+        text = file_path.read_text(encoding="utf-8", errors="ignore")
+        if any(fragment in text for fragment in forbidden_text_fragments):
+            raise RuntimeError(f"skill overlay contains forbidden secret material: {file_path}")
+
+
+def _tree_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    for file_path in sorted(path.rglob("*")):
+        if not file_path.is_file():
+            continue
+        rel = file_path.relative_to(path).as_posix().encode("utf-8")
+        digest.update(rel)
+        digest.update(b"\0")
+        digest.update(file_path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
 
 
 def _verify_windows_app_payload(payload_dir: Path) -> None:
@@ -752,6 +1152,7 @@ def _first_run_script() -> str:
 
         import argparse
         import json
+        import os
         import shutil
         import subprocess
         import sys
@@ -778,6 +1179,21 @@ def _first_run_script() -> str:
                 config_path.write_text(rendered + "\n", encoding="utf-8")
             policy_dir = data_dir / "governance" / "policies"
             policy_dir.mkdir(parents=True, exist_ok=True)
+            for directory in (
+                data_dir / "memory",
+                data_dir / "memory" / "registry",
+                data_dir / "governance" / "audit",
+                data_dir / "logs",
+                data_dir / "backups",
+                data_dir / "metabase" / "application",
+                data_dir / "metabase" / "provisioning",
+                data_dir / "metabase" / "analytics" / "sources",
+                data_dir / "documents",
+                data_dir / "connectors",
+                data_dir / "local-api",
+                data_dir / "updates",
+            ):
+                directory.mkdir(parents=True, exist_ok=True)
             policy_path = policy_dir / "default.json"
             if not policy_path.exists():
                 shutil.copy2(install_dir / "config-templates" / "default-governance-policy.json", policy_path)
@@ -787,7 +1203,9 @@ def _first_run_script() -> str:
                 source = install_dir / "release" / name
                 if source.is_file():
                     shutil.copy2(source, updates_dir / name)
+            secret_status = _initialize_local_api_secret(data_dir)
             print(json.dumps({"operation": "first_run", "config": str(config_path), "data_dir": str(data_dir), "created_config": True}, sort_keys=True))
+            print(json.dumps({"operation": "local_api_secret", "status": secret_status}, sort_keys=True))
             for command in (
                 [sys.executable, "-m", "project_maya.cli", "setup", "plan", "--config", str(config_path)],
                 [sys.executable, "-m", "project_maya.cli", "setup", "init", "--config", str(config_path), "--apply"],
@@ -797,6 +1215,19 @@ def _first_run_script() -> str:
                 if result.returncode != 0:
                     return result.returncode
             return 0
+
+
+        def _initialize_local_api_secret(data_dir):
+            value = uuid.uuid4().hex + uuid.uuid4().hex
+            try:
+                from project_maya.secrets import SecretRef, build_platform_secret_store
+                store = build_platform_secret_store(data_dir)
+                store.write(SecretRef.parse("secret://local-api/token"), value)
+                return store.health().status.value
+            except Exception as exc:
+                if os.name == "nt":
+                    return "blocked:" + type(exc).__name__
+                return "blocked:platform_secret_store_unavailable"
 
 
         if __name__ == "__main__":
@@ -822,6 +1253,52 @@ def _qualification_script() -> str:
 
 
         SECRET_MARKERS = ("secret://", "access_token", "refresh_token", "password", "api_key")
+        HERMES_PROBE = "\n".join([
+            "import importlib.util, json, sys",
+            "run_agent = importlib.util.find_spec('run_agent')",
+            "if run_agent is None:",
+            "    print(json.dumps({'component': 'hermes-agent', 'status': 'blocked', 'reason': 'run_agent import unavailable'}))",
+            "    raise SystemExit(1)",
+            "module = __import__('run_agent')",
+            "factory = getattr(module, 'AIAgent', None)",
+            "if not callable(factory):",
+            "    print(json.dumps({'component': 'hermes-agent', 'status': 'blocked', 'reason': 'AIAgent factory unavailable'}))",
+            "    raise SystemExit(1)",
+            "print(json.dumps({'component': 'hermes-agent', 'status': 'available', 'factory': 'run_agent:AIAgent'}))",
+        ])
+        LOCAL_API_PROBE = "\n".join([
+            "import json, sys",
+            "from pathlib import Path",
+            "from project_maya.config import config_from_mapping",
+            "config = config_from_mapping(json.loads(Path(sys.argv[1]).read_text(encoding='utf-8')))",
+            "if config.local_api.bind.startswith('127.') and not config.local_api.remote_access:",
+            "    print(json.dumps({'component': 'local-api', 'status': 'configured-loopback'}))",
+            "    raise SystemExit(0)",
+            "print(json.dumps({'component': 'local-api', 'status': 'blocked', 'reason': 'non-loopback or remote access configured'}))",
+            "raise SystemExit(1)",
+        ])
+        CONNECTOR_PROBE = "\n".join([
+            "import json, sys",
+            "from pathlib import Path",
+            "from project_maya.config import config_from_mapping",
+            "from project_maya.connectors import validate_configured_connectors",
+            "config = config_from_mapping(json.loads(Path(sys.argv[1]).read_text(encoding='utf-8')))",
+            "validations = validate_configured_connectors(config.integrations, broker_mode=config.broker.mode)",
+            "print(json.dumps({'component': 'connectors', 'status': 'ready-for-explicit-authorization', 'connectors': sorted(item.name for item in validations)}))",
+            "raise SystemExit(0)",
+        ])
+        SERVICE_ARTIFACT_PROBE = "\n".join([
+            "import json, sys",
+            "from pathlib import Path",
+            "install_dir = Path(sys.argv[1])",
+            "required = sys.argv[2:]",
+            "manifest = json.loads((install_dir / 'services' / 'managed-services.json').read_text(encoding='utf-8'))",
+            "missing = [name for name in required if not manifest['artifacts'].get(name, {}).get('included')]",
+            "if missing:",
+            "    print(json.dumps({'component': 'managed-services', 'status': 'blocked', 'missing': missing}))",
+            "    raise SystemExit(1)",
+            "print(json.dumps({'component': 'managed-services', 'status': 'artifacts-present', 'required': required}))",
+        ])
 
 
         def main(argv=None):
@@ -843,8 +1320,13 @@ def _qualification_script() -> str:
                 commands = {
                     "setup_plan": [sys.executable, "-m", "project_maya.cli", "setup", "plan", "--config", str(config_path)],
                     "setup_init_dry_run": [sys.executable, "-m", "project_maya.cli", "setup", "init", "--config", str(config_path)],
+                    "hermes_runtime": [sys.executable, "-c", HERMES_PROBE, str(install_dir)],
                     "doctor": [sys.executable, "-m", "project_maya.cli", "doctor", "--config", str(config_path)],
                     "health_summary": [sys.executable, "-m", "project_maya.cli", "health", "summary", "--config", str(config_path)],
+                    "local_api_contract": [sys.executable, "-c", LOCAL_API_PROBE, str(config_path)],
+                    "connector_authorization_readiness": [sys.executable, "-c", CONNECTOR_PROBE, str(config_path)],
+                    "metabase_readiness": [sys.executable, "-c", SERVICE_ARTIFACT_PROBE, str(install_dir), "metabase", "java"],
+                    "document_conversion_readiness": [sys.executable, "-c", SERVICE_ARTIFACT_PROBE, str(install_dir), "libreoffice"],
                     "update_check": [sys.executable, "-m", "project_maya.cli", "update", "--config", str(config_path), "--check"],
                     "rollback_check": [sys.executable, "-m", "project_maya.cli", "update", "--config", str(config_path), "--rollback"],
                     "broker_status": [sys.executable, "-m", "project_maya.cli", "broker", "status", "--config", str(config_path)],
@@ -879,7 +1361,15 @@ def _qualification_script() -> str:
 
         def _run(command, env):
             result = subprocess.run(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
-            return {"returncode": result.returncode, "output": result.stdout[-4000:]}
+            return {"returncode": result.returncode, "output": _redact(result.stdout[-4000:])}
+
+
+        def _redact(text):
+            redacted = text
+            for marker in SECRET_MARKERS:
+                redacted = redacted.replace(marker, "[redacted]")
+                redacted = redacted.replace(marker.upper(), "[redacted]")
+            return redacted
 
 
         def _make_legacy_memory(path):
@@ -910,7 +1400,16 @@ def _build_windows_installer_bundle(
         "version": version,
         "wheel": wheel.name,
         "payload_root": WINDOWS_APP_PAYLOAD_DIR,
-        "payload_layout": ["app", "runtime", "wheels", "config-templates", "scripts", "release"],
+        "payload_layout": [
+            "app",
+            "runtime",
+            "wheels",
+            "skills",
+            "services",
+            "config-templates",
+            "scripts",
+            "release",
+        ],
         "installed_entry_points": [
             "bin/maya-cli.cmd",
             "bin/setup-maya.cmd",
@@ -925,7 +1424,8 @@ def _build_windows_installer_bundle(
         "silent_system_dependency_install": False,
         "customer_tenant_resources_created": False,
         "raw_secrets_stored": False,
-        "heavy_dependencies": "validated-or-installed-on-demand",
+        "production_qualification": _payload_qualification_mode(app_payload),
+        "heavy_dependencies": "prepared-artifacts-or-blocked-readiness",
     }
     manifest_path = out_dir / "installer-manifest.json"
     write_canonical_json(manifest_path, manifest)
@@ -941,6 +1441,14 @@ def _build_windows_installer_bundle(
             _write_zip_entry(archive, payload_file, arcname)
     manifest_path.unlink()
     return bundle_path
+
+
+def _payload_qualification_mode(app_payload: Path) -> str:
+    manifest_path = app_payload / "runtime" / "runtime-manifest.json"
+    if not manifest_path.is_file():
+        return "unknown"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    return str(manifest.get("qualification_mode", "unknown"))
 
 
 def _build_inno_setup_products(
@@ -966,6 +1474,7 @@ def _build_inno_setup_products(
         "customer_tenant_resources_created": False,
         "installs_from_built_artifact": True,
         "signing": "external-release-signing-required",
+        "production_qualification": _payload_qualification_mode(app_payload),
     }
     manifest_path = inno_dir / "inno-installer-manifest.json"
     write_canonical_json(manifest_path, inno_manifest)

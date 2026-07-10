@@ -220,6 +220,13 @@ webhooks, allowlists, Enterprise vaults, certificates, networking, and offline
 update channels. Do not silently install system software or create customer
 tenant resources.
 
+This does not prohibit a Maya Standard installer from bundling pinned,
+curated, disclosed, license-compatible, Maya-managed runtime artifacts through
+the release process, including managed Python, the compatible Hermes runtime,
+Metabase, Java, LibreOffice, or Poppler. Such artifacts must be hashed,
+provenanced, installed into Maya-owned locations where practical, and qualified
+honestly; missing artifacts remain blocked readiness, not healthy operation.
+
 Do not claim support for Windows, macOS, Linux, server, or container deployment
 until installation, lifecycle, health, backup, restore, update, and rollback
 tests pass for that artifact.

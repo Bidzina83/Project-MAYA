@@ -14,9 +14,12 @@ does not satisfy the product specification by itself.
 
 The current staged payload now includes a managed product layout, starter
 Standard configuration template, first-run setup script, product shortcuts,
-runtime and wheel metadata, and installed qualification checks. It still must
-be completed with the actual managed Python/Hermes runtime artifacts and
-clean-install Windows qualification before Windows desktop support is claimed.
+runtime and wheel metadata, curated-skills and managed-service manifests, and
+installed qualification checks. The builder can now consume prepared managed
+Python, Hermes, heavy dependency, and skills-overlay artifacts and records
+whether the result is `production` or `local_smoke_blocked`. It still must be
+run with real release-approved artifacts and pass clean-install Windows
+qualification before Windows desktop support is claimed.
 
 Windows desktop production qualification remains open until compiled Inno
 Setup `.exe` installers are Authenticode-signed with release-infrastructure
@@ -43,10 +46,14 @@ met.
 - Runtime verification uses public keys only; committed test signing material
   is explicitly non-production.
 - The release builder emits a staged Windows payload with `app/`, `runtime/`,
-  `wheels/`, `config-templates/`, `scripts/`, `release/`, and `bin/`, plus
-  Standard and Enterprise Inno Setup `.iss` products and an Inno installer
-  manifest. Native `.exe` compilation runs only when a caller supplies an
-  available `ISCC.exe`.
+  `wheels/`, `skills/`, `services/`, `config-templates/`, `scripts/`,
+  `release/`, and `bin/`, plus Standard and Enterprise Inno Setup `.iss`
+  products and an Inno installer manifest. Native `.exe` compilation runs only
+  when a caller supplies an available `ISCC.exe`.
+- The builder accepts prepared artifact inputs for a managed Python runtime,
+  the pinned Hermes Agent wheel, heavy dependency artifacts, and a curated Maya
+  skills overlay. Missing runtime-heavy artifacts are recorded as blocked
+  readiness and local-smoke status, not healthy operation.
 - Windows shortcuts now target product actions: Setup Maya, Start Maya, Maya
   Doctor, installed qualification, and the Maya data folder. They are not a
   replacement for the guided desktop setup experience.
@@ -77,9 +84,8 @@ Phase 6 does not:
 - execute automatic background updates;
 - silently install system dependencies;
 - create customer tenant resources;
-- complete the managed Python runtime artifact;
-- complete the pinned Hermes Agent runtime artifact inside the Windows
-  installer payload;
+- provide release-approved managed Python and Hermes artifacts by default in
+  this repository;
 - install Inno Setup or compiler toolchains;
 - provide or store Windows code-signing private keys, certificate passwords,
   or release-signing credentials;
