@@ -47,14 +47,22 @@ an Inno installer manifest, SBOM, provenance, signed release manifest, signed
 update manifest, and signed rollback manifest.
 
 If `ISCC.exe` is supplied through `--inno-compiler`, the builder may also
-compile native Inno Setup `.exe` installers. The builder never installs Inno
-Setup, Python, system dependencies, services, OAuth grants, or customer tenant
-resources.
+compile native Inno Setup `.exe` installers. Production `.exe` installers
+must be Authenticode-signed through release infrastructure by passing
+`--signtool` plus exactly one certificate selector, either `--sign-cert-sha1`
+or `--sign-cert-subject`. Private certificate material and passwords are never
+stored in this repository.
+
+For local smoke testing only, `--allow-unsigned-installers` permits compiled
+installers to remain unsigned. That mode does not satisfy Windows desktop
+release qualification and may be blocked by Smart App Control. The builder
+never installs Inno Setup, Python, system dependencies, services, OAuth grants,
+or customer tenant resources.
 
 The verifier checks signatures, checksums, SBOM/provenance presence, Inno
-installer products, installer-bundle boundaries, and that the installer
-products are built from release artifacts without silently installing system
-dependencies or creating customer tenant resources.
+installer products, installer-bundle boundaries, packaged launcher startup,
+and that compiled Windows installers are trusted by Authenticode. Unsigned or
+untrusted compiled `.exe` installers fail verification.
 
 ## Boundaries
 

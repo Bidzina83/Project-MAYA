@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import hashlib
 import shutil
@@ -33,6 +34,8 @@ from project_maya.release import (  # noqa: E402
 
 
 HERMES_RUNTIME_COMMIT = "b13e2fd6948a59eeb59fe618914147d97a2ee90a"
+PRODUCT_DISPLAY_NAME = "Maya the Info Manager"
+WINDOWS_APP_PAYLOAD_DIR = "windows-app-payload"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -45,18 +48,24 @@ def main(argv: list[str] | None = None) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     wheel = _build_wheel(out_dir)
+    app_payload = _build_windows_app_payload(
+        out_dir,
+        wheel,
+        version=args.version,
+    )
     installer = _build_windows_installer_bundle(
         out_dir,
         wheel,
+        app_payload,
         version=args.version,
     )
     inno_artifacts = _build_inno_setup_products(
         out_dir,
         wheel,
         installer,
+        app_payload,
         version=args.version,
         platform=args.platform,
-        compiler=args.inno_compiler,
     )
     sbom_path = out_dir / "sbom.json"
     provenance_path = out_dir / "provenance.json"
@@ -140,6 +149,15 @@ def main(argv: list[str] | None = None) -> int:
         }
     )
     write_canonical_json(rollback_manifest_path, signed_rollback)
+    _compile_inno_setup_products(
+        inno_artifacts,
+        compiler=args.inno_compiler,
+        signtool=args.signtool,
+        sign_cert_sha1=args.sign_cert_sha1,
+        sign_cert_subject=args.sign_cert_subject,
+        timestamp_url=args.timestamp_url,
+        allow_unsigned_installers=args.allow_unsigned_installers,
+    )
     return 0
 
 
@@ -158,6 +176,40 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         help=(
             "Optional path to ISCC.exe. If omitted or unavailable, the release "
             "contains verified .iss installer products without compiling .exe files."
+        ),
+    )
+    parser.add_argument(
+        "--signtool",
+        type=Path,
+        default=None,
+        help=(
+            "Optional path to signtool.exe. Required with --inno-compiler for "
+            "production Windows installers unless --allow-unsigned-installers "
+            "is used for local smoke testing."
+        ),
+    )
+    parser.add_argument(
+        "--sign-cert-sha1",
+        default=None,
+        help="Certificate SHA-1 thumbprint for signtool /sha1 selection.",
+    )
+    parser.add_argument(
+        "--sign-cert-subject",
+        default=None,
+        help="Certificate subject name for signtool /n selection.",
+    )
+    parser.add_argument(
+        "--timestamp-url",
+        default="http://timestamp.digicert.com",
+        help="RFC 3161 timestamp URL passed to signtool /tr.",
+    )
+    parser.add_argument(
+        "--allow-unsigned-installers",
+        action="store_true",
+        help=(
+            "Allow compiled Inno installers to remain unsigned. This is only "
+            "for local smoke testing and does not satisfy Phase 6 production "
+            "qualification."
         ),
     )
     return parser.parse_args(argv)
@@ -256,11 +308,198 @@ def _build_minimal_wheel(out_dir: Path) -> Path:
     return wheel_path
 
 
-def _build_windows_installer_bundle(out_dir: Path, wheel: Path, *, version: str) -> Path:
+def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> Path:
+    payload_dir = out_dir / WINDOWS_APP_PAYLOAD_DIR
+    if payload_dir.exists():
+        shutil.rmtree(payload_dir)
+    app_dir = payload_dir / "app"
+    bin_dir = payload_dir / "bin"
+    app_dir.mkdir(parents=True)
+    bin_dir.mkdir(parents=True)
+
+    with zipfile.ZipFile(wheel) as archive:
+        for member in sorted(archive.infolist(), key=lambda item: item.filename):
+            name = member.filename
+            if member.is_dir():
+                continue
+            if name.startswith("/") or ".." in Path(name).parts:
+                raise RuntimeError(f"wheel contains unsafe member: {name}")
+            destination = app_dir / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(archive.read(member))
+
+    maya_launcher = "\r\n".join(
+        [
+            "@echo off",
+            "setlocal",
+            'set "MAYA_APP_DIR=%~dp0..\\app"',
+            'set "PYTHONPATH=%MAYA_APP_DIR%;%PYTHONPATH%"',
+            'if "%~1"=="" (',
+            '  call "%~f0" --help',
+            "  exit /b %ERRORLEVEL%",
+            ")",
+            "where py >nul 2>nul",
+            "if %ERRORLEVEL%==0 (",
+            '  py -3 -m project_maya.cli %*',
+            "  exit /b %ERRORLEVEL%",
+            ")",
+            "where python >nul 2>nul",
+            "if %ERRORLEVEL%==0 (",
+            '  python -m project_maya.cli %*',
+            "  exit /b %ERRORLEVEL%",
+            ")",
+            "echo Python 3 is required to run Maya the Info Manager.",
+            "echo Install Python 3, then run this command again.",
+            "exit /b 1",
+            "",
+        ]
+    )
+    console_launcher = "\r\n".join(
+        [
+            "@echo off",
+            'call "%~dp0maya.cmd" %*',
+            "set MAYA_EXIT=%ERRORLEVEL%",
+            "echo.",
+            "echo Press any key to close this window.",
+            "pause >nul",
+            "exit /b %MAYA_EXIT%",
+            "",
+        ]
+    )
+    doctor_launcher = "\r\n".join(
+        [
+            "@echo off",
+            'if "%~1"=="" (',
+            "  echo Maya Doctor needs a configuration file.",
+            "  echo.",
+            '  echo Example: "%~dp0maya.cmd" doctor --config "%USERPROFILE%\\maya-data\\config\\maya.json"',
+            "  echo.",
+            '  echo Run "%~dp0maya.cmd" --help to see available commands.',
+            "  exit /b 2",
+            ")",
+            'call "%~dp0maya.cmd" doctor %*',
+            "exit /b %ERRORLEVEL%",
+            "",
+        ]
+    )
+    doctor_console_launcher = "\r\n".join(
+        [
+            "@echo off",
+            'call "%~dp0maya-doctor.cmd" %*',
+            "set MAYA_EXIT=%ERRORLEVEL%",
+            "echo.",
+            "echo Press any key to close this window.",
+            "pause >nul",
+            "exit /b %MAYA_EXIT%",
+            "",
+        ]
+    )
+    self_check_launcher = "\r\n".join(
+        [
+            "@echo off",
+            'call "%~dp0maya.cmd" --help',
+            "exit /b %ERRORLEVEL%",
+            "",
+        ]
+    )
+    self_check_console_launcher = "\r\n".join(
+        [
+            "@echo off",
+            'call "%~dp0maya-self-check.cmd"',
+            "set MAYA_EXIT=%ERRORLEVEL%",
+            "echo.",
+            "echo Press any key to close this window.",
+            "pause >nul",
+            "exit /b %MAYA_EXIT%",
+            "",
+        ]
+    )
+    (bin_dir / "maya.cmd").write_text(maya_launcher, encoding="utf-8", newline="")
+    (bin_dir / "maya-console.cmd").write_text(
+        console_launcher, encoding="utf-8", newline=""
+    )
+    (bin_dir / "maya-doctor.cmd").write_text(
+        doctor_launcher, encoding="utf-8", newline=""
+    )
+    (bin_dir / "maya-doctor-console.cmd").write_text(
+        doctor_console_launcher, encoding="utf-8", newline=""
+    )
+    (bin_dir / "maya-self-check.cmd").write_text(
+        self_check_launcher, encoding="utf-8", newline=""
+    )
+    (bin_dir / "maya-self-check-console.cmd").write_text(
+        self_check_console_launcher, encoding="utf-8", newline=""
+    )
+    (payload_dir / "README.txt").write_text(
+        "\r\n".join(
+            [
+                f"{PRODUCT_DISPLAY_NAME} {version}",
+                "",
+                "This folder contains the installed Maya application payload.",
+                "Use the Start Menu shortcuts for a visible console window.",
+                "Run bin\\maya.cmd from PowerShell or Command Prompt for normal CLI use.",
+                "Run bin\\maya-self-check.cmd to confirm the installed payload can start.",
+                "Python 3 must be installed separately; this installer does not silently install system software.",
+                "Customer data remains outside this folder in MAYA_HOME or MAYA_DATA_DIR.",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+        newline="",
+    )
+    _verify_windows_app_payload(payload_dir)
+    _remove_python_caches(payload_dir)
+    return payload_dir
+
+
+def _verify_windows_app_payload(payload_dir: Path) -> None:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(payload_dir / "app")
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    result = subprocess.run(
+        [sys.executable, "-m", "project_maya.cli", "--help"],
+        cwd=payload_dir,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0 or "usage: maya" not in result.stdout:
+        raise RuntimeError(
+            "installed Windows app payload cannot start:\n" + result.stdout
+        )
+
+
+def _remove_python_caches(payload_dir: Path) -> None:
+    for cache_dir in sorted(payload_dir.rglob("__pycache__"), reverse=True):
+        shutil.rmtree(cache_dir)
+
+
+def _iter_payload_files(payload_dir: Path) -> tuple[Path, ...]:
+    return tuple(sorted(path for path in payload_dir.rglob("*") if path.is_file()))
+
+
+def _build_windows_installer_bundle(
+    out_dir: Path,
+    wheel: Path,
+    app_payload: Path,
+    *,
+    version: str,
+) -> Path:
     manifest = {
         "installer_kind": "windows-desktop-bundle",
         "version": version,
         "wheel": wheel.name,
+        "payload_root": WINDOWS_APP_PAYLOAD_DIR,
+        "installed_entry_points": [
+            "bin/maya.cmd",
+            "bin/maya-console.cmd",
+            "bin/maya-doctor.cmd",
+            "bin/maya-doctor-console.cmd",
+            "bin/maya-self-check.cmd",
+            "bin/maya-self-check-console.cmd",
+        ],
         "installs_from_built_artifact": True,
         "silent_system_dependency_install": False,
         "customer_tenant_resources_created": False,
@@ -272,6 +511,12 @@ def _build_windows_installer_bundle(out_dir: Path, wheel: Path, *, version: str)
     with zipfile.ZipFile(bundle_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         _write_zip_entry(archive, wheel, wheel.name)
         _write_zip_entry(archive, manifest_path, manifest_path.name)
+        for payload_file in _iter_payload_files(app_payload):
+            arcname = (
+                Path(WINDOWS_APP_PAYLOAD_DIR)
+                / payload_file.relative_to(app_payload)
+            ).as_posix()
+            _write_zip_entry(archive, payload_file, arcname)
     manifest_path.unlink()
     return bundle_path
 
@@ -280,10 +525,10 @@ def _build_inno_setup_products(
     out_dir: Path,
     wheel: Path,
     installer_bundle: Path,
+    app_payload: Path,
     *,
     version: str,
     platform: str,
-    compiler: Path | None,
 ) -> tuple[Path, ...]:
     inno_dir = out_dir / "inno"
     inno_dir.mkdir(parents=True, exist_ok=True)
@@ -292,8 +537,9 @@ def _build_inno_setup_products(
         "platform": platform,
         "version": version,
         "editions": ["standard", "enterprise"],
-        "compiler": str(compiler) if compiler is not None else None,
-        "compiler_available": bool(compiler and compiler.is_file()),
+        "compiler": None,
+        "compiler_available": False,
+        "compiled_installers": [],
         "silent_system_dependency_install": False,
         "customer_tenant_resources_created": False,
         "installs_from_built_artifact": True,
@@ -310,14 +556,45 @@ def _build_inno_setup_products(
                 version=version,
                 wheel=wheel,
                 installer_bundle=installer_bundle,
+                app_payload=app_payload,
             ),
             encoding="utf-8",
         )
         products.append(script_path)
-        compiled = _compile_inno_script(script_path, compiler)
-        if compiled is not None:
-            products.append(compiled)
     return tuple(products)
+
+
+def _compile_inno_setup_products(
+    inno_artifacts: tuple[Path, ...],
+    *,
+    compiler: Path | None,
+    signtool: Path | None,
+    sign_cert_sha1: str | None,
+    sign_cert_subject: str | None,
+    timestamp_url: str,
+    allow_unsigned_installers: bool,
+) -> tuple[Path, ...]:
+    scripts = tuple(path for path in inno_artifacts if path.suffix.lower() == ".iss")
+    compiled: list[Path] = []
+    for script_path in scripts:
+        installer = _compile_inno_script(script_path, compiler)
+        if installer is not None:
+            if signtool is None and not allow_unsigned_installers:
+                raise RuntimeError(
+                    "compiled Windows installers must be Authenticode-signed; "
+                    "pass --signtool and a certificate selector, or use "
+                    "--allow-unsigned-installers only for local smoke testing"
+                )
+            _sign_windows_installer(
+                installer,
+                signtool=signtool,
+                sign_cert_sha1=sign_cert_sha1,
+                sign_cert_subject=sign_cert_subject,
+                timestamp_url=timestamp_url,
+            )
+            compiled.append(installer)
+    return tuple(compiled)
+
 
 
 def _inno_script(
@@ -326,6 +603,7 @@ def _inno_script(
     version: str,
     wheel: Path,
     installer_bundle: Path,
+    app_payload: Path,
 ) -> str:
     title = "Standard" if edition == "standard" else "Enterprise"
     app_id = (
@@ -337,25 +615,27 @@ def _inno_script(
         [
             "#define MayaVersion \"" + version + "\"",
             "#define MayaEdition \"" + title + "\"",
+            "#define MayaProductName \"" + PRODUCT_DISPLAY_NAME + "\"",
             "",
             "[Setup]",
             f"AppId={app_id}",
-            "AppName=Project MAYA {#MayaEdition}",
+            "AppName={#MayaProductName} {#MayaEdition}",
             "AppVersion={#MayaVersion}",
-            "AppPublisher=Project MAYA",
-            "DefaultDirName={autopf}\\Project MAYA",
-            "DefaultGroupName=Project MAYA",
+            "AppPublisher=Maya the Info Manager",
+            "DefaultDirName={autopf}\\Maya the Info Manager",
+            "DefaultGroupName=Maya the Info Manager",
             "DisableProgramGroupPage=yes",
             "PrivilegesRequired=lowest",
             "ArchitecturesAllowed=x64compatible",
             "ArchitecturesInstallIn64BitMode=x64compatible",
             "Compression=lzma2",
             "SolidCompression=yes",
-            "UninstallDisplayName=Project MAYA {#MayaEdition}",
+            "UninstallDisplayName={#MayaProductName} {#MayaEdition}",
             "OutputDir=.",
-            f"OutputBaseFilename=Project-MAYA-{version}-{title}-Setup",
+            f"OutputBaseFilename=Maya-the-Info-Manager-{version}-{title}-Setup",
             "",
             "[Files]",
+            f'Source: "..\\{app_payload.name}\\*"; DestDir: "{{app}}"; Flags: ignoreversion recursesubdirs createallsubdirs',
             f'Source: "..\\{wheel.name}"; DestDir: "{{app}}\\release"; Flags: ignoreversion',
             f'Source: "..\\{installer_bundle.name}"; DestDir: "{{app}}\\release"; Flags: ignoreversion',
             'Source: "..\\release-manifest.json"; DestDir: "{app}\\release"; Flags: ignoreversion',
@@ -365,7 +645,10 @@ def _inno_script(
             'Source: "..\\provenance.json"; DestDir: "{app}\\release"; Flags: ignoreversion',
             "",
             "[Icons]",
-            'Name: "{group}\\Project MAYA Documentation"; Filename: "{app}\\release\\release-manifest.json"',
+            'Name: "{group}\\Maya the Info Manager"; Filename: "{app}\\bin\\maya-console.cmd"',
+            'Name: "{group}\\Maya Doctor"; Filename: "{app}\\bin\\maya-doctor-console.cmd"',
+            'Name: "{group}\\Maya Self Check"; Filename: "{app}\\bin\\maya-self-check-console.cmd"',
+            'Name: "{group}\\Release Manifest"; Filename: "{app}\\release\\release-manifest.json"',
             "",
             "[Run]",
             "; No system software, credentials, OAuth grants, tenant resources, or services are installed silently.",
@@ -380,16 +663,66 @@ def _inno_script(
 def _compile_inno_script(script_path: Path, compiler: Path | None) -> Path | None:
     if compiler is None or not compiler.is_file():
         return None
-    subprocess.run(
-        [str(compiler), str(script_path)],
-        cwd=script_path.parent.parent,
-        check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-    )
-    candidates = sorted(script_path.parent.glob("Project-MAYA-*-Setup.exe"))
+    try:
+        subprocess.run(
+            [str(compiler), str(script_path)],
+            cwd=script_path.parent,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        output = exc.stdout or "Inno Setup compiler failed without output."
+        raise RuntimeError(output) from exc
+    candidates = sorted(script_path.parent.glob("Maya-the-Info-Manager-*-Setup.exe"))
     return candidates[-1] if candidates else None
+
+
+def _sign_windows_installer(
+    installer: Path,
+    *,
+    signtool: Path | None,
+    sign_cert_sha1: str | None,
+    sign_cert_subject: str | None,
+    timestamp_url: str,
+) -> None:
+    if signtool is None:
+        return
+    if not signtool.is_file():
+        raise RuntimeError(f"signtool.exe is not available: {signtool}")
+    if bool(sign_cert_sha1) == bool(sign_cert_subject):
+        raise RuntimeError(
+            "provide exactly one Windows signing certificate selector: "
+            "--sign-cert-sha1 or --sign-cert-subject"
+        )
+    command = [
+        str(signtool),
+        "sign",
+        "/fd",
+        "SHA256",
+        "/tr",
+        timestamp_url,
+        "/td",
+        "SHA256",
+    ]
+    if sign_cert_sha1:
+        command.extend(["/sha1", sign_cert_sha1])
+    else:
+        command.extend(["/n", str(sign_cert_subject)])
+    command.append(str(installer))
+    try:
+        subprocess.run(
+            command,
+            cwd=installer.parent,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        output = exc.stdout or "signtool failed without output."
+        raise RuntimeError(output) from exc
 
 
 def _inno_artifact_kind(path: Path) -> str:

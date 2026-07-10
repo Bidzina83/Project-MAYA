@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -20,6 +21,8 @@ from project_maya.release import (
     ReleaseMetadataError,
     non_production_test_private_key,
 )
+import scripts.build_phase6_release as build_release_module
+import scripts.verify_phase6_release as verify_release_module
 from scripts.build_phase6_release import main as build_phase6_release
 from scripts.verify_phase6_release import main as verify_phase6_release
 
@@ -115,11 +118,39 @@ class TestPhase6Release(unittest.TestCase):
                 for path in release_dir.rglob("*")
                 if path.is_file()
             )
+            self.assertIn("windows-app-payload/app/project_maya/__init__.py", contents)
+            self.assertIn("windows-app-payload/bin/maya.cmd", contents)
+            self.assertIn("windows-app-payload/bin/maya-console.cmd", contents)
+            self.assertIn("windows-app-payload/bin/maya-doctor.cmd", contents)
+            self.assertIn(
+                "windows-app-payload/bin/maya-doctor-console.cmd",
+                contents,
+            )
+            self.assertIn("windows-app-payload/bin/maya-self-check.cmd", contents)
+            self.assertIn(
+                "windows-app-payload/bin/maya-self-check-console.cmd",
+                contents,
+            )
             self.assertIn("inno/project-maya-standard.iss", contents)
             self.assertIn("inno/project-maya-enterprise.iss", contents)
             self.assertIn("inno/inno-installer-manifest.json", contents)
             self.assertNotIn("secret://", contents)
             self.assertNotIn("__pycache__", contents)
+            with zipfile.ZipFile(
+                release_dir / "project-maya-1.0.0-windows-desktop.zip"
+            ) as archive:
+                self.assertIn(
+                    "windows-app-payload/app/project_maya/__init__.py",
+                    archive.namelist(),
+                )
+                self.assertIn(
+                    "windows-app-payload/bin/maya.cmd",
+                    archive.namelist(),
+                )
+                self.assertIn(
+                    "windows-app-payload/bin/maya-console.cmd",
+                    archive.namelist(),
+                )
 
     def test_release_builder_rejects_unadvertised_platform(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -134,6 +165,73 @@ class TestPhase6Release(unittest.TestCase):
                         str(Path(tmp) / "release"),
                     ]
                 )
+
+    def test_release_builder_blocks_compiled_unsigned_installers_by_default(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            release_dir = Path(tmp) / "release"
+            compiled = release_dir / "inno" / "Maya-the-Info-Manager-1.0.0-Standard-Setup.exe"
+
+            def fake_compile(script_path, compiler):
+                compiled.parent.mkdir(parents=True, exist_ok=True)
+                compiled.write_bytes(b"unsigned installer")
+                return compiled
+
+            with patch.object(
+                build_release_module,
+                "_compile_inno_script",
+                side_effect=fake_compile,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "Authenticode-signed"):
+                    build_phase6_release(
+                        [
+                            "--version",
+                            "1.0.0",
+                            "--platform",
+                            "windows-desktop",
+                            "--out",
+                            str(release_dir),
+                            "--inno-compiler",
+                            str(Path(tmp) / "ISCC.exe"),
+                        ]
+                    )
+
+    def test_release_verifier_rejects_unsigned_compiled_installers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            release_dir = Path(tmp) / "release"
+            self.assertEqual(
+                build_phase6_release(
+                    [
+                        "--version",
+                        "1.0.0",
+                        "--platform",
+                        "windows-desktop",
+                        "--out",
+                        str(release_dir),
+                    ]
+                ),
+                0,
+            )
+            installer = (
+                release_dir
+                / "inno"
+                / "Maya-the-Info-Manager-1.0.0-Standard-Setup.exe"
+            )
+            installer.write_bytes(b"unsigned installer")
+
+            with patch.object(
+                verify_release_module,
+                "_windows_authenticode_status",
+                return_value="NotSigned",
+            ):
+                with self.assertRaisesRegex(RuntimeError, "not trusted"):
+                    verify_phase6_release(
+                        [
+                            "--release-dir",
+                            str(release_dir),
+                            "--platform",
+                            "windows-desktop",
+                        ]
+                    )
 
     def test_wrong_public_key_rejects_signature(self):
         wrong_private_key = Ed25519PrivateKey.from_private_bytes(bytes(range(32, 64)))

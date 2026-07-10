@@ -7,6 +7,13 @@ release-bundle generation, Standard and Enterprise Inno Setup product sources,
 signed update and rollback verification, platform support boundary reporting,
 package verification, and tests.
 
+Windows desktop production qualification remains open until compiled Inno
+Setup `.exe` installers are Authenticode-signed with release-infrastructure
+certificate material and pass clean install, lifecycle, backup, restore,
+update, and rollback qualification. Smart App Control blocking an unsigned
+installer is treated as valid evidence that the production exit gate is not
+met.
+
 ## Evidence
 
 | Step | Evidence |
@@ -27,6 +34,10 @@ package verification, and tests.
 - The release builder emits Standard and Enterprise Inno Setup `.iss` products
   and an Inno installer manifest. Native `.exe` compilation runs only when a
   caller supplies an available `ISCC.exe`.
+- Compiled Windows `.exe` installers must be Authenticode-signed with
+  `signtool.exe` and a release-infrastructure certificate selector. The
+  builder allows unsigned compiled installers only when
+  `--allow-unsigned-installers` is explicitly supplied for local smoke testing.
 - `maya update --check` and `maya update --rollback` reject unsigned,
   tampered, incomplete, wrong-key, and unsupported-platform metadata without
   network use or mutation.
@@ -34,7 +45,9 @@ package verification, and tests.
 - macOS, Linux, server, and container artifacts remain not advertised until
   full qualification passes.
 - The release verifier checks SBOM, provenance, checksums, Inno Setup product
-  sources, installer-bundle boundaries, and built-artifact installation.
+  sources, installer-bundle boundaries, packaged launcher startup,
+  built-artifact installation, and Authenticode trust for compiled `.exe`
+  installers.
 
 ## Known Limits
 
@@ -44,5 +57,7 @@ Phase 6 does not:
 - silently install system dependencies;
 - create customer tenant resources;
 - install Inno Setup or compiler toolchains;
+- provide or store Windows code-signing private keys, certificate passwords,
+  or release-signing credentials;
 - claim macOS, Linux, server, or container support;
 - replace the deferred external independent security review gate.
