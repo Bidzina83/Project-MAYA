@@ -762,11 +762,12 @@ def _stage_managed_python_runtime(
             raise RuntimeError(
                 "managed Python runtime must contain python.exe or python.cmd"
             )
+        launcher = _ensure_managed_python_launcher(python_dir, executable)
         return {
             "managed_layout": "runtime/python",
             "status": "included",
             "requires_python": ">=3.11,<3.14",
-            "executable": executable.relative_to(runtime_dir.parent).as_posix(),
+            "executable": launcher.relative_to(runtime_dir.parent).as_posix(),
             "sha256": _tree_sha256(python_dir),
             "silent_system_install": False,
         }
@@ -812,6 +813,27 @@ def _find_managed_python_executable(python_dir: Path) -> Path | None:
         if candidate.is_file():
             return candidate
     return None
+
+
+def _ensure_managed_python_launcher(python_dir: Path, executable: Path) -> Path:
+    launcher = python_dir / "python.cmd"
+    if launcher.is_file():
+        return launcher
+    relative = executable.relative_to(python_dir)
+    launcher.write_text(
+        "\r\n".join(
+            [
+                "@echo off",
+                "setlocal",
+                f'"%~dp0{relative.as_posix().replace("/", "\\")}" %*',
+                "exit /b %ERRORLEVEL%",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+        newline="",
+    )
+    return launcher
 
 
 def _stage_hermes_runtime_wheel(

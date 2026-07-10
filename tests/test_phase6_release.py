@@ -241,10 +241,7 @@ class TestPhase6Release(unittest.TestCase):
             release_dir = root / "release"
             runtime_dir = root / "python-runtime"
             runtime_dir.mkdir()
-            (runtime_dir / "python.cmd").write_text(
-                "@echo off\r\npython %*\r\n",
-                encoding="utf-8",
-            )
+            (runtime_dir / "python.exe").write_bytes(b"fake-python")
             hermes_wheel = root / (
                 "hermes_agent-0.17.0-py3-none-any.whl"
             )
@@ -311,6 +308,10 @@ class TestPhase6Release(unittest.TestCase):
             )
             self.assertEqual(runtime_manifest["qualification_mode"], "production")
             self.assertEqual(runtime_manifest["python"]["status"], "included")
+            self.assertEqual(
+                runtime_manifest["python"]["executable"],
+                "runtime/python/python.cmd",
+            )
             self.assertTrue(runtime_manifest["hermes_agent"]["included"])
             services_manifest = json.loads(
                 (
