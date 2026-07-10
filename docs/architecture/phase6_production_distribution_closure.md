@@ -2,10 +2,21 @@
 
 ## Status
 
-Implementation complete for signed Phase 6 release metadata, Windows desktop
+Implementation complete for signed Phase 6 release metadata, Windows
 release-bundle generation, Standard and Enterprise Inno Setup product sources,
 signed update and rollback verification, platform support boundary reporting,
-package verification, and tests.
+package verification, and staged managed-payload tests.
+
+The previous Inno Setup output was a release-artifact smoke installer: it
+installed metadata, an unpacked `project_maya` payload, and thin command
+launchers. That shape is not a production-quality Maya Standard installer and
+does not satisfy the product specification by itself.
+
+The current staged payload now includes a managed product layout, starter
+Standard configuration template, first-run setup script, product shortcuts,
+runtime and wheel metadata, and installed qualification checks. It still must
+be completed with the actual managed Python/Hermes runtime artifacts and
+clean-install Windows qualification before Windows desktop support is claimed.
 
 Windows desktop production qualification remains open until compiled Inno
 Setup `.exe` installers are Authenticode-signed with release-infrastructure
@@ -20,7 +31,7 @@ met.
 | --- | --- |
 | 1. Release metadata contracts | `src/project_maya/release.py`, `tests/test_phase6_release.py` |
 | 2. Signed update and rollback verification | `src/project_maya/update.py`, `tests/test_phase1_update.py` |
-| 3. Windows desktop Inno release tooling | `scripts/build_phase6_release.py`, `scripts/verify_phase6_release.py` |
+| 3. Windows desktop Inno release tooling and staged managed payload | `scripts/build_phase6_release.py`, `scripts/verify_phase6_release.py` |
 | 4. Platform boundary diagnostics | `src/project_maya/doctor.py`, `src/project_maya/health.py` |
 | 5. Installed package surface | `scripts/verify_phase1_package.py` |
 | 6. Scope and closure docs | `docs/architecture/phase6_production_distribution.md`, `docs/architecture/phase6_production_distribution_closure.md` |
@@ -31,9 +42,19 @@ met.
   signatures.
 - Runtime verification uses public keys only; committed test signing material
   is explicitly non-production.
-- The release builder emits Standard and Enterprise Inno Setup `.iss` products
-  and an Inno installer manifest. Native `.exe` compilation runs only when a
-  caller supplies an available `ISCC.exe`.
+- The release builder emits a staged Windows payload with `app/`, `runtime/`,
+  `wheels/`, `config-templates/`, `scripts/`, `release/`, and `bin/`, plus
+  Standard and Enterprise Inno Setup `.iss` products and an Inno installer
+  manifest. Native `.exe` compilation runs only when a caller supplies an
+  available `ISCC.exe`.
+- Windows shortcuts now target product actions: Setup Maya, Start Maya, Maya
+  Doctor, installed qualification, and the Maya data folder. They are not a
+  replacement for the guided desktop setup experience.
+- The installed qualification script exercises setup plan/init, doctor, health
+  summary, update check, rollback check, migration dry run, backup/restore dry
+  run, broker status, broker conformance, and secret-safe output checks from
+  the installed payload. Missing Hermes runtime or heavy profile dependencies
+  are reported as blocked readiness, not healthy operation.
 - Compiled Windows `.exe` installers must be Authenticode-signed with
   `signtool.exe` and a release-infrastructure certificate selector. The
   builder allows unsigned compiled installers only when
@@ -45,9 +66,9 @@ met.
 - macOS, Linux, server, and container artifacts remain not advertised until
   full qualification passes.
 - The release verifier checks SBOM, provenance, checksums, Inno Setup product
-  sources, installer-bundle boundaries, packaged launcher startup,
-  built-artifact installation, and Authenticode trust for compiled `.exe`
-  installers.
+  sources, installer-bundle boundaries, managed payload layout, product
+  shortcuts, installed qualification commands, built-artifact installation,
+  secret-safe output, and Authenticode trust for compiled `.exe` installers.
 
 ## Known Limits
 
@@ -56,6 +77,9 @@ Phase 6 does not:
 - execute automatic background updates;
 - silently install system dependencies;
 - create customer tenant resources;
+- complete the managed Python runtime artifact;
+- complete the pinned Hermes Agent runtime artifact inside the Windows
+  installer payload;
 - install Inno Setup or compiler toolchains;
 - provide or store Windows code-signing private keys, certificate passwords,
   or release-signing credentials;

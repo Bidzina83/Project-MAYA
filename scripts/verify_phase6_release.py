@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import zipfile
@@ -101,20 +102,7 @@ def _verify_installer_bundle(path: Path) -> None:
             raise RuntimeError("installer bundle lacks installer manifest")
         if not any(name.endswith(".whl") for name in names):
             raise RuntimeError("installer bundle lacks built wheel")
-        if "windows-app-payload/app/project_maya/__init__.py" not in names:
-            raise RuntimeError("installer bundle lacks installed project_maya payload")
-        if "windows-app-payload/bin/maya.cmd" not in names:
-            raise RuntimeError("installer bundle lacks Maya command launcher")
-        if "windows-app-payload/bin/maya-console.cmd" not in names:
-            raise RuntimeError("installer bundle lacks Maya console launcher")
-        if "windows-app-payload/bin/maya-doctor.cmd" not in names:
-            raise RuntimeError("installer bundle lacks Maya doctor launcher")
-        if "windows-app-payload/bin/maya-doctor-console.cmd" not in names:
-            raise RuntimeError("installer bundle lacks Maya doctor console launcher")
-        if "windows-app-payload/bin/maya-self-check.cmd" not in names:
-            raise RuntimeError("installer bundle lacks Maya self-check launcher")
-        if "windows-app-payload/bin/maya-self-check-console.cmd" not in names:
-            raise RuntimeError("installer bundle lacks Maya self-check console launcher")
+        _verify_payload_entries(names)
         forbidden = [
             name
             for name in names
@@ -127,14 +115,55 @@ def _verify_installer_bundle(path: Path) -> None:
         raise RuntimeError("installer bundle does not install from a built artifact")
     if manifest.get("payload_root") != "windows-app-payload":
         raise RuntimeError("installer bundle does not declare installed app payload")
-    if "bin/maya.cmd" not in manifest.get("installed_entry_points", []):
-        raise RuntimeError("installer bundle does not declare Maya command launcher")
-    if "bin/maya-console.cmd" not in manifest.get("installed_entry_points", []):
-        raise RuntimeError("installer bundle does not declare Maya console launcher")
+    for required_layout in ("app", "runtime", "wheels", "config-templates", "scripts", "release"):
+        if required_layout not in manifest.get("payload_layout", []):
+            raise RuntimeError(f"installer bundle lacks managed payload layout: {required_layout}")
+    for entry_point in (
+        "bin/maya-cli.cmd",
+        "bin/setup-maya.cmd",
+        "bin/maya.cmd",
+        "bin/maya-console.cmd",
+        "bin/maya-doctor.cmd",
+        "bin/maya-self-check.cmd",
+    ):
+        if entry_point not in manifest.get("installed_entry_points", []):
+            raise RuntimeError(f"installer bundle does not declare {entry_point}")
     if manifest.get("silent_system_dependency_install"):
         raise RuntimeError("installer bundle silently installs system dependencies")
     if manifest.get("customer_tenant_resources_created"):
         raise RuntimeError("installer bundle creates customer tenant resources")
+    if manifest.get("raw_secrets_stored"):
+        raise RuntimeError("installer bundle stores raw secrets")
+    payload_dir = path.parent / "windows-app-payload"
+    if payload_dir.is_dir():
+        _verify_product_launchers(payload_dir)
+        _verify_installed_qualification(payload_dir)
+
+
+def _verify_payload_entries(names: list[str]) -> None:
+    required = (
+        "windows-app-payload/app/project_maya/__init__.py",
+        "windows-app-payload/runtime/runtime-manifest.json",
+        "windows-app-payload/runtime/component-readiness.json",
+        "windows-app-payload/wheels/requirements-pinned.txt",
+        "windows-app-payload/config-templates/standard.json.template",
+        "windows-app-payload/config-templates/default-governance-policy.json",
+        "windows-app-payload/scripts/maya_first_run.py",
+        "windows-app-payload/scripts/maya_qualification.py",
+        "windows-app-payload/bin/maya-cli.cmd",
+        "windows-app-payload/bin/setup-maya.cmd",
+        "windows-app-payload/bin/maya.cmd",
+        "windows-app-payload/bin/maya-console.cmd",
+        "windows-app-payload/bin/maya-doctor.cmd",
+        "windows-app-payload/bin/maya-doctor-console.cmd",
+        "windows-app-payload/bin/maya-self-check.cmd",
+        "windows-app-payload/bin/maya-self-check-console.cmd",
+    )
+    for name in required:
+        if name not in names:
+            raise RuntimeError(f"installer bundle lacks payload entry: {name}")
+    if not any(name.startswith("windows-app-payload/wheels/") and name.endswith(".whl") for name in names):
+        raise RuntimeError("installer bundle lacks managed wheelhouse wheel")
 
 
 def _verify_inno_products(release_dir: Path) -> None:
@@ -163,8 +192,11 @@ def _verify_inno_products(release_dir: Path) -> None:
             "PrivilegesRequired=lowest",
             'Source: "..\\windows-app-payload\\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs',
             'Name: "{group}\\Maya the Info Manager"; Filename: "{app}\\bin\\maya-console.cmd"',
+            'Name: "{group}\\Setup Maya"; Filename: "{app}\\bin\\setup-maya.cmd"',
+            'Name: "{group}\\Start Maya"; Filename: "{app}\\bin\\maya-console.cmd"',
             'Name: "{group}\\Maya Doctor"; Filename: "{app}\\bin\\maya-doctor-console.cmd"',
-            'Name: "{group}\\Maya Self Check"; Filename: "{app}\\bin\\maya-self-check-console.cmd"',
+            'Name: "{group}\\Maya Installed Qualification"; Filename: "{app}\\bin\\maya-self-check-console.cmd"',
+            'Name: "{group}\\Maya Data Folder"; Filename: "{localappdata}\\Maya the Info Manager\\maya-data"',
             "Source: \"..\\",
             "release-manifest.json",
             "update-manifest.json",
@@ -176,6 +208,35 @@ def _verify_inno_products(release_dir: Path) -> None:
                 raise RuntimeError(f"Inno script missing required boundary: {expected}")
     _verify_compiled_installers_are_signed(inno_dir)
     _verify_packaged_payload_starts(release_dir / "windows-app-payload")
+    _verify_product_launchers(release_dir / "windows-app-payload")
+    _verify_installed_qualification(release_dir / "windows-app-payload")
+
+
+def _verify_product_launchers(payload_dir: Path) -> None:
+    launchers = {
+        "setup-maya.cmd": ("maya_first_run.py", "MAYA_DATA_DIR"),
+        "maya.cmd": ("health summary", "Blocked items must be resolved"),
+        "maya-doctor.cmd": ("doctor --config", "setup-maya.cmd"),
+        "maya-self-check.cmd": ("maya_qualification.py", "installed qualification"),
+    }
+    for name, expected_parts in launchers.items():
+        launcher = payload_dir / "bin" / name
+        _require_file(launcher)
+        text = launcher.read_text(encoding="utf-8")
+        for expected in expected_parts:
+            if expected not in text:
+                raise RuntimeError(f"{name} does not run product action: {expected}")
+    menu_text = (payload_dir / "bin" / "maya.cmd").read_text(encoding="utf-8")
+    if "Choose an option" in menu_text or re.search(r"\b--help\b", menu_text):
+        raise RuntimeError("Start Maya is still a thin menu/help wrapper")
+    first_run = (payload_dir / "scripts" / "maya_first_run.py").read_text(
+        encoding="utf-8"
+    )
+    for expected in ("setup\", \"plan", "setup\", \"init", "--apply"):
+        if expected not in first_run:
+            raise RuntimeError(
+                f"first-run setup does not run product setup action: {expected}"
+            )
 
 
 def _verify_compiled_installers_are_signed(inno_dir: Path) -> None:
@@ -231,6 +292,56 @@ def _verify_packaged_payload_starts(payload_dir: Path) -> None:
     if result.returncode != 0 or "usage: maya" not in result.stdout:
         raise RuntimeError(
             "packaged Windows app payload cannot start:\n" + result.stdout
+        )
+
+
+def _verify_installed_qualification(payload_dir: Path) -> None:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(payload_dir / "app")
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(payload_dir / "scripts" / "maya_qualification.py"),
+            "--install-dir",
+            str(payload_dir),
+        ],
+        cwd=payload_dir,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+    if result.returncode not in {0, 1}:
+        raise RuntimeError("installed qualification crashed:\n" + result.stdout)
+    try:
+        payload = json.loads(result.stdout.strip().splitlines()[-1])
+    except (IndexError, json.JSONDecodeError) as exc:
+        raise RuntimeError("installed qualification did not emit JSON") from exc
+    if payload.get("qualification_status") not in {"ready", "blocked"}:
+        raise RuntimeError("installed qualification failed:\n" + result.stdout)
+    if not payload.get("secret_safe"):
+        raise RuntimeError("installed qualification output is not secret-safe")
+    required_commands = {
+        "setup_plan",
+        "setup_init_dry_run",
+        "doctor",
+        "health_summary",
+        "update_check",
+        "rollback_check",
+        "migration_dry_run",
+        "backup_create",
+        "backup_inspect",
+        "restore_dry_run",
+        "broker_status",
+        "broker_conformance",
+    }
+    commands = payload.get("commands", {})
+    missing = required_commands.difference(commands)
+    if missing:
+        raise RuntimeError(
+            "installed qualification skipped commands: " + ", ".join(sorted(missing))
         )
 
 

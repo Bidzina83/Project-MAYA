@@ -4,7 +4,8 @@
 
 Project MAYA Phase 6 turns the existing installed-package, setup, health,
 backup, restore, migration, broker, and update-readiness surfaces into a
-signed production distribution contract.
+signed production distribution contract. The current Windows work is a staged
+production-installer payload, not a completed Windows desktop support claim.
 
 The first advertised platform is Windows desktop. macOS, Linux, server, and
 container artifacts remain not advertised until their own installer,
@@ -42,9 +43,32 @@ scripts/verify_phase6_release.py --release-dir <dir> --platform windows-desktop
 ```
 
 The builder creates a deterministic release directory containing a built wheel,
-a Windows payload bundle, Standard and Enterprise Inno Setup installer sources,
-an Inno installer manifest, SBOM, provenance, signed release manifest, signed
-update manifest, and signed rollback manifest.
+a managed Windows payload layout, Standard and Enterprise Inno Setup installer
+sources, an Inno installer manifest, SBOM, provenance, signed release manifest,
+signed update manifest, and signed rollback manifest.
+
+The Windows Standard payload is required to contain product-level structure
+rather than thin command wrappers:
+
+```text
+windows-app-payload/
+  app/
+  runtime/
+  wheels/
+  config-templates/
+  scripts/
+  release/
+  bin/
+```
+
+The payload includes the built `project_maya` artifact, pinned Hermes Agent
+runtime metadata for the compatible commit, Maya-owned setup, doctor, health,
+backup, restore, migration, update, broker/messaging, Metabase/document
+integration code, starter Standard configuration templates, first-run setup
+scripts, qualification scripts, and release metadata. If the pinned Hermes
+runtime artifact or profile-specific heavy dependency is not actually present
+or configured, setup and doctor must report a blocked readiness item. They must
+not report the product as healthy.
 
 If `ISCC.exe` is supplied through `--inno-compiler`, the builder may also
 compile native Inno Setup `.exe` installers. Production `.exe` installers
@@ -60,9 +84,17 @@ never installs Inno Setup, Python, system dependencies, services, OAuth grants,
 or customer tenant resources.
 
 The verifier checks signatures, checksums, SBOM/provenance presence, Inno
-installer products, installer-bundle boundaries, packaged launcher startup,
-and that compiled Windows installers are trusted by Authenticode. Unsigned or
+installer products, installer-bundle boundaries, managed payload layout,
+product shortcuts, installed qualification commands, secret-safe output, and
+that compiled Windows installers are trusted by Authenticode. Unsigned or
 untrusted compiled `.exe` installers fail verification.
+
+Release-artifact smoke means the built payload can start and run non-mutating
+qualification commands from the release directory. Production Windows desktop
+qualification remains stricter: the compiled installer must be
+Authenticode-signed and clean-install lifecycle, health, backup, restore,
+migration, update, rollback, setup, and start checks must pass on a supported
+Windows machine with the required managed runtime artifacts.
 
 ## Boundaries
 

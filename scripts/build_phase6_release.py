@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import textwrap
 import zipfile
 from pathlib import Path
 
@@ -314,8 +315,21 @@ def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> P
         shutil.rmtree(payload_dir)
     app_dir = payload_dir / "app"
     bin_dir = payload_dir / "bin"
-    app_dir.mkdir(parents=True)
-    bin_dir.mkdir(parents=True)
+    runtime_dir = payload_dir / "runtime"
+    wheels_dir = payload_dir / "wheels"
+    config_templates_dir = payload_dir / "config-templates"
+    scripts_dir = payload_dir / "scripts"
+    release_dir = payload_dir / "release"
+    for directory in (
+        app_dir,
+        bin_dir,
+        runtime_dir,
+        wheels_dir,
+        config_templates_dir,
+        scripts_dir,
+        release_dir,
+    ):
+        directory.mkdir(parents=True)
 
     with zipfile.ZipFile(wheel) as archive:
         for member in sorted(archive.infolist(), key=lambda item: item.filename):
@@ -328,40 +342,181 @@ def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> P
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(archive.read(member))
 
-    maya_launcher = "\r\n".join(
+    shutil.copy2(wheel, wheels_dir / wheel.name)
+    (wheels_dir / "requirements-pinned.txt").write_text(
+        "\n".join(
+            [
+                f"project_maya @ file:///%MAYA_INSTALL_DIR%/wheels/{wheel.name}",
+                (
+                    "hermes-agent @ "
+                    "git+https://github.com/Bidzina83/hermes-agent.git"
+                    f"@{HERMES_RUNTIME_COMMIT}"
+                ),
+                "cryptography>=42",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    write_canonical_json(
+        runtime_dir / "runtime-manifest.json",
+        {
+            "runtime_layout_version": 1,
+            "python": {
+                "managed_layout": "runtime/python",
+                "status": "external_or_bundled_by_release_infrastructure",
+                "requires_python": ">=3.11,<3.14",
+                "silent_system_install": False,
+            },
+            "hermes_agent": {
+                "package": "hermes-agent",
+                "source": "git+https://github.com/Bidzina83/hermes-agent.git",
+                "commit": HERMES_RUNTIME_COMMIT,
+                "factory": "run_agent:AIAgent",
+                "artifact_status": "pinned_requirement_recorded",
+                "readiness_if_unresolved": "blocked",
+            },
+            "profiles": [
+                "maya-core",
+                "maya-metabase",
+                "maya-documents",
+                "maya-messaging",
+            ],
+            "boundaries": {
+                "silent_system_dependency_install": False,
+                "customer_tenant_resources_created": False,
+                "raw_secrets_stored": False,
+            },
+        },
+    )
+    write_canonical_json(
+        runtime_dir / "component-readiness.json",
+        {
+            "maya-core": {
+                "included": True,
+                "status": "installed",
+                "notes": "project_maya payload is installed from the built wheel",
+            },
+            "hermes-agent": {
+                "included": False,
+                "status": "blocked_until_runtime_artifact_available",
+                "notes": "pinned runtime contract is recorded; verifier must not report Hermes healthy unless importable",
+            },
+            "maya-messaging": {
+                "included": True,
+                "status": "setup_required",
+                "notes": "broker and connector code ships; OAuth grants and tenant resources are not created by the installer",
+            },
+            "maya-metabase": {
+                "included": True,
+                "status": "setup_required",
+                "notes": "integration and readiness code ships; Java/Metabase service artifacts are validated or supplied on demand",
+            },
+            "maya-documents": {
+                "included": True,
+                "status": "setup_required",
+                "notes": "document integration code ships; native document tools are validated or supplied on demand",
+            },
+        },
+    )
+    (config_templates_dir / "standard.json.template").write_text(
+        _standard_config_template(),
+        encoding="utf-8",
+        newline="\r\n",
+    )
+    (config_templates_dir / "default-governance-policy.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "default_action": "deny",
+                "rules": [],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    (scripts_dir / "maya_first_run.py").write_text(
+        _first_run_script(),
+        encoding="utf-8",
+        newline="\n",
+    )
+    (scripts_dir / "maya_qualification.py").write_text(
+        _qualification_script(),
+        encoding="utf-8",
+        newline="\n",
+    )
+    cli_launcher = "\r\n".join(
         [
             "@echo off",
             "setlocal",
             'set "MAYA_APP_DIR=%~dp0..\\app"',
+            'set "MAYA_INSTALL_DIR=%~dp0.."',
             'set "PYTHONPATH=%MAYA_APP_DIR%;%PYTHONPATH%"',
-            'if "%~1"=="" (',
-            '  call "%~f0" --help',
-            "  exit /b %ERRORLEVEL%",
-            ")",
             "where py >nul 2>nul",
-            "if %ERRORLEVEL%==0 (",
-            '  py -3 -m project_maya.cli %*',
-            "  exit /b %ERRORLEVEL%",
-            ")",
+            "if %ERRORLEVEL%==0 goto run_py",
             "where python >nul 2>nul",
-            "if %ERRORLEVEL%==0 (",
-            '  python -m project_maya.cli %*',
-            "  exit /b %ERRORLEVEL%",
-            ")",
+            "if %ERRORLEVEL%==0 goto run_python",
             "echo Python 3 is required to run Maya the Info Manager.",
             "echo Install Python 3, then run this command again.",
             "exit /b 1",
+            ":run_py",
+            "py -3 -m project_maya.cli %*",
+            "exit /b %ERRORLEVEL%",
+            ":run_python",
+            "python -m project_maya.cli %*",
+            "exit /b %ERRORLEVEL%",
             "",
         ]
     )
-    console_launcher = "\r\n".join(
+    product_launcher = "\r\n".join(
         [
             "@echo off",
-            'call "%~dp0maya.cmd" %*',
+            "setlocal",
+            "title Start Maya",
+            'call "%~dp0setup-maya.cmd" --ensure',
+            'if errorlevel 1 exit /b %ERRORLEVEL%',
+            'call "%~dp0maya-cli.cmd" health summary --config "%LOCALAPPDATA%\\Maya the Info Manager\\maya-data\\config\\maya.json" --format text',
             "set MAYA_EXIT=%ERRORLEVEL%",
             "echo.",
-            "echo Press any key to close this window.",
-            "pause >nul",
+            "echo Maya start readiness finished with exit code %MAYA_EXIT%.",
+            "echo Blocked items must be resolved before Maya is treated as healthy.",
+            "echo.",
+            "pause",
+            "exit /b %MAYA_EXIT%",
+            "",
+        ]
+    )
+    setup_launcher = "\r\n".join(
+        [
+            "@echo off",
+            "setlocal",
+            "title Setup Maya",
+            'set "MAYA_CONFIG=%LOCALAPPDATA%\\Maya the Info Manager\\maya-data\\config\\maya.json"',
+            'set "MAYA_DATA_DIR=%LOCALAPPDATA%\\Maya the Info Manager\\maya-data"',
+            'set "MAYA_INSTALL_DIR=%~dp0.."',
+            'set "MAYA_APP_DIR=%~dp0..\\app"',
+            'set "PYTHONPATH=%MAYA_APP_DIR%;%PYTHONPATH%"',
+            "where py >nul 2>nul",
+            "if %ERRORLEVEL%==0 goto setup_py",
+            "where python >nul 2>nul",
+            "if %ERRORLEVEL%==0 goto setup_python",
+            "echo Python 3 is required to set up Maya the Info Manager.",
+            "set MAYA_EXIT=1",
+            "goto setup_done",
+            ":setup_py",
+            'py -3 "%~dp0..\\scripts\\maya_first_run.py" --install-dir "%~dp0.." --config "%MAYA_CONFIG%" --data-dir "%MAYA_DATA_DIR%" %*',
+            "set MAYA_EXIT=%ERRORLEVEL%",
+            "goto setup_done",
+            ":setup_python",
+            'python "%~dp0..\\scripts\\maya_first_run.py" --install-dir "%~dp0.." --config "%MAYA_CONFIG%" --data-dir "%MAYA_DATA_DIR%" %*',
+            "set MAYA_EXIT=%ERRORLEVEL%",
+            ":setup_done",
+            "echo.",
+            "pause",
             "exit /b %MAYA_EXIT%",
             "",
         ]
@@ -369,23 +524,11 @@ def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> P
     doctor_launcher = "\r\n".join(
         [
             "@echo off",
-            'if "%~1"=="" (',
-            "  echo Maya Doctor needs a configuration file.",
-            "  echo.",
-            '  echo Example: "%~dp0maya.cmd" doctor --config "%USERPROFILE%\\maya-data\\config\\maya.json"',
-            "  echo.",
-            '  echo Run "%~dp0maya.cmd" --help to see available commands.',
-            "  exit /b 2",
-            ")",
-            'call "%~dp0maya.cmd" doctor %*',
-            "exit /b %ERRORLEVEL%",
-            "",
-        ]
-    )
-    doctor_console_launcher = "\r\n".join(
-        [
-            "@echo off",
-            'call "%~dp0maya-doctor.cmd" %*',
+            "setlocal",
+            "title Maya Doctor",
+            'call "%~dp0setup-maya.cmd" --ensure',
+            'if errorlevel 1 exit /b %ERRORLEVEL%',
+            'call "%~dp0maya-cli.cmd" doctor --config "%LOCALAPPDATA%\\Maya the Info Manager\\maya-data\\config\\maya.json"',
             "set MAYA_EXIT=%ERRORLEVEL%",
             "echo.",
             "echo Press any key to close this window.",
@@ -397,16 +540,26 @@ def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> P
     self_check_launcher = "\r\n".join(
         [
             "@echo off",
-            'call "%~dp0maya.cmd" --help',
-            "exit /b %ERRORLEVEL%",
-            "",
-        ]
-    )
-    self_check_console_launcher = "\r\n".join(
-        [
-            "@echo off",
-            'call "%~dp0maya-self-check.cmd"',
+            "setlocal",
+            "echo Maya the Info Manager installed qualification",
+            "echo.",
+            'set "MAYA_APP_DIR=%~dp0..\\app"',
+            'set "PYTHONPATH=%MAYA_APP_DIR%;%PYTHONPATH%"',
+            "where py >nul 2>nul",
+            "if %ERRORLEVEL%==0 goto qualification_py",
+            "where python >nul 2>nul",
+            "if %ERRORLEVEL%==0 goto qualification_python",
+            "echo Python 3 is required to qualify Maya the Info Manager.",
+            "set MAYA_EXIT=1",
+            "goto qualification_done",
+            ":qualification_py",
+            'py -3 "%~dp0..\\scripts\\maya_qualification.py" --install-dir "%~dp0.."',
             "set MAYA_EXIT=%ERRORLEVEL%",
+            "goto qualification_done",
+            ":qualification_python",
+            'python "%~dp0..\\scripts\\maya_qualification.py" --install-dir "%~dp0.."',
+            "set MAYA_EXIT=%ERRORLEVEL%",
+            ":qualification_done",
             "echo.",
             "echo Press any key to close this window.",
             "pause >nul",
@@ -414,21 +567,21 @@ def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> P
             "",
         ]
     )
-    (bin_dir / "maya.cmd").write_text(maya_launcher, encoding="utf-8", newline="")
-    (bin_dir / "maya-console.cmd").write_text(
-        console_launcher, encoding="utf-8", newline=""
-    )
+    (bin_dir / "maya-cli.cmd").write_text(cli_launcher, encoding="utf-8", newline="")
+    (bin_dir / "setup-maya.cmd").write_text(setup_launcher, encoding="utf-8", newline="")
+    (bin_dir / "maya.cmd").write_text(product_launcher, encoding="utf-8", newline="")
+    (bin_dir / "maya-console.cmd").write_text(product_launcher, encoding="utf-8", newline="")
     (bin_dir / "maya-doctor.cmd").write_text(
         doctor_launcher, encoding="utf-8", newline=""
     )
     (bin_dir / "maya-doctor-console.cmd").write_text(
-        doctor_console_launcher, encoding="utf-8", newline=""
+        doctor_launcher, encoding="utf-8", newline=""
     )
     (bin_dir / "maya-self-check.cmd").write_text(
         self_check_launcher, encoding="utf-8", newline=""
     )
     (bin_dir / "maya-self-check-console.cmd").write_text(
-        self_check_console_launcher, encoding="utf-8", newline=""
+        self_check_launcher, encoding="utf-8", newline=""
     )
     (payload_dir / "README.txt").write_text(
         "\r\n".join(
@@ -436,10 +589,12 @@ def _build_windows_app_payload(out_dir: Path, wheel: Path, *, version: str) -> P
                 f"{PRODUCT_DISPLAY_NAME} {version}",
                 "",
                 "This folder contains the installed Maya application payload.",
-                "Use the Start Menu shortcuts for a visible console window.",
-                "Run bin\\maya.cmd from PowerShell or Command Prompt for normal CLI use.",
-                "Run bin\\maya-self-check.cmd to confirm the installed payload can start.",
-                "Python 3 must be installed separately; this installer does not silently install system software.",
+                "Use Setup Maya to create starter local state and a Standard configuration.",
+                "Use Start Maya to run product readiness checks for the configured local instance.",
+                "Run bin\\maya-cli.cmd from PowerShell or Command Prompt for direct CLI use.",
+                "Run bin\\maya-self-check.cmd to run the installed qualification path.",
+                "Python/Hermes runtime artifacts are managed by the release payload or reported as blocked readiness.",
+                "This installer does not silently install system software.",
                 "Customer data remains outside this folder in MAYA_HOME or MAYA_DATA_DIR.",
                 "",
             ]
@@ -469,6 +624,30 @@ def _verify_windows_app_payload(payload_dir: Path) -> None:
         raise RuntimeError(
             "installed Windows app payload cannot start:\n" + result.stdout
         )
+    qualification = subprocess.run(
+        [
+            sys.executable,
+            str(payload_dir / "scripts" / "maya_qualification.py"),
+            "--install-dir",
+            str(payload_dir),
+        ],
+        cwd=payload_dir,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+    if qualification.returncode not in {0, 1}:
+        raise RuntimeError(
+            "installed Windows app payload qualification crashed:\n"
+            + qualification.stdout
+        )
+    if "qualification_status" not in qualification.stdout:
+        raise RuntimeError(
+            "installed Windows app payload qualification did not report status:\n"
+            + qualification.stdout
+        )
 
 
 def _remove_python_caches(payload_dir: Path) -> None:
@@ -478,6 +657,245 @@ def _remove_python_caches(payload_dir: Path) -> None:
 
 def _iter_payload_files(payload_dir: Path) -> tuple[Path, ...]:
     return tuple(sorted(path for path in payload_dir.rglob("*") if path.is_file()))
+
+
+def _standard_config_template() -> str:
+    return json.dumps(
+        {
+            "schema_version": 2,
+            "product": {
+                "edition": "standard",
+                "instance_id": "${MAYA_INSTANCE_ID}",
+            },
+            "deployment": {
+                "class": "desktop",
+                "network_policy": "standard",
+                "data_dir": "${MAYA_DATA_DIR}",
+            },
+            "runtime": {
+                "hermes_compatibility": ">=0.1",
+                "enabled_profiles": [
+                    "maya-core",
+                    "maya-metabase",
+                    "maya-documents",
+                    "maya-messaging",
+                ],
+                "hermes_factory": "run_agent:AIAgent",
+                "hermes_runtime_version": HERMES_RUNTIME_COMMIT,
+            },
+            "broker": {
+                "mode": "runtime",
+                "endpoint": "https://broker.maya.example",
+            },
+            "llm": {
+                "mode": "maya_managed",
+                "provider": "openai",
+                "model": "configured-during-setup",
+                "credential_ref": None,
+                "endpoint": None,
+                "timeout_seconds": 60,
+            },
+            "integrations": {
+                "google": {
+                    "enabled": True,
+                    "credential_mode": "broker",
+                    "credential_ref": "secret://integrations/google",
+                },
+                "slack": {
+                    "enabled": True,
+                    "credential_mode": "broker",
+                    "credential_ref": "secret://integrations/slack",
+                },
+                "telegram": {
+                    "enabled": False,
+                    "credential_mode": "customer_owned",
+                    "credential_ref": "secret://integrations/telegram",
+                },
+            },
+            "memory": {
+                "hermes_provider": "local",
+                "retriever": "local_json",
+                "registry": "sqlite",
+                "governance_enabled": True,
+            },
+            "governance": {
+                "policy_file": "${MAYA_DATA_DIR}/governance/policies/default.json",
+                "audit_enabled": True,
+                "default_action": "deny",
+                "minimum_memory_trust": 0.7,
+            },
+            "metabase": {
+                "enabled": True,
+                "deployment": "managed_local",
+                "endpoint": "http://127.0.0.1:3030",
+                "application_database": {
+                    "engine": "h2",
+                    "credential_ref": "secret://metabase/application-db",
+                },
+                "analytics_sources": [],
+            },
+            "local_api": {
+                "bind": "127.0.0.1",
+                "port": 8765,
+                "remote_access": False,
+            },
+        },
+        indent=2,
+        sort_keys=True,
+    )
+
+
+def _first_run_script() -> str:
+    return textwrap.dedent(
+        r'''
+        from __future__ import annotations
+
+        import argparse
+        import json
+        import shutil
+        import subprocess
+        import sys
+        import uuid
+        from pathlib import Path
+
+
+        def main(argv=None):
+            parser = argparse.ArgumentParser(description="Initialize Maya Standard local state.")
+            parser.add_argument("--install-dir", type=Path, required=True)
+            parser.add_argument("--config", type=Path, required=True)
+            parser.add_argument("--data-dir", type=Path, required=True)
+            parser.add_argument("--ensure", action="store_true")
+            args = parser.parse_args(argv)
+            install_dir = args.install_dir.resolve()
+            data_dir = args.data_dir.resolve()
+            config_path = args.config.resolve()
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            data_dir.mkdir(parents=True, exist_ok=True)
+            if not config_path.exists():
+                template = (install_dir / "config-templates" / "standard.json.template").read_text(encoding="utf-8")
+                rendered = template.replace("${MAYA_INSTANCE_ID}", str(uuid.uuid4()))
+                rendered = rendered.replace("${MAYA_DATA_DIR}", str(data_dir).replace("\\", "/"))
+                config_path.write_text(rendered + "\n", encoding="utf-8")
+            policy_dir = data_dir / "governance" / "policies"
+            policy_dir.mkdir(parents=True, exist_ok=True)
+            policy_path = policy_dir / "default.json"
+            if not policy_path.exists():
+                shutil.copy2(install_dir / "config-templates" / "default-governance-policy.json", policy_path)
+            updates_dir = data_dir / "updates"
+            updates_dir.mkdir(parents=True, exist_ok=True)
+            for name in ("update-manifest.json", "rollback.json", "release-manifest.json", "sbom.json", "provenance.json"):
+                source = install_dir / "release" / name
+                if source.is_file():
+                    shutil.copy2(source, updates_dir / name)
+            print(json.dumps({"operation": "first_run", "config": str(config_path), "data_dir": str(data_dir), "created_config": True}, sort_keys=True))
+            for command in (
+                [sys.executable, "-m", "project_maya.cli", "setup", "plan", "--config", str(config_path)],
+                [sys.executable, "-m", "project_maya.cli", "setup", "init", "--config", str(config_path), "--apply"],
+            ):
+                result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+                print(result.stdout.strip())
+                if result.returncode != 0:
+                    return result.returncode
+            return 0
+
+
+        if __name__ == "__main__":
+            raise SystemExit(main())
+        '''
+    ).lstrip()
+
+
+def _qualification_script() -> str:
+    return textwrap.dedent(
+        r'''
+        from __future__ import annotations
+
+        import argparse
+        import json
+        import os
+        import shutil
+        import sqlite3
+        import subprocess
+        import sys
+        import tempfile
+        from pathlib import Path
+
+
+        SECRET_MARKERS = ("secret://", "access_token", "refresh_token", "password", "api_key")
+
+
+        def main(argv=None):
+            parser = argparse.ArgumentParser(description="Run installed Maya payload qualification.")
+            parser.add_argument("--install-dir", type=Path, required=True)
+            args = parser.parse_args(argv)
+            install_dir = args.install_dir.resolve()
+            env = os.environ.copy()
+            env["PYTHONPATH"] = str(install_dir / "app") + os.pathsep + env.get("PYTHONPATH", "")
+            env["PYTHONDONTWRITEBYTECODE"] = "1"
+            with tempfile.TemporaryDirectory(prefix="maya-installed-qualification-") as tmp:
+                root = Path(tmp)
+                data_dir = root / "maya-data"
+                config_path = data_dir / "config" / "maya.json"
+                first_run = _run(
+                    [sys.executable, str(install_dir / "scripts" / "maya_first_run.py"), "--install-dir", str(install_dir), "--config", str(config_path), "--data-dir", str(data_dir)],
+                    env,
+                )
+                commands = {
+                    "setup_plan": [sys.executable, "-m", "project_maya.cli", "setup", "plan", "--config", str(config_path)],
+                    "setup_init_dry_run": [sys.executable, "-m", "project_maya.cli", "setup", "init", "--config", str(config_path)],
+                    "doctor": [sys.executable, "-m", "project_maya.cli", "doctor", "--config", str(config_path)],
+                    "health_summary": [sys.executable, "-m", "project_maya.cli", "health", "summary", "--config", str(config_path)],
+                    "update_check": [sys.executable, "-m", "project_maya.cli", "update", "--config", str(config_path), "--check"],
+                    "rollback_check": [sys.executable, "-m", "project_maya.cli", "update", "--config", str(config_path), "--rollback"],
+                    "broker_status": [sys.executable, "-m", "project_maya.cli", "broker", "status", "--config", str(config_path)],
+                    "broker_conformance": [sys.executable, "-m", "project_maya.cli", "broker", "conformance", "--config", str(config_path)],
+                }
+                results = {"first_run": first_run}
+                for name, command in commands.items():
+                    results[name] = _run(command, env)
+                legacy = root / "legacy-memory.sqlite"
+                destination = root / "migrated-memory.sqlite"
+                _make_legacy_memory(legacy)
+                results["migration_dry_run"] = _run([sys.executable, "-m", "project_maya.cli", "migrate", "--from", str(legacy), "--to", str(destination), "--dry-run"], env)
+                backup_path = root / "backup.zip"
+                results["backup_create"] = _run([sys.executable, "-m", "project_maya.cli", "backup", "--config", str(config_path), "--to", str(backup_path)], env)
+                results["backup_inspect"] = _run([sys.executable, "-m", "project_maya.cli", "backup", "inspect", "--from", str(backup_path)], env)
+                results["restore_dry_run"] = _run([sys.executable, "-m", "project_maya.cli", "restore", "--from", str(backup_path), "--to", str(root / "restore")], env)
+                secret_safe = not any(marker in (item["output"] or "").lower() for item in results.values() for marker in SECRET_MARKERS)
+                hard_failures = {
+                    name: item for name, item in results.items()
+                    if item["returncode"] not in (0, 1)
+                }
+                blocked = {
+                    name: item for name, item in results.items()
+                    if item["returncode"] == 1
+                }
+                status = "blocked" if blocked else "ready"
+                if hard_failures or not secret_safe:
+                    status = "failed"
+                print(json.dumps({"qualification_status": status, "secret_safe": secret_safe, "blocked": sorted(blocked), "hard_failures": sorted(hard_failures), "commands": results}, sort_keys=True))
+                return 0 if status in {"ready", "blocked"} else 2
+
+
+        def _run(command, env):
+            result = subprocess.run(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+            return {"returncode": result.returncode, "output": result.stdout[-4000:]}
+
+
+        def _make_legacy_memory(path):
+            connection = sqlite3.connect(path)
+            try:
+                connection.execute("create table memory_kv (key text primary key, value text)")
+                connection.execute("insert into memory_kv (key, value) values (?, ?)", ("welcome", "Maya installed qualification"))
+                connection.commit()
+            finally:
+                connection.close()
+
+
+        if __name__ == "__main__":
+            raise SystemExit(main())
+        '''
+    ).lstrip()
 
 
 def _build_windows_installer_bundle(
@@ -492,7 +910,10 @@ def _build_windows_installer_bundle(
         "version": version,
         "wheel": wheel.name,
         "payload_root": WINDOWS_APP_PAYLOAD_DIR,
+        "payload_layout": ["app", "runtime", "wheels", "config-templates", "scripts", "release"],
         "installed_entry_points": [
+            "bin/maya-cli.cmd",
+            "bin/setup-maya.cmd",
             "bin/maya.cmd",
             "bin/maya-console.cmd",
             "bin/maya-doctor.cmd",
@@ -503,6 +924,7 @@ def _build_windows_installer_bundle(
         "installs_from_built_artifact": True,
         "silent_system_dependency_install": False,
         "customer_tenant_resources_created": False,
+        "raw_secrets_stored": False,
         "heavy_dependencies": "validated-or-installed-on-demand",
     }
     manifest_path = out_dir / "installer-manifest.json"
@@ -646,8 +1068,11 @@ def _inno_script(
             "",
             "[Icons]",
             'Name: "{group}\\Maya the Info Manager"; Filename: "{app}\\bin\\maya-console.cmd"',
+            'Name: "{group}\\Setup Maya"; Filename: "{app}\\bin\\setup-maya.cmd"',
+            'Name: "{group}\\Start Maya"; Filename: "{app}\\bin\\maya-console.cmd"',
             'Name: "{group}\\Maya Doctor"; Filename: "{app}\\bin\\maya-doctor-console.cmd"',
-            'Name: "{group}\\Maya Self Check"; Filename: "{app}\\bin\\maya-self-check-console.cmd"',
+            'Name: "{group}\\Maya Installed Qualification"; Filename: "{app}\\bin\\maya-self-check-console.cmd"',
+            'Name: "{group}\\Maya Data Folder"; Filename: "{localappdata}\\Maya the Info Manager\\maya-data"',
             'Name: "{group}\\Release Manifest"; Filename: "{app}\\release\\release-manifest.json"',
             "",
             "[Run]",

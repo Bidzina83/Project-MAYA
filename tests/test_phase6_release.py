@@ -119,6 +119,17 @@ class TestPhase6Release(unittest.TestCase):
                 if path.is_file()
             )
             self.assertIn("windows-app-payload/app/project_maya/__init__.py", contents)
+            self.assertIn("windows-app-payload/runtime/runtime-manifest.json", contents)
+            self.assertIn("windows-app-payload/runtime/component-readiness.json", contents)
+            self.assertIn("windows-app-payload/wheels/requirements-pinned.txt", contents)
+            self.assertIn(
+                "windows-app-payload/config-templates/standard.json.template",
+                contents,
+            )
+            self.assertIn("windows-app-payload/scripts/maya_first_run.py", contents)
+            self.assertIn("windows-app-payload/scripts/maya_qualification.py", contents)
+            self.assertIn("windows-app-payload/bin/maya-cli.cmd", contents)
+            self.assertIn("windows-app-payload/bin/setup-maya.cmd", contents)
             self.assertIn("windows-app-payload/bin/maya.cmd", contents)
             self.assertIn("windows-app-payload/bin/maya-console.cmd", contents)
             self.assertIn("windows-app-payload/bin/maya-doctor.cmd", contents)
@@ -136,11 +147,57 @@ class TestPhase6Release(unittest.TestCase):
             self.assertIn("inno/inno-installer-manifest.json", contents)
             self.assertNotIn("secret://", contents)
             self.assertNotIn("__pycache__", contents)
+            launcher = (
+                release_dir / "windows-app-payload" / "bin" / "maya.cmd"
+            ).read_text(encoding="utf-8")
+            self.assertIn("health summary", launcher)
+            self.assertIn("Blocked items must be resolved", launcher)
+            self.assertNotIn("Choose an option", launcher)
+            setup_launcher = (
+                release_dir / "windows-app-payload" / "bin" / "setup-maya.cmd"
+            ).read_text(encoding="utf-8")
+            self.assertIn("maya_first_run.py", setup_launcher)
+            runtime_manifest = json.loads(
+                (
+                    release_dir
+                    / "windows-app-payload"
+                    / "runtime"
+                    / "runtime-manifest.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                runtime_manifest["hermes_agent"]["commit"],
+                build_release_module.HERMES_RUNTIME_COMMIT,
+            )
+            self.assertFalse(
+                runtime_manifest["boundaries"]["silent_system_dependency_install"]
+            )
+            standard_template = (
+                release_dir
+                / "windows-app-payload"
+                / "config-templates"
+                / "standard.json.template"
+            ).read_text(encoding="utf-8")
+            self.assertIn('"edition": "standard"', standard_template)
+            self.assertIn('"mode": "runtime"', standard_template)
+            self.assertIn('"credential_ref": "secret://integrations/google"', standard_template)
             with zipfile.ZipFile(
                 release_dir / "project-maya-1.0.0-windows-desktop.zip"
             ) as archive:
                 self.assertIn(
                     "windows-app-payload/app/project_maya/__init__.py",
+                    archive.namelist(),
+                )
+                self.assertIn(
+                    "windows-app-payload/bin/maya-cli.cmd",
+                    archive.namelist(),
+                )
+                self.assertIn(
+                    "windows-app-payload/runtime/runtime-manifest.json",
+                    archive.namelist(),
+                )
+                self.assertIn(
+                    "windows-app-payload/scripts/maya_qualification.py",
                     archive.namelist(),
                 )
                 self.assertIn(
