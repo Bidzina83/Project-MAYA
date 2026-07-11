@@ -119,8 +119,11 @@ class TestPhase6Release(unittest.TestCase):
                 if path.is_file()
             )
             self.assertIn("windows-app-payload/app/project_maya/__init__.py", contents)
+            self.assertIn("windows-app-payload/app/plugins/__init__.py", contents)
+            self.assertIn("windows-app-payload/app/plugins/browser/__init__.py", contents)
             self.assertIn("windows-app-payload/runtime/runtime-manifest.json", contents)
             self.assertIn("windows-app-payload/runtime/component-readiness.json", contents)
+            self.assertIn("windows-app-payload/runtime/maya_runtime.py", contents)
             self.assertIn("windows-app-payload/runtime/python/python.cmd", contents)
             self.assertIn("windows-app-payload/wheels/requirements-pinned.txt", contents)
             self.assertIn("windows-app-payload/wheels/wheelhouse-manifest.json", contents)
@@ -161,6 +164,13 @@ class TestPhase6Release(unittest.TestCase):
                 release_dir / "windows-app-payload" / "bin" / "setup-maya.cmd"
             ).read_text(encoding="utf-8")
             self.assertIn("maya_first_run.py", setup_launcher)
+            self.assertIn("maya_runtime.py", setup_launcher)
+            inno_script = (release_dir / "inno" / "project-maya-standard.iss").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("AllowNoIcons=yes", inno_script)
+            self.assertIn("Tasks: startmenuicon", inno_script)
+            self.assertIn("Tasks: desktopicon", inno_script)
             runtime_manifest = json.loads(
                 (
                     release_dir
@@ -256,6 +266,12 @@ class TestPhase6Release(unittest.TestCase):
                 "poppler-runtime.zip",
             ):
                 (deps_dir / name).write_bytes(name.encode("utf-8"))
+            python_wheelhouse = root / "python-wheelhouse"
+            python_wheelhouse.mkdir()
+            with zipfile.ZipFile(
+                python_wheelhouse / "pyyaml-6.0.3-py3-none-any.whl", "w"
+            ) as archive:
+                archive.writestr("yaml/__init__.py", "__version__ = '6.0.3'\n")
             skills_source = root / "skills-source"
             skill = skills_source / "skills" / "maya-identity"
             skill.mkdir(parents=True)
@@ -263,6 +279,8 @@ class TestPhase6Release(unittest.TestCase):
                 "---\nname: maya-identity\n---\nMaya identity.\n",
                 encoding="utf-8",
             )
+            app_icon = root / "maya.ico"
+            app_icon.write_bytes(b"fake-ico")
 
             self.assertEqual(
                 build_phase6_release(
@@ -279,10 +297,14 @@ class TestPhase6Release(unittest.TestCase):
                         str(hermes_wheel),
                         "--dependency-artifacts-dir",
                         str(deps_dir),
+                        "--python-wheelhouse-dir",
+                        str(python_wheelhouse),
                         "--skills-overlay-source",
                         str(skills_source),
                         "--skills-allowlist",
                         "skills/maya-identity",
+                        "--app-icon",
+                        str(app_icon),
                     ]
                 ),
                 0,
@@ -312,6 +334,10 @@ class TestPhase6Release(unittest.TestCase):
                 runtime_manifest["python"]["executable"],
                 "runtime/python/python.cmd",
             )
+            self.assertEqual(
+                runtime_manifest["python_dependencies"]["status"],
+                "included",
+            )
             self.assertTrue(runtime_manifest["hermes_agent"]["included"])
             services_manifest = json.loads(
                 (
@@ -331,6 +357,14 @@ class TestPhase6Release(unittest.TestCase):
                 ).read_text(encoding="utf-8")
             )
             self.assertEqual(len(skills_manifest["skills"]), 1)
+            self.assertTrue(
+                (release_dir / "windows-app-payload" / "assets" / "maya.ico").is_file()
+            )
+            inno_script = (release_dir / "inno" / "project-maya-standard.iss").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("SetupIconFile", inno_script)
+            self.assertIn('IconFilename: "{app}\\assets\\maya.ico"', inno_script)
 
     def test_release_builder_rejects_unadvertised_platform(self):
         with tempfile.TemporaryDirectory() as tmp:

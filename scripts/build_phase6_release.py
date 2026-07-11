@@ -75,9 +75,11 @@ def main(argv: list[str] | None = None) -> int:
         version=args.version,
         managed_python_runtime=args.managed_python_runtime,
         hermes_agent_wheel=args.hermes_agent_wheel,
+        python_wheelhouse_dir=args.python_wheelhouse_dir,
         dependency_artifacts_dir=args.dependency_artifacts_dir,
         skills_overlay_source=args.skills_overlay_source,
         skills_allowlist=args.skills_allowlist,
+        app_icon=args.app_icon,
     )
     installer = _build_windows_installer_bundle(
         out_dir,
@@ -267,6 +269,16 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--python-wheelhouse-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Directory containing prepared pinned Python dependency wheels "
+            "for the managed runtime. Wheels are copied and hashed; the "
+            "installer never downloads them."
+        ),
+    )
+    parser.add_argument(
         "--skills-overlay-source",
         type=Path,
         default=None,
@@ -279,6 +291,16 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         help=(
             "Allowlisted skills-overlay path prefix. May be passed multiple "
             "times. Defaults to the curated Maya Standard skills set."
+        ),
+    )
+    parser.add_argument(
+        "--app-icon",
+        type=Path,
+        default=None,
+        help=(
+            "Optional .ico or .png image used for the Windows installer and "
+            "shortcuts. PNG conversion requires Pillow in the release builder "
+            "environment."
         ),
     )
     return parser.parse_args(argv)
@@ -384,9 +406,11 @@ def _build_windows_app_payload(
     version: str,
     managed_python_runtime: Path | None,
     hermes_agent_wheel: Path | None,
+    python_wheelhouse_dir: Path | None,
     dependency_artifacts_dir: Path | None,
     skills_overlay_source: Path | None,
     skills_allowlist: list[str] | None,
+    app_icon: Path | None,
 ) -> Path:
     payload_dir = out_dir / WINDOWS_APP_PAYLOAD_DIR
     if payload_dir.exists():
@@ -397,6 +421,7 @@ def _build_windows_app_payload(
     wheels_dir = payload_dir / "wheels"
     skills_dir = payload_dir / "skills"
     services_dir = payload_dir / "services"
+    assets_dir = payload_dir / "assets"
     config_templates_dir = payload_dir / "config-templates"
     scripts_dir = payload_dir / "scripts"
     release_dir = payload_dir / "release"
@@ -407,6 +432,7 @@ def _build_windows_app_payload(
         wheels_dir,
         skills_dir,
         services_dir,
+        assets_dir,
         config_templates_dir,
         scripts_dir,
         release_dir,
@@ -426,6 +452,8 @@ def _build_windows_app_payload(
 
     shutil.copy2(wheel, wheels_dir / wheel.name)
     _write_sitecustomize_for_wheelhouse(app_dir)
+    _write_hermes_plugin_namespace_shims(app_dir)
+    _write_runtime_bootstrap(runtime_dir)
     python_manifest = _stage_managed_python_runtime(
         runtime_dir,
         managed_python_runtime,
@@ -433,6 +461,10 @@ def _build_windows_app_payload(
     hermes_manifest = _stage_hermes_runtime_wheel(
         wheels_dir,
         hermes_agent_wheel,
+    )
+    python_dependency_manifest = _stage_python_dependency_wheelhouse(
+        wheels_dir,
+        python_wheelhouse_dir,
     )
     dependency_manifest = _stage_dependency_artifacts(
         services_dir,
@@ -443,10 +475,12 @@ def _build_windows_app_payload(
         skills_overlay_source,
         skills_allowlist or list(DEFAULT_SKILLS_ALLOWLIST),
     )
+    icon_manifest = _stage_app_icon(assets_dir, app_icon)
     wheelhouse_manifest = _write_wheelhouse_manifest(wheels_dir)
     production_qualified = (
         python_manifest["status"] == "included"
         and hermes_manifest["included"]
+        and python_dependency_manifest["status"] == "included"
         and all(item["included"] for item in dependency_manifest["artifacts"].values())
     )
     (wheels_dir / "requirements-pinned.txt").write_text(
@@ -478,6 +512,7 @@ def _build_windows_app_payload(
                 "readiness_if_unresolved": "blocked",
             },
             "wheelhouse": wheelhouse_manifest,
+            "python_dependencies": python_dependency_manifest,
             "skills": {
                 "manifest": "skills/skills-manifest.json",
                 "included_count": len(skills_manifest["skills"]),
@@ -487,6 +522,7 @@ def _build_windows_app_payload(
                 "manifest": "services/managed-services.json",
                 "production_ready": dependency_manifest["production_ready"],
             },
+            "assets": icon_manifest,
             "profiles": [
                 "maya-core",
                 "maya-metabase",
@@ -588,12 +624,13 @@ def _build_windows_app_payload(
             'set "MAYA_APP_DIR=%~dp0..\\app"',
             'set "MAYA_INSTALL_DIR=%~dp0.."',
             'set "MAYA_RUNTIME_PYTHON=%~dp0..\\runtime\\python\\python.cmd"',
+            'set "MAYA_RUNTIME_BOOTSTRAP=%~dp0..\\runtime\\maya_runtime.py"',
             'set "PYTHONPATH=%MAYA_APP_DIR%;%PYTHONPATH%"',
             'if exist "%MAYA_RUNTIME_PYTHON%" goto run_managed',
             "echo Maya managed Python runtime is missing.",
             "exit /b 1",
             ":run_managed",
-            '"%MAYA_RUNTIME_PYTHON%" -m project_maya.cli %*',
+            '"%MAYA_RUNTIME_PYTHON%" "%MAYA_RUNTIME_BOOTSTRAP%" -m project_maya.cli %*',
             "exit /b %ERRORLEVEL%",
             "",
         ]
@@ -626,13 +663,14 @@ def _build_windows_app_payload(
             'set "MAYA_INSTALL_DIR=%~dp0.."',
             'set "MAYA_APP_DIR=%~dp0..\\app"',
             'set "MAYA_RUNTIME_PYTHON=%~dp0..\\runtime\\python\\python.cmd"',
+            'set "MAYA_RUNTIME_BOOTSTRAP=%~dp0..\\runtime\\maya_runtime.py"',
             'set "PYTHONPATH=%MAYA_APP_DIR%;%PYTHONPATH%"',
             'if exist "%MAYA_RUNTIME_PYTHON%" goto setup_managed',
             "echo Maya managed Python runtime is missing.",
             "set MAYA_EXIT=1",
             "goto setup_done",
             ":setup_managed",
-            '"%MAYA_RUNTIME_PYTHON%" "%~dp0..\\scripts\\maya_first_run.py" --install-dir "%~dp0.." --config "%MAYA_CONFIG%" --data-dir "%MAYA_DATA_DIR%" %*',
+            '"%MAYA_RUNTIME_PYTHON%" "%MAYA_RUNTIME_BOOTSTRAP%" "%~dp0..\\scripts\\maya_first_run.py" --install-dir "%~dp0.." --config "%MAYA_CONFIG%" --data-dir "%MAYA_DATA_DIR%" %*',
             "set MAYA_EXIT=%ERRORLEVEL%",
             ":setup_done",
             "echo.",
@@ -665,13 +703,14 @@ def _build_windows_app_payload(
             "echo.",
             'set "MAYA_APP_DIR=%~dp0..\\app"',
             'set "MAYA_RUNTIME_PYTHON=%~dp0..\\runtime\\python\\python.cmd"',
+            'set "MAYA_RUNTIME_BOOTSTRAP=%~dp0..\\runtime\\maya_runtime.py"',
             'set "PYTHONPATH=%MAYA_APP_DIR%;%PYTHONPATH%"',
             'if exist "%MAYA_RUNTIME_PYTHON%" goto qualification_managed',
             "echo Maya managed Python runtime is missing.",
             "set MAYA_EXIT=1",
             "goto qualification_done",
             ":qualification_managed",
-            '"%MAYA_RUNTIME_PYTHON%" "%~dp0..\\scripts\\maya_qualification.py" --install-dir "%~dp0.."',
+            '"%MAYA_RUNTIME_PYTHON%" "%MAYA_RUNTIME_BOOTSTRAP%" "%~dp0..\\scripts\\maya_qualification.py" --install-dir "%~dp0.."',
             "set MAYA_EXIT=%ERRORLEVEL%",
             ":qualification_done",
             "echo.",
@@ -738,6 +777,110 @@ def _write_sitecustomize_for_wheelhouse(app_dir: Path) -> None:
                 "        wheel_path = str(wheel)",
                 "        if wheel_path not in sys.path:",
                 "            sys.path.append(wheel_path)",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
+def _write_hermes_plugin_namespace_shims(app_dir: Path) -> None:
+    plugins_dir = app_dir / "plugins"
+    browser_dir = plugins_dir / "browser"
+    browser_dir.mkdir(parents=True, exist_ok=True)
+    namespace_shim = "\n".join(
+        [
+            '"""Namespace shim for bundled Hermes plugin artifacts."""',
+            "from __future__ import annotations",
+            "",
+            "from pkgutil import extend_path",
+            "",
+            "__path__ = extend_path(__path__, __name__)",
+            "",
+        ]
+    )
+    browser_shim = "\n".join(
+        [
+            '"""Namespace shim for bundled Hermes browser plugin artifacts."""',
+            "from __future__ import annotations",
+            "",
+            "from pathlib import Path",
+            "from pkgutil import extend_path",
+            "",
+            "import plugins",
+            "",
+            "__path__ = extend_path(__path__, __name__)",
+            "for parent in plugins.__path__:",
+            "    browser_path = str(Path(parent) / 'browser')",
+            "    if browser_path not in __path__:",
+            "        __path__.append(browser_path)",
+            "",
+        ]
+    )
+    (plugins_dir / "__init__.py").write_text(
+        namespace_shim, encoding="utf-8", newline="\n"
+    )
+    (browser_dir / "__init__.py").write_text(
+        browser_shim, encoding="utf-8", newline="\n"
+    )
+
+
+def _write_runtime_bootstrap(runtime_dir: Path) -> None:
+    (runtime_dir / "maya_runtime.py").write_text(
+        "\n".join(
+            [
+                '"""Bootstrap installed Maya from a managed Python runtime."""',
+                "from __future__ import annotations",
+                "",
+                "import os",
+                "import runpy",
+                "import sys",
+                "from pathlib import Path",
+                "",
+                "install_dir = Path(__file__).resolve().parents[1]",
+                "app_dir = install_dir / 'app'",
+                "wheels_dir = install_dir / 'wheels'",
+                "os.environ.setdefault('PYTHONDONTWRITEBYTECODE', '1')",
+                "for path in (app_dir,):",
+                "    value = str(path)",
+                "    if value not in sys.path:",
+                "        sys.path.insert(0, value)",
+                "if wheels_dir.is_dir():",
+                "    for wheel in sorted(wheels_dir.glob('*.whl')):",
+                "        value = str(wheel)",
+                "        if value not in sys.path:",
+                "            sys.path.append(value)",
+                "",
+                "def main() -> int:",
+                "    if len(sys.argv) < 2:",
+                "        print('usage: maya_runtime.py [-m module | script.py] [args...]')",
+                "        return 2",
+                "    target = sys.argv[1]",
+                "    if target == '-m':",
+                "        if len(sys.argv) < 3:",
+                "            print('usage: maya_runtime.py -m module [args...]')",
+                "            return 2",
+                "        module = sys.argv[2]",
+                "        sys.argv = [module, *sys.argv[3:]]",
+                "        runpy.run_module(module, run_name='__main__', alter_sys=True)",
+                "        return 0",
+                "    if target == '-c':",
+                "        if len(sys.argv) < 3:",
+                "            print('usage: maya_runtime.py -c code [args...]')",
+                "            return 2",
+                "        code = sys.argv[2]",
+                "        sys.argv = ['-c', *sys.argv[3:]]",
+                "        namespace = {'__name__': '__main__', '__file__': '<string>'}",
+                "        exec(compile(code, '<string>', 'exec'), namespace)",
+                "        return 0",
+                "    script = Path(target)",
+                "    sys.argv = [str(script), *sys.argv[2:]]",
+                "    runpy.run_path(str(script), run_name='__main__')",
+                "    return 0",
+                "",
+                "if __name__ == '__main__':",
+                "    raise SystemExit(main())",
                 "",
             ]
         ),
@@ -820,12 +963,13 @@ def _ensure_managed_python_launcher(python_dir: Path, executable: Path) -> Path:
     if launcher.is_file():
         return launcher
     relative = executable.relative_to(python_dir)
+    windows_relative = relative.as_posix().replace("/", "\\")
     launcher.write_text(
         "\r\n".join(
             [
                 "@echo off",
                 "setlocal",
-                f'"%~dp0{relative.as_posix().replace("/", "\\")}" %*',
+                f'"%~dp0{windows_relative}" %*',
                 "exit /b %ERRORLEVEL%",
                 "",
             ]
@@ -834,6 +978,37 @@ def _ensure_managed_python_launcher(python_dir: Path, executable: Path) -> Path:
         newline="",
     )
     return launcher
+
+
+def _stage_app_icon(assets_dir: Path, source: Path | None) -> dict[str, object]:
+    if source is None:
+        return {"app_icon": None, "status": "not_configured"}
+    source = source.resolve()
+    if not source.is_file():
+        raise RuntimeError(f"--app-icon does not exist: {source}")
+    icon_path = assets_dir / "maya.ico"
+    suffix = source.suffix.lower()
+    if suffix == ".ico":
+        shutil.copy2(source, icon_path)
+    elif suffix == ".png":
+        try:
+            from PIL import Image
+        except ImportError as exc:  # pragma: no cover - exercised by packaging env
+            raise RuntimeError("PNG app icon conversion requires Pillow") from exc
+        with Image.open(source) as image:
+            image.save(
+                icon_path,
+                format="ICO",
+                sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
+            )
+    else:
+        raise RuntimeError("--app-icon must be a .ico or .png file")
+    return {
+        "app_icon": "assets/maya.ico",
+        "status": "included",
+        "source_name": source.name,
+        "sha256": sha256_file(icon_path),
+    }
 
 
 def _stage_hermes_runtime_wheel(
@@ -870,6 +1045,50 @@ def _requirements_line_for_hermes(hermes_manifest: dict[str, object]) -> str:
         "# hermes-agent runtime artifact missing; pinned commit "
         f"{HERMES_RUNTIME_COMMIT} must be supplied for production qualification"
     )
+
+
+def _stage_python_dependency_wheelhouse(
+    wheels_dir: Path,
+    source_dir: Path | None,
+) -> dict[str, object]:
+    if source_dir is None:
+        return {
+            "status": "missing_blocked",
+            "included": False,
+            "wheels": [],
+            "readiness_if_unresolved": "blocked",
+        }
+    source_dir = source_dir.resolve()
+    if not source_dir.is_dir():
+        raise RuntimeError("--python-wheelhouse-dir must be a directory")
+    copied: list[dict[str, object]] = []
+    existing_names = {path.name for path in wheels_dir.glob("*.whl")}
+    for source in sorted(source_dir.glob("*.whl")):
+        if source.name in existing_names:
+            continue
+        destination = wheels_dir / source.name
+        shutil.copy2(source, destination)
+        existing_names.add(source.name)
+        copied.append(
+            {
+                "name": destination.name,
+                "path": f"wheels/{destination.name}",
+                "sha256": sha256_file(destination),
+                "size_bytes": destination.stat().st_size,
+            }
+        )
+    if not copied:
+        return {
+            "status": "missing_blocked",
+            "included": False,
+            "wheels": [],
+            "readiness_if_unresolved": "blocked",
+        }
+    return {
+        "status": "included",
+        "included": True,
+        "wheels": copied,
+    }
 
 
 def _write_wheelhouse_manifest(wheels_dir: Path) -> dict[str, object]:
@@ -1034,7 +1253,13 @@ def _verify_windows_app_payload(payload_dir: Path) -> None:
     env["PYTHONPATH"] = str(payload_dir / "app")
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     result = subprocess.run(
-        [sys.executable, "-m", "project_maya.cli", "--help"],
+        [
+            sys.executable,
+            str(payload_dir / "runtime" / "maya_runtime.py"),
+            "-m",
+            "project_maya.cli",
+            "--help",
+        ],
         cwd=payload_dir,
         env=env,
         stdout=subprocess.PIPE,
@@ -1049,6 +1274,7 @@ def _verify_windows_app_payload(payload_dir: Path) -> None:
     qualification = subprocess.run(
         [
             sys.executable,
+            str(payload_dir / "runtime" / "maya_runtime.py"),
             str(payload_dir / "scripts" / "maya_qualification.py"),
             "--install-dir",
             str(payload_dir),
@@ -1229,8 +1455,8 @@ def _first_run_script() -> str:
             print(json.dumps({"operation": "first_run", "config": str(config_path), "data_dir": str(data_dir), "created_config": True}, sort_keys=True))
             print(json.dumps({"operation": "local_api_secret", "status": secret_status}, sort_keys=True))
             for command in (
-                [sys.executable, "-m", "project_maya.cli", "setup", "plan", "--config", str(config_path)],
-                [sys.executable, "-m", "project_maya.cli", "setup", "init", "--config", str(config_path), "--apply"],
+                _python_command(install_dir, "-m", "project_maya.cli", "setup", "plan", "--config", str(config_path)),
+                _python_command(install_dir, "-m", "project_maya.cli", "setup", "init", "--config", str(config_path), "--apply"),
             ):
                 result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
                 print(result.stdout.strip())
@@ -1250,6 +1476,13 @@ def _first_run_script() -> str:
                 if os.name == "nt":
                     return "blocked:" + type(exc).__name__
                 return "blocked:platform_secret_store_unavailable"
+
+
+        def _python_command(install_dir, *args):
+            bootstrap = install_dir / "runtime" / "maya_runtime.py"
+            if bootstrap.is_file():
+                return [sys.executable, str(bootstrap), *args]
+            return [sys.executable, *args]
 
 
         if __name__ == "__main__":
@@ -1336,23 +1569,23 @@ def _qualification_script() -> str:
                 data_dir = root / "maya-data"
                 config_path = data_dir / "config" / "maya.json"
                 first_run = _run(
-                    [sys.executable, str(install_dir / "scripts" / "maya_first_run.py"), "--install-dir", str(install_dir), "--config", str(config_path), "--data-dir", str(data_dir)],
+                    _python_command(install_dir, str(install_dir / "scripts" / "maya_first_run.py"), "--install-dir", str(install_dir), "--config", str(config_path), "--data-dir", str(data_dir)),
                     env,
                 )
                 commands = {
-                    "setup_plan": [sys.executable, "-m", "project_maya.cli", "setup", "plan", "--config", str(config_path)],
-                    "setup_init_dry_run": [sys.executable, "-m", "project_maya.cli", "setup", "init", "--config", str(config_path)],
-                    "hermes_runtime": [sys.executable, "-c", HERMES_PROBE, str(install_dir)],
-                    "doctor": [sys.executable, "-m", "project_maya.cli", "doctor", "--config", str(config_path)],
-                    "health_summary": [sys.executable, "-m", "project_maya.cli", "health", "summary", "--config", str(config_path)],
-                    "local_api_contract": [sys.executable, "-c", LOCAL_API_PROBE, str(config_path)],
-                    "connector_authorization_readiness": [sys.executable, "-c", CONNECTOR_PROBE, str(config_path)],
-                    "metabase_readiness": [sys.executable, "-c", SERVICE_ARTIFACT_PROBE, str(install_dir), "metabase", "java"],
-                    "document_conversion_readiness": [sys.executable, "-c", SERVICE_ARTIFACT_PROBE, str(install_dir), "libreoffice"],
-                    "update_check": [sys.executable, "-m", "project_maya.cli", "update", "--config", str(config_path), "--check"],
-                    "rollback_check": [sys.executable, "-m", "project_maya.cli", "update", "--config", str(config_path), "--rollback"],
-                    "broker_status": [sys.executable, "-m", "project_maya.cli", "broker", "status", "--config", str(config_path)],
-                    "broker_conformance": [sys.executable, "-m", "project_maya.cli", "broker", "conformance", "--config", str(config_path)],
+                    "setup_plan": _python_command(install_dir, "-m", "project_maya.cli", "setup", "plan", "--config", str(config_path)),
+                    "setup_init_dry_run": _python_command(install_dir, "-m", "project_maya.cli", "setup", "init", "--config", str(config_path)),
+                    "hermes_runtime": _python_command(install_dir, "-c", HERMES_PROBE, str(install_dir)),
+                    "doctor": _python_command(install_dir, "-m", "project_maya.cli", "doctor", "--config", str(config_path)),
+                    "health_summary": _python_command(install_dir, "-m", "project_maya.cli", "health", "summary", "--config", str(config_path)),
+                    "local_api_contract": _python_command(install_dir, "-c", LOCAL_API_PROBE, str(config_path)),
+                    "connector_authorization_readiness": _python_command(install_dir, "-c", CONNECTOR_PROBE, str(config_path)),
+                    "metabase_readiness": _python_command(install_dir, "-c", SERVICE_ARTIFACT_PROBE, str(install_dir), "metabase", "java"),
+                    "document_conversion_readiness": _python_command(install_dir, "-c", SERVICE_ARTIFACT_PROBE, str(install_dir), "libreoffice"),
+                    "update_check": _python_command(install_dir, "-m", "project_maya.cli", "update", "--config", str(config_path), "--check"),
+                    "rollback_check": _python_command(install_dir, "-m", "project_maya.cli", "update", "--config", str(config_path), "--rollback"),
+                    "broker_status": _python_command(install_dir, "-m", "project_maya.cli", "broker", "status", "--config", str(config_path)),
+                    "broker_conformance": _python_command(install_dir, "-m", "project_maya.cli", "broker", "conformance", "--config", str(config_path)),
                 }
                 results = {"first_run": first_run}
                 for name, command in commands.items():
@@ -1360,11 +1593,11 @@ def _qualification_script() -> str:
                 legacy = root / "legacy-memory.sqlite"
                 destination = root / "migrated-memory.sqlite"
                 _make_legacy_memory(legacy)
-                results["migration_dry_run"] = _run([sys.executable, "-m", "project_maya.cli", "migrate", "--from", str(legacy), "--to", str(destination), "--dry-run"], env)
+                results["migration_dry_run"] = _run(_python_command(install_dir, "-m", "project_maya.cli", "migrate", "--from", str(legacy), "--to", str(destination), "--dry-run"), env)
                 backup_path = root / "backup.zip"
-                results["backup_create"] = _run([sys.executable, "-m", "project_maya.cli", "backup", "--config", str(config_path), "--to", str(backup_path)], env)
-                results["backup_inspect"] = _run([sys.executable, "-m", "project_maya.cli", "backup", "inspect", "--from", str(backup_path)], env)
-                results["restore_dry_run"] = _run([sys.executable, "-m", "project_maya.cli", "restore", "--from", str(backup_path), "--to", str(root / "restore")], env)
+                results["backup_create"] = _run(_python_command(install_dir, "-m", "project_maya.cli", "backup", "--config", str(config_path), "--to", str(backup_path)), env)
+                results["backup_inspect"] = _run(_python_command(install_dir, "-m", "project_maya.cli", "backup", "inspect", "--from", str(backup_path)), env)
+                results["restore_dry_run"] = _run(_python_command(install_dir, "-m", "project_maya.cli", "restore", "--from", str(backup_path), "--to", str(root / "restore")), env)
                 secret_safe = not any(marker in (item["output"] or "").lower() for item in results.values() for marker in SECRET_MARKERS)
                 hard_failures = {
                     name: item for name, item in results.items()
@@ -1384,6 +1617,13 @@ def _qualification_script() -> str:
         def _run(command, env):
             result = subprocess.run(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
             return {"returncode": result.returncode, "output": _redact(result.stdout[-4000:])}
+
+
+        def _python_command(install_dir, *args):
+            bootstrap = install_dir / "runtime" / "maya_runtime.py"
+            if bootstrap.is_file():
+                return [sys.executable, str(bootstrap), *args]
+            return [sys.executable, *args]
 
 
         def _redact(text):
@@ -1564,28 +1804,40 @@ def _inno_script(
         if edition == "standard"
         else "{{A24877A0-9D25-4336-BD58-CBDF06242774}"
     )
+    icon_path = app_payload / "assets" / "maya.ico"
+    has_icon = icon_path.is_file()
+    setup_lines = [
+        "[Setup]",
+        f"AppId={app_id}",
+        "AppName={#MayaProductName} {#MayaEdition}",
+        "AppVersion={#MayaVersion}",
+        "AppPublisher=Maya the Info Manager",
+        "DefaultDirName={localappdata}\\Programs\\Maya the Info Manager",
+        "DefaultGroupName=Maya the Info Manager",
+        "AllowNoIcons=yes",
+        "PrivilegesRequired=lowest",
+        "ArchitecturesAllowed=x64compatible",
+        "ArchitecturesInstallIn64BitMode=x64compatible",
+        "Compression=lzma2",
+        "SolidCompression=yes",
+        "UninstallDisplayName={#MayaProductName} {#MayaEdition}",
+        "OutputDir=.",
+        f"OutputBaseFilename=Maya-the-Info-Manager-{version}-{title}-Setup",
+    ]
+    if has_icon:
+        setup_lines.append('SetupIconFile="..\\windows-app-payload\\assets\\maya.ico"')
+    icon_suffix = '; IconFilename: "{app}\\assets\\maya.ico"' if has_icon else ""
     return "\n".join(
         [
             "#define MayaVersion \"" + version + "\"",
             "#define MayaEdition \"" + title + "\"",
             "#define MayaProductName \"" + PRODUCT_DISPLAY_NAME + "\"",
             "",
-            "[Setup]",
-            f"AppId={app_id}",
-            "AppName={#MayaProductName} {#MayaEdition}",
-            "AppVersion={#MayaVersion}",
-            "AppPublisher=Maya the Info Manager",
-            "DefaultDirName={autopf}\\Maya the Info Manager",
-            "DefaultGroupName=Maya the Info Manager",
-            "DisableProgramGroupPage=yes",
-            "PrivilegesRequired=lowest",
-            "ArchitecturesAllowed=x64compatible",
-            "ArchitecturesInstallIn64BitMode=x64compatible",
-            "Compression=lzma2",
-            "SolidCompression=yes",
-            "UninstallDisplayName={#MayaProductName} {#MayaEdition}",
-            "OutputDir=.",
-            f"OutputBaseFilename=Maya-the-Info-Manager-{version}-{title}-Setup",
+            *setup_lines,
+            "",
+            "[Tasks]",
+            'Name: "startmenuicon"; Description: "Create Start Menu shortcuts"; GroupDescription: "Shortcuts:"; Flags: checkedonce',
+            'Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked',
             "",
             "[Files]",
             f'Source: "..\\{app_payload.name}\\*"; DestDir: "{{app}}"; Flags: ignoreversion recursesubdirs createallsubdirs',
@@ -1598,13 +1850,14 @@ def _inno_script(
             'Source: "..\\provenance.json"; DestDir: "{app}\\release"; Flags: ignoreversion',
             "",
             "[Icons]",
-            'Name: "{group}\\Maya the Info Manager"; Filename: "{app}\\bin\\maya-console.cmd"',
-            'Name: "{group}\\Setup Maya"; Filename: "{app}\\bin\\setup-maya.cmd"',
-            'Name: "{group}\\Start Maya"; Filename: "{app}\\bin\\maya-console.cmd"',
-            'Name: "{group}\\Maya Doctor"; Filename: "{app}\\bin\\maya-doctor-console.cmd"',
-            'Name: "{group}\\Maya Installed Qualification"; Filename: "{app}\\bin\\maya-self-check-console.cmd"',
-            'Name: "{group}\\Maya Data Folder"; Filename: "{localappdata}\\Maya the Info Manager\\maya-data"',
-            'Name: "{group}\\Release Manifest"; Filename: "{app}\\release\\release-manifest.json"',
+            f'Name: "{{group}}\\Maya the Info Manager"; Filename: "{{app}}\\bin\\maya-console.cmd"; Tasks: startmenuicon{icon_suffix}',
+            f'Name: "{{group}}\\Setup Maya"; Filename: "{{app}}\\bin\\setup-maya.cmd"; Tasks: startmenuicon{icon_suffix}',
+            f'Name: "{{group}}\\Start Maya"; Filename: "{{app}}\\bin\\maya-console.cmd"; Tasks: startmenuicon{icon_suffix}',
+            f'Name: "{{group}}\\Maya Doctor"; Filename: "{{app}}\\bin\\maya-doctor-console.cmd"; Tasks: startmenuicon{icon_suffix}',
+            f'Name: "{{group}}\\Maya Installed Qualification"; Filename: "{{app}}\\bin\\maya-self-check-console.cmd"; Tasks: startmenuicon{icon_suffix}',
+            f'Name: "{{group}}\\Maya Data Folder"; Filename: "{{localappdata}}\\Maya the Info Manager\\maya-data"; Tasks: startmenuicon{icon_suffix}',
+            f'Name: "{{group}}\\Release Manifest"; Filename: "{{app}}\\release\\release-manifest.json"; Tasks: startmenuicon{icon_suffix}',
+            f'Name: "{{autodesktop}}\\Maya the Info Manager"; Filename: "{{app}}\\bin\\maya-console.cmd"; Tasks: desktopicon{icon_suffix}',
             "",
             "[Run]",
             "; No system software, credentials, OAuth grants, tenant resources, or services are installed silently.",

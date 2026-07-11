@@ -153,8 +153,11 @@ def _verify_payload_entries(names: list[str]) -> None:
     required = (
         "windows-app-payload/app/project_maya/__init__.py",
         "windows-app-payload/app/sitecustomize.py",
+        "windows-app-payload/app/plugins/__init__.py",
+        "windows-app-payload/app/plugins/browser/__init__.py",
         "windows-app-payload/runtime/runtime-manifest.json",
         "windows-app-payload/runtime/component-readiness.json",
+        "windows-app-payload/runtime/maya_runtime.py",
         "windows-app-payload/runtime/python/python.cmd",
         "windows-app-payload/wheels/requirements-pinned.txt",
         "windows-app-payload/wheels/wheelhouse-manifest.json",
@@ -200,17 +203,22 @@ def _verify_inno_products(release_dir: Path) -> None:
         for expected in (
             "#define MayaProductName \"Maya the Info Manager\"",
             "AppName={#MayaProductName} {#MayaEdition}",
-            "DefaultDirName={autopf}\\Maya the Info Manager",
+            "DefaultDirName={localappdata}\\Programs\\Maya the Info Manager",
             "DefaultGroupName=Maya the Info Manager",
+            "AllowNoIcons=yes",
             "UninstallDisplayName={#MayaProductName} {#MayaEdition}",
             "PrivilegesRequired=lowest",
+            "[Tasks]",
+            'Name: "startmenuicon"; Description: "Create Start Menu shortcuts"',
+            'Name: "desktopicon"; Description: "Create a desktop shortcut"',
             'Source: "..\\windows-app-payload\\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs',
-            'Name: "{group}\\Maya the Info Manager"; Filename: "{app}\\bin\\maya-console.cmd"',
-            'Name: "{group}\\Setup Maya"; Filename: "{app}\\bin\\setup-maya.cmd"',
-            'Name: "{group}\\Start Maya"; Filename: "{app}\\bin\\maya-console.cmd"',
-            'Name: "{group}\\Maya Doctor"; Filename: "{app}\\bin\\maya-doctor-console.cmd"',
-            'Name: "{group}\\Maya Installed Qualification"; Filename: "{app}\\bin\\maya-self-check-console.cmd"',
-            'Name: "{group}\\Maya Data Folder"; Filename: "{localappdata}\\Maya the Info Manager\\maya-data"',
+            'Name: "{group}\\Maya the Info Manager"; Filename: "{app}\\bin\\maya-console.cmd"; Tasks: startmenuicon',
+            'Name: "{group}\\Setup Maya"; Filename: "{app}\\bin\\setup-maya.cmd"; Tasks: startmenuicon',
+            'Name: "{group}\\Start Maya"; Filename: "{app}\\bin\\maya-console.cmd"; Tasks: startmenuicon',
+            'Name: "{group}\\Maya Doctor"; Filename: "{app}\\bin\\maya-doctor-console.cmd"; Tasks: startmenuicon',
+            'Name: "{group}\\Maya Installed Qualification"; Filename: "{app}\\bin\\maya-self-check-console.cmd"; Tasks: startmenuicon',
+            'Name: "{group}\\Maya Data Folder"; Filename: "{localappdata}\\Maya the Info Manager\\maya-data"; Tasks: startmenuicon',
+            'Name: "{autodesktop}\\Maya the Info Manager"; Filename: "{app}\\bin\\maya-console.cmd"; Tasks: desktopicon',
             "Source: \"..\\",
             "release-manifest.json",
             "update-manifest.json",
@@ -252,6 +260,11 @@ def _verify_managed_runtime_payload(payload_dir: Path) -> None:
             raise RuntimeError("production payload lacks included managed Python")
         if not hermes.get("included") or not hermes.get("artifact"):
             raise RuntimeError("production payload lacks bundled Hermes runtime")
+        python_dependencies = runtime_manifest.get("python_dependencies", {})
+        if python_dependencies.get("status") != "included":
+            raise RuntimeError(
+                "production payload lacks bundled Python dependency wheelhouse"
+            )
     wheelhouse = json.loads(
         (payload_dir / "wheels" / "wheelhouse-manifest.json").read_text(
             encoding="utf-8"
@@ -289,6 +302,8 @@ def _verify_product_launchers(payload_dir: Path) -> None:
         for expected in expected_parts:
             if expected not in text:
                 raise RuntimeError(f"{name} does not run product action: {expected}")
+        if name in {"setup-maya.cmd", "maya-self-check.cmd"} and "maya_runtime.py" not in text:
+            raise RuntimeError(f"{name} does not use installed runtime bootstrap")
     menu_text = (payload_dir / "bin" / "maya.cmd").read_text(encoding="utf-8")
     if "Choose an option" in menu_text or re.search(r"\b--help\b", menu_text):
         raise RuntimeError("Start Maya is still a thin menu/help wrapper")
@@ -296,6 +311,8 @@ def _verify_product_launchers(payload_dir: Path) -> None:
         text = (payload_dir / "bin" / launcher_name).read_text(encoding="utf-8")
         if "MAYA_RUNTIME_PYTHON" not in text:
             raise RuntimeError(f"{launcher_name} does not use managed runtime")
+        if "maya_runtime.py" not in text:
+            raise RuntimeError(f"{launcher_name} does not use managed runtime bootstrap")
     first_run = (payload_dir / "scripts" / "maya_first_run.py").read_text(
         encoding="utf-8"
     )
@@ -348,7 +365,13 @@ def _verify_packaged_payload_starts(payload_dir: Path) -> None:
     env["PYTHONPATH"] = str(payload_dir / "app")
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     result = subprocess.run(
-        [sys.executable, "-m", "project_maya.cli", "--help"],
+        [
+            sys.executable,
+            str(payload_dir / "runtime" / "maya_runtime.py"),
+            "-m",
+            "project_maya.cli",
+            "--help",
+        ],
         cwd=payload_dir,
         env=env,
         stdout=subprocess.PIPE,
@@ -369,6 +392,7 @@ def _verify_installed_qualification(payload_dir: Path) -> None:
     result = subprocess.run(
         [
             sys.executable,
+            str(payload_dir / "runtime" / "maya_runtime.py"),
             str(payload_dir / "scripts" / "maya_qualification.py"),
             "--install-dir",
             str(payload_dir),
