@@ -834,6 +834,7 @@ def _write_runtime_bootstrap(runtime_dir: Path) -> None:
                 "from __future__ import annotations",
                 "",
                 "import os",
+                "import json",
                 "import runpy",
                 "import sys",
                 "from pathlib import Path",
@@ -842,6 +843,16 @@ def _write_runtime_bootstrap(runtime_dir: Path) -> None:
                 "app_dir = install_dir / 'app'",
                 "wheels_dir = install_dir / 'wheels'",
                 "os.environ.setdefault('PYTHONDONTWRITEBYTECODE', '1')",
+                "services_manifest = install_dir / 'services' / 'managed-services.json'",
+                "if services_manifest.is_file():",
+                "    services = json.loads(services_manifest.read_text(encoding='utf-8'))",
+                "    managed_bins = []",
+                "    for artifact in services.get('artifacts', {}).values():",
+                "        executable = artifact.get('executable')",
+                "        if executable:",
+                "            managed_bins.append(str((install_dir / 'services' / executable).parent))",
+                "    if managed_bins:",
+                "        os.environ['PATH'] = os.pathsep.join([*managed_bins, os.environ.get('PATH', '')])",
                 "for path in (app_dir,):",
                 "    value = str(path)",
                 "    if value not in sys.path:",
@@ -1129,14 +1140,32 @@ def _stage_dependency_artifacts(
                 "sha256": None,
             }
             continue
-        destination = artifacts_dir / match.name
-        shutil.copy2(match, destination)
+        source_sha256 = sha256_file(match)
+        runtime_path = _stage_managed_dependency_runtime(services_dir, slot, match)
+        executable = _managed_dependency_executable(services_dir, slot, runtime_path)
         staged[slot] = {
             "included": True,
-            "status": "artifact_included",
-            "path": destination.relative_to(services_dir).as_posix(),
-            "sha256": sha256_file(destination),
-            "size_bytes": destination.stat().st_size,
+            "status": "managed_runtime_included",
+            "source_filename": match.name,
+            "source_sha256": source_sha256,
+            "path": runtime_path.relative_to(services_dir).as_posix(),
+            "sha256": (
+                sha256_file(runtime_path)
+                if runtime_path.is_file()
+                else _tree_sha256(runtime_path)
+            ),
+            "size_bytes": sum(
+                path.stat().st_size
+                for path in (
+                    (runtime_path,) if runtime_path.is_file() else runtime_path.rglob("*")
+                )
+                if path.is_file()
+            ),
+            "executable": (
+                executable.relative_to(services_dir).as_posix()
+                if executable is not None
+                else None
+            ),
         }
     manifest = {
         "schema_version": 1,
@@ -1147,6 +1176,86 @@ def _stage_dependency_artifacts(
     }
     write_canonical_json(services_dir / "managed-services.json", manifest)
     return manifest
+
+
+def _stage_managed_dependency_runtime(
+    services_dir: Path,
+    slot: str,
+    source: Path,
+) -> Path:
+    runtime_path = services_dir / "runtime" / slot
+    runtime_path.parent.mkdir(parents=True, exist_ok=True)
+    if source.suffix.lower() == ".zip":
+        runtime_path.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(source) as archive:
+            root = runtime_path.resolve()
+            for member in archive.infolist():
+                destination = (runtime_path / member.filename).resolve()
+                if destination != root and root not in destination.parents:
+                    raise RuntimeError(
+                        f"managed dependency archive escapes its runtime root: {source.name}"
+                    )
+            archive.extractall(runtime_path)
+        if slot == "libreoffice":
+            _prune_libreoffice_non_runtime_files(runtime_path)
+        return runtime_path
+    runtime_path.mkdir(parents=True, exist_ok=True)
+    destination = runtime_path / ("metabase.jar" if slot == "metabase" else source.name)
+    shutil.copy2(source, destination)
+    return destination
+
+
+def _prune_libreoffice_non_runtime_files(runtime_path: Path) -> None:
+    """Remove bundled docs/help trees that are not needed for headless conversion."""
+    relative_prune_roots = (
+        Path("App/DefaultData/settings/user/extensions"),
+        Path("App/DefaultData/settings/user/uno_packages"),
+        Path("App/libreoffice/help"),
+        Path("App/libreoffice/share/readmes"),
+        Path("App/libreoffice/share/config/soffice.cfg/modules/swriter/help"),
+        Path("App/libreoffice/share/config/soffice.cfg/modules/scalc/help"),
+        Path("App/libreoffice/share/config/soffice.cfg/modules/simpress/help"),
+        Path("App/libreoffice/share/config/soffice.cfg/modules/sdraw/help"),
+    )
+    for relative in relative_prune_roots:
+        target = runtime_path / relative
+        if target.exists():
+            shutil.rmtree(target)
+    for target in runtime_path.glob("App/libreoffice/program/python-core-*"):
+        if target.is_dir():
+            shutil.rmtree(target)
+    for pattern in ("**/*.pdb", "**/*.msi"):
+        for file_path in runtime_path.glob(pattern):
+            if file_path.is_file():
+                file_path.unlink()
+    for file_path in runtime_path.glob("App/libreoffice/program/opengl/*MultiColorGradientFragmentShader.glsl"):
+        if file_path.is_file():
+            file_path.unlink()
+
+
+def _managed_dependency_executable(
+    services_dir: Path,
+    slot: str,
+    runtime_path: Path,
+) -> Path | None:
+    patterns = {
+        "java": ("java.exe",),
+        "libreoffice": ("soffice.exe",),
+        "poppler": ("pdftoppm.exe",),
+    }
+    expected = patterns.get(slot, ())
+    if not expected:
+        return None
+    candidates = (
+        (runtime_path,)
+        if runtime_path.is_file()
+        else tuple(path for path in runtime_path.rglob("*") if path.is_file())
+    )
+    for name in expected:
+        for candidate in sorted(candidates):
+            if candidate.name.lower() == name:
+                return candidate
+    raise RuntimeError(f"{slot} artifact does not contain a managed {expected[0]}")
 
 
 def _find_dependency_artifact(
@@ -1451,6 +1560,7 @@ def _first_run_script() -> str:
                 source = install_dir / "release" / name
                 if source.is_file():
                     shutil.copy2(source, updates_dir / name)
+            _initialize_managed_services(install_dir, data_dir)
             secret_status = _initialize_local_api_secret(data_dir)
             print(json.dumps({"operation": "first_run", "config": str(config_path), "data_dir": str(data_dir), "created_config": True}, sort_keys=True))
             print(json.dumps({"operation": "local_api_secret", "status": secret_status}, sort_keys=True))
@@ -1476,6 +1586,20 @@ def _first_run_script() -> str:
                 if os.name == "nt":
                     return "blocked:" + type(exc).__name__
                 return "blocked:platform_secret_store_unavailable"
+
+
+        def _initialize_managed_services(install_dir, data_dir):
+            manifest_path = install_dir / "services" / "managed-services.json"
+            if not manifest_path.is_file():
+                return
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            metabase = manifest.get("artifacts", {}).get("metabase", {})
+            source_ref = metabase.get("path")
+            if metabase.get("included") and source_ref:
+                source = install_dir / "services" / source_ref
+                target = data_dir / "metabase" / "application" / "metabase.jar"
+                if source.is_file() and not target.is_file():
+                    shutil.copy2(source, target)
 
 
         def _python_command(install_dir, *args):
@@ -1786,7 +1910,47 @@ def _compile_inno_setup_products(
                 timestamp_url=timestamp_url,
             )
             compiled.append(installer)
+    _update_inno_compile_manifest(
+        inno_artifacts,
+        compiler=compiler,
+        compiled=tuple(compiled),
+        signed=signtool is not None,
+        allow_unsigned_installers=allow_unsigned_installers,
+    )
     return tuple(compiled)
+
+
+def _update_inno_compile_manifest(
+    inno_artifacts: tuple[Path, ...],
+    *,
+    compiler: Path | None,
+    compiled: tuple[Path, ...],
+    signed: bool,
+    allow_unsigned_installers: bool,
+) -> None:
+    manifest_path = next(
+        (path for path in inno_artifacts if path.name == "inno-installer-manifest.json"),
+        None,
+    )
+    if manifest_path is None or not manifest_path.is_file():
+        return
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["compiler"] = str(compiler) if compiler is not None else None
+    manifest["compiler_available"] = bool(compiler and compiler.is_file())
+    manifest["compiled_installers"] = [
+        {
+            "path": installer.relative_to(manifest_path.parent).as_posix(),
+            "sha256": sha256_file(installer),
+            "size_bytes": installer.stat().st_size,
+            "signed": signed,
+            "qualification": "local-smoke" if not signed and allow_unsigned_installers else "production",
+        }
+        for installer in compiled
+    ]
+    if compiled and not signed and allow_unsigned_installers:
+        manifest["production_qualification"] = "local-smoke"
+        manifest["signing"] = "unsigned-local-smoke-only"
+    write_canonical_json(manifest_path, manifest)
 
 
 
@@ -1872,10 +2036,15 @@ def _inno_script(
 def _compile_inno_script(script_path: Path, compiler: Path | None) -> Path | None:
     if compiler is None or not compiler.is_file():
         return None
+    compile_script_path = script_path
+    temp_dir: tempfile.TemporaryDirectory[str] | None = None
+    if os.name == "nt":
+        short_script_path, temp_dir = _short_inno_compile_path(script_path)
+        compile_script_path = short_script_path
     try:
         subprocess.run(
-            [str(compiler), str(script_path)],
-            cwd=script_path.parent,
+            [str(compiler), str(compile_script_path)],
+            cwd=compile_script_path.parent,
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -1884,8 +2053,54 @@ def _compile_inno_script(script_path: Path, compiler: Path | None) -> Path | Non
     except subprocess.CalledProcessError as exc:
         output = exc.stdout or "Inno Setup compiler failed without output."
         raise RuntimeError(output) from exc
-    candidates = sorted(script_path.parent.glob("Maya-the-Info-Manager-*-Setup.exe"))
+    finally:
+        if temp_dir is not None:
+            temp_dir.cleanup()
+    expected = _expected_inno_output_path(script_path)
+    if expected.is_file():
+        return expected
+    candidates = sorted(
+        script_path.parent.glob(
+            f"Maya-the-Info-Manager-*-{_inno_title_for_script(script_path)}-Setup.exe"
+        )
+    )
     return candidates[-1] if candidates else None
+
+
+def _expected_inno_output_path(script_path: Path) -> Path:
+    version = "unknown"
+    for line in script_path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("#define MayaVersion "):
+            version = line.rsplit('"', 2)[1]
+            break
+    return (
+        script_path.parent
+        / f"Maya-the-Info-Manager-{version}-{_inno_title_for_script(script_path)}-Setup.exe"
+    )
+
+
+def _inno_title_for_script(script_path: Path) -> str:
+    edition = script_path.stem.rsplit("-", 1)[-1].lower()
+    return "Enterprise" if edition == "enterprise" else "Standard"
+
+
+def _short_inno_compile_path(
+    script_path: Path,
+) -> tuple[Path, tempfile.TemporaryDirectory[str] | None]:
+    release_dir = script_path.parent.parent
+    temp_dir = tempfile.TemporaryDirectory(prefix="maya-inno-")
+    junction = Path(temp_dir.name) / "r"
+    result = subprocess.run(
+        ["cmd", "/c", "mklink", "/J", str(junction), str(release_dir)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        temp_dir.cleanup()
+        return script_path, None
+    return junction / "inno" / script_path.name, temp_dir
 
 
 def _sign_windows_installer(

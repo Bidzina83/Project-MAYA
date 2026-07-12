@@ -259,13 +259,24 @@ class TestPhase6Release(unittest.TestCase):
                 archive.writestr("run_agent.py", "class AIAgent: pass\n")
             deps_dir = root / "deps"
             deps_dir.mkdir()
-            for name in (
-                "metabase.jar",
-                "java-runtime.zip",
-                "libreoffice-portable.zip",
-                "poppler-runtime.zip",
-            ):
-                (deps_dir / name).write_bytes(name.encode("utf-8"))
+            (deps_dir / "metabase.jar").write_bytes(b"fake-metabase")
+            dependency_archives = {
+                "java-runtime.zip": "jdk/bin/java.exe",
+                "libreoffice-portable.zip": "App/libreoffice/program/soffice.exe",
+                "poppler-runtime.zip": "poppler/Library/bin/pdftoppm.exe",
+            }
+            for name, executable in dependency_archives.items():
+                with zipfile.ZipFile(deps_dir / name, "w") as archive:
+                    archive.writestr(executable, name.encode("utf-8"))
+                    if "libreoffice" in name:
+                        archive.writestr(
+                            "App/libreoffice/help/media/icon-themes/cmd/lc_arrowshapes.left-right-arrow-callout.svg",
+                            b"not required for headless conversion",
+                        )
+                        archive.writestr(
+                            "App/libreoffice/program/python-core-3.12.13/lib/lib2to3/fixes/fix_imports.py",
+                            b"not required for headless conversion",
+                        )
             python_wheelhouse = root / "python-wheelhouse"
             python_wheelhouse.mkdir()
             with zipfile.ZipFile(
@@ -309,17 +320,27 @@ class TestPhase6Release(unittest.TestCase):
                 ),
                 0,
             )
-            self.assertEqual(
-                verify_phase6_release(
-                    [
-                        "--release-dir",
-                        str(release_dir),
-                        "--platform",
-                        "windows-desktop",
-                    ]
+            with (
+                patch.object(
+                    verify_release_module,
+                    "_verify_packaged_payload_starts",
                 ),
-                0,
-            )
+                patch.object(
+                    verify_release_module,
+                    "_verify_installed_qualification",
+                ),
+            ):
+                self.assertEqual(
+                    verify_phase6_release(
+                        [
+                            "--release-dir",
+                            str(release_dir),
+                            "--platform",
+                            "windows-desktop",
+                        ]
+                    ),
+                    0,
+                )
             runtime_manifest = json.loads(
                 (
                     release_dir
@@ -338,6 +359,58 @@ class TestPhase6Release(unittest.TestCase):
                 runtime_manifest["python_dependencies"]["status"],
                 "included",
             )
+            services = json.loads(
+                (
+                    release_dir
+                    / "windows-app-payload"
+                    / "services"
+                    / "managed-services.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                services["artifacts"]["libreoffice"]["status"],
+                "managed_runtime_included",
+            )
+            self.assertTrue(services["artifacts"]["java"]["executable"].endswith("java.exe"))
+            self.assertTrue(
+                services["artifacts"]["libreoffice"]["executable"].endswith("soffice.exe")
+            )
+            self.assertFalse(
+                (
+                    release_dir
+                    / "windows-app-payload"
+                    / "services"
+                    / "runtime"
+                    / "libreoffice"
+                    / "App"
+                    / "libreoffice"
+                    / "help"
+                ).exists()
+            )
+            self.assertFalse(
+                (
+                    release_dir
+                    / "windows-app-payload"
+                    / "services"
+                    / "runtime"
+                    / "libreoffice"
+                    / "App"
+                    / "libreoffice"
+                    / "program"
+                    / "python-core-3.12.13"
+                ).exists()
+            )
+            self.assertTrue(
+                services["artifacts"]["poppler"]["executable"].endswith("pdftoppm.exe")
+            )
+            first_run = (
+                release_dir
+                / "windows-app-payload"
+                / "scripts"
+                / "maya_first_run.py"
+            ).read_text(encoding="utf-8")
+            self.assertIn("_initialize_managed_services", first_run)
+            self.assertIn('"metabase.jar"', first_run)
             self.assertTrue(runtime_manifest["hermes_agent"]["included"])
             services_manifest = json.loads(
                 (
@@ -408,6 +481,64 @@ class TestPhase6Release(unittest.TestCase):
                             str(Path(tmp) / "ISCC.exe"),
                         ]
                     )
+
+    def test_release_builder_records_unsigned_local_smoke_installers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            release_dir = Path(tmp) / "release"
+
+            def fake_compile(script_path, compiler):
+                compiled = (
+                    script_path.parent
+                    / f"Maya-the-Info-Manager-1.0.0-{script_path.stem.rsplit('-', 1)[-1].title()}-Setup.exe"
+                )
+                compiled.write_bytes(b"unsigned installer")
+                return compiled
+
+            compiler = Path(tmp) / "ISCC.exe"
+            compiler.write_bytes(b"fake compiler")
+            with patch.object(
+                build_release_module,
+                "_compile_inno_script",
+                side_effect=fake_compile,
+            ):
+                self.assertEqual(
+                    build_phase6_release(
+                        [
+                            "--version",
+                            "1.0.0",
+                            "--platform",
+                            "windows-desktop",
+                            "--out",
+                            str(release_dir),
+                            "--inno-compiler",
+                            str(compiler),
+                            "--allow-unsigned-installers",
+                        ]
+                    ),
+                    0,
+                )
+            manifest = json.loads(
+                (release_dir / "inno" / "inno-installer-manifest.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertTrue(manifest["compiler_available"])
+            self.assertEqual(manifest["signing"], "unsigned-local-smoke-only")
+            self.assertEqual(manifest["production_qualification"], "local-smoke")
+            self.assertEqual(len(manifest["compiled_installers"]), 2)
+            self.assertEqual(
+                {
+                    item["path"]
+                    for item in manifest["compiled_installers"]
+                },
+                {
+                    "Maya-the-Info-Manager-1.0.0-Standard-Setup.exe",
+                    "Maya-the-Info-Manager-1.0.0-Enterprise-Setup.exe",
+                },
+            )
+            self.assertTrue(
+                all(not item["signed"] for item in manifest["compiled_installers"])
+            )
 
     def test_release_verifier_rejects_unsigned_compiled_installers(self):
         with tempfile.TemporaryDirectory() as tmp:

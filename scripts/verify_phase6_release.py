@@ -284,8 +284,38 @@ def _verify_managed_runtime_payload(payload_dir: Path) -> None:
     for name, artifact in services.get("artifacts", {}).items():
         if artifact.get("included"):
             path = payload_dir / "services" / artifact["path"]
-            _require_file(path)
-            _verify_artifact_checksum(path, artifact["sha256"])
+            if not path.exists():
+                raise RuntimeError(f"managed service runtime is missing: {path}")
+            actual_sha256 = (
+                sha256_file(path) if path.is_file() else _tree_sha256(path)
+            )
+            if actual_sha256 != artifact["sha256"]:
+                raise RuntimeError(
+                    f"managed service runtime checksum mismatch: {name}"
+                )
+            if name in {"java", "libreoffice", "poppler"}:
+                executable = artifact.get("executable")
+                if not executable:
+                    raise RuntimeError(
+                        f"managed service runtime lacks executable mapping: {name}"
+                    )
+                _require_file(payload_dir / "services" / executable)
+            if artifact.get("status") != "managed_runtime_included":
+                raise RuntimeError(
+                    f"managed dependency is only copied, not deployable: {name}"
+                )
+
+
+def _tree_sha256(root: Path) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    for path in sorted(item for item in root.rglob("*") if item.is_file()):
+        digest.update(path.relative_to(root).as_posix().encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
 
 
 def _verify_product_launchers(payload_dir: Path) -> None:
