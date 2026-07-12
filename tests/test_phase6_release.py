@@ -157,8 +157,8 @@ class TestPhase6Release(unittest.TestCase):
             launcher = (
                 release_dir / "windows-app-payload" / "bin" / "maya.cmd"
             ).read_text(encoding="utf-8")
-            self.assertIn("health summary", launcher)
-            self.assertIn("Blocked items must be resolved", launcher)
+            self.assertIn("serve-local-api", launcher)
+            self.assertIn("Starting Maya local runtime", launcher)
             self.assertNotIn("Choose an option", launcher)
             setup_launcher = (
                 release_dir / "windows-app-payload" / "bin" / "setup-maya.cmd"
@@ -283,6 +283,7 @@ class TestPhase6Release(unittest.TestCase):
                 python_wheelhouse / "pyyaml-6.0.3-py3-none-any.whl", "w"
             ) as archive:
                 archive.writestr("yaml/__init__.py", "__version__ = '6.0.3'\n")
+                archive.writestr("yaml/_yaml.pyd", b"fake-native-extension")
             skills_source = root / "skills-source"
             skill = skills_source / "skills" / "maya-identity"
             skill.mkdir(parents=True)
@@ -358,6 +359,20 @@ class TestPhase6Release(unittest.TestCase):
             self.assertEqual(
                 runtime_manifest["python_dependencies"]["status"],
                 "included",
+            )
+            self.assertEqual(
+                runtime_manifest["installed_python_packages"]["status"],
+                "materialized",
+            )
+            self.assertTrue(
+                (
+                    release_dir
+                    / "windows-app-payload"
+                    / "runtime"
+                    / "site-packages"
+                    / "yaml"
+                    / "_yaml.pyd"
+                ).is_file()
             )
             services = json.loads(
                 (

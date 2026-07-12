@@ -265,6 +265,16 @@ def _verify_managed_runtime_payload(payload_dir: Path) -> None:
             raise RuntimeError(
                 "production payload lacks bundled Python dependency wheelhouse"
             )
+        installed_packages = runtime_manifest.get("installed_python_packages", {})
+        if installed_packages.get("status") != "materialized":
+            raise RuntimeError(
+                "production payload does not materialize Python wheels for native imports"
+            )
+        site_packages = payload_dir / installed_packages.get("path", "")
+        if not site_packages.is_dir():
+            raise RuntimeError("managed Python site-packages directory is missing")
+        if not any(site_packages.rglob("*")):
+            raise RuntimeError("managed Python site-packages directory is empty")
     wheelhouse = json.loads(
         (payload_dir / "wheels" / "wheelhouse-manifest.json").read_text(
             encoding="utf-8"
@@ -321,7 +331,7 @@ def _tree_sha256(root: Path) -> str:
 def _verify_product_launchers(payload_dir: Path) -> None:
     launchers = {
         "setup-maya.cmd": ("maya_first_run.py", "MAYA_DATA_DIR", "MAYA_RUNTIME_PYTHON"),
-        "maya.cmd": ("health summary", "Blocked items must be resolved"),
+        "maya.cmd": ("serve-local-api", "Starting Maya local runtime"),
         "maya-doctor.cmd": ("doctor --config", "setup-maya.cmd"),
         "maya-self-check.cmd": ("maya_qualification.py", "installed qualification"),
     }

@@ -133,11 +133,25 @@ def run_doctor(
         )
 
     health = runtime.health()
+    lifecycle = None
+    if lifecycle_state is not None:
+        try:
+            lifecycle = AgentState(lifecycle_state)
+        except ValueError:
+            lifecycle = None
+    health_status = DoctorStatus.PASS
+    if health.state.value != "healthy":
+        health_status = (
+            DoctorStatus.WARN
+            if compatibility.compatible
+            and lifecycle in {AgentState.CREATED, AgentState.STOPPED}
+            else DoctorStatus.FAIL
+        )
     checks.append(
         DoctorCheck(
             "hermes.health",
-            DoctorStatus.PASS if health.state.value == "healthy" else DoctorStatus.FAIL,
-            health.state.value,
+            health_status,
+            "not_started" if health_status is DoctorStatus.WARN else health.state.value,
         )
     )
     return DoctorReport(tuple(checks))
@@ -462,7 +476,9 @@ def _metabase_capability_checks(config: MayaConfig) -> list[DoctorCheck]:
             name = "metabase.provisioning"
         status_value = str(summary.get("status", "unknown"))
         status = DoctorStatus.PASS
-        if status_value in {"not_ready", "blocked", "unsupported_deployment"}:
+        if status_value == "blocked" and summary.get("apply") is False:
+            status = DoctorStatus.WARN
+        elif status_value in {"not_ready", "blocked", "unsupported_deployment"}:
             status = DoctorStatus.FAIL
         elif status_value in {
             "live_check_deferred",

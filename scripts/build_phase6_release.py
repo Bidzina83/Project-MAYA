@@ -466,6 +466,10 @@ def _build_windows_app_payload(
         wheels_dir,
         python_wheelhouse_dir,
     )
+    installed_python_manifest = _materialize_python_wheelhouse(
+        wheels_dir,
+        runtime_dir / "site-packages",
+    )
     dependency_manifest = _stage_dependency_artifacts(
         services_dir,
         dependency_artifacts_dir,
@@ -513,6 +517,7 @@ def _build_windows_app_payload(
             },
             "wheelhouse": wheelhouse_manifest,
             "python_dependencies": python_dependency_manifest,
+            "installed_python_packages": installed_python_manifest,
             "skills": {
                 "manifest": "skills/skills-manifest.json",
                 "included_count": len(skills_manifest["skills"]),
@@ -642,13 +647,11 @@ def _build_windows_app_payload(
             "title Start Maya",
             'call "%~dp0setup-maya.cmd" --ensure',
             'if errorlevel 1 exit /b %ERRORLEVEL%',
-            'call "%~dp0maya-cli.cmd" health summary --config "%LOCALAPPDATA%\\Maya the Info Manager\\maya-data\\config\\maya.json" --format text',
+            "echo Starting Maya local runtime...",
+            'call "%~dp0maya-cli.cmd" serve-local-api --config "%LOCALAPPDATA%\\Maya the Info Manager\\maya-data\\config\\maya.json"',
             "set MAYA_EXIT=%ERRORLEVEL%",
-            "echo.",
-            "echo Maya start readiness finished with exit code %MAYA_EXIT%.",
-            "echo Blocked items must be resolved before Maya is treated as healthy.",
-            "echo.",
-            "pause",
+            "if not %MAYA_EXIT%==0 echo Maya stopped with exit code %MAYA_EXIT%.",
+            "if not %MAYA_EXIT%==0 pause",
             "exit /b %MAYA_EXIT%",
             "",
         ]
@@ -764,19 +767,18 @@ def _write_sitecustomize_for_wheelhouse(app_dir: Path) -> None:
     (app_dir / "sitecustomize.py").write_text(
         "\n".join(
             [
-                '"""Installed Maya wheelhouse path bootstrap."""',
+                '"""Installed Maya managed Python path bootstrap."""',
                 "from __future__ import annotations",
                 "",
                 "import sys",
                 "from pathlib import Path",
                 "",
                 "install_dir = Path(__file__).resolve().parents[1]",
-                "wheels_dir = install_dir / 'wheels'",
-                "if wheels_dir.is_dir():",
-                "    for wheel in sorted(wheels_dir.glob('*.whl')):",
-                "        wheel_path = str(wheel)",
-                "        if wheel_path not in sys.path:",
-                "            sys.path.append(wheel_path)",
+                "site_packages = install_dir / 'runtime' / 'site-packages'",
+                "if site_packages.is_dir():",
+                "    package_path = str(site_packages)",
+                "    if package_path not in sys.path:",
+                "        sys.path.append(package_path)",
                 "",
             ]
         ),
@@ -841,7 +843,11 @@ def _write_runtime_bootstrap(runtime_dir: Path) -> None:
                 "",
                 "install_dir = Path(__file__).resolve().parents[1]",
                 "app_dir = install_dir / 'app'",
-                "wheels_dir = install_dir / 'wheels'",
+                "site_packages = install_dir / 'runtime' / 'site-packages'",
+                "default_data_dir = Path(os.environ.get('LOCALAPPDATA', str(Path.home()))) / 'Maya the Info Manager' / 'maya-data'",
+                "maya_data_dir = Path(os.environ.get('MAYA_DATA_DIR', str(default_data_dir)))",
+                "os.environ.setdefault('MAYA_DATA_DIR', str(maya_data_dir))",
+                "os.environ.setdefault('HERMES_HOME', str(maya_data_dir / 'hermes'))",
                 "os.environ.setdefault('PYTHONDONTWRITEBYTECODE', '1')",
                 "services_manifest = install_dir / 'services' / 'managed-services.json'",
                 "if services_manifest.is_file():",
@@ -853,15 +859,10 @@ def _write_runtime_bootstrap(runtime_dir: Path) -> None:
                 "            managed_bins.append(str((install_dir / 'services' / executable).parent))",
                 "    if managed_bins:",
                 "        os.environ['PATH'] = os.pathsep.join([*managed_bins, os.environ.get('PATH', '')])",
-                "for path in (app_dir,):",
+                "for path in (app_dir, site_packages):",
                 "    value = str(path)",
                 "    if value not in sys.path:",
                 "        sys.path.insert(0, value)",
-                "if wheels_dir.is_dir():",
-                "    for wheel in sorted(wheels_dir.glob('*.whl')):",
-                "        value = str(wheel)",
-                "        if value not in sys.path:",
-                "            sys.path.append(value)",
                 "",
                 "def main() -> int:",
                 "    if len(sys.argv) < 2:",
@@ -1120,6 +1121,65 @@ def _write_wheelhouse_manifest(wheels_dir: Path) -> dict[str, object]:
     }
     write_canonical_json(wheels_dir / "wheelhouse-manifest.json", manifest)
     return manifest
+
+
+def _materialize_python_wheelhouse(
+    wheels_dir: Path,
+    site_packages_dir: Path,
+) -> dict[str, object]:
+    """Install wheel contents into the managed runtime without invoking system pip."""
+    site_packages_dir.mkdir(parents=True, exist_ok=True)
+    installed: list[dict[str, object]] = []
+    for wheel_path in sorted(wheels_dir.glob("*.whl")):
+        file_count = 0
+        with zipfile.ZipFile(wheel_path) as archive:
+            for member in sorted(archive.infolist(), key=lambda item: item.filename):
+                if member.is_dir():
+                    continue
+                relative = _wheel_install_relative_path(member.filename)
+                if relative is None:
+                    continue
+                destination = (site_packages_dir / relative).resolve()
+                root = site_packages_dir.resolve()
+                if destination != root and root not in destination.parents:
+                    raise RuntimeError(
+                        f"Python wheel escapes managed site-packages: {wheel_path.name}"
+                    )
+                content = archive.read(member)
+                if destination.exists() and destination.read_bytes() != content:
+                    raise RuntimeError(
+                        f"Python wheels contain conflicting file: {relative.as_posix()}"
+                    )
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(content)
+                file_count += 1
+        installed.append(
+            {
+                "name": wheel_path.name,
+                "sha256": sha256_file(wheel_path),
+                "files_installed": file_count,
+            }
+        )
+    return {
+        "status": "materialized" if installed else "missing_blocked",
+        "path": "runtime/site-packages",
+        "wheels": installed,
+    }
+
+
+def _wheel_install_relative_path(member_name: str) -> Path | None:
+    path = Path(member_name)
+    if path.is_absolute() or ".." in path.parts:
+        raise RuntimeError(f"Python wheel contains unsafe member: {member_name}")
+    parts = path.parts
+    for index, part in enumerate(parts):
+        if part.endswith(".data") and index + 2 <= len(parts):
+            category = parts[index + 1] if index + 1 < len(parts) else ""
+            if category in {"purelib", "platlib"}:
+                remainder = parts[index + 2 :]
+                return Path(*remainder) if remainder else None
+            return None
+    return path
 
 
 def _stage_dependency_artifacts(
@@ -1508,6 +1568,7 @@ def _first_run_script() -> str:
         from __future__ import annotations
 
         import argparse
+        import getpass
         import json
         import os
         import shutil
@@ -1564,6 +1625,10 @@ def _first_run_script() -> str:
             secret_status = _initialize_local_api_secret(data_dir)
             print(json.dumps({"operation": "first_run", "config": str(config_path), "data_dir": str(data_dir), "created_config": True}, sort_keys=True))
             print(json.dumps({"operation": "local_api_secret", "status": secret_status}, sort_keys=True))
+            model_status = _initialize_model_credential(config_path, data_dir, ensure=args.ensure)
+            print(json.dumps({"operation": "model_credential", "status": model_status}, sort_keys=True))
+            if model_status == "blocked":
+                return 1
             for command in (
                 _python_command(install_dir, "-m", "project_maya.cli", "setup", "plan", "--config", str(config_path)),
                 _python_command(install_dir, "-m", "project_maya.cli", "setup", "init", "--config", str(config_path), "--apply"),
@@ -1586,6 +1651,35 @@ def _first_run_script() -> str:
                 if os.name == "nt":
                     return "blocked:" + type(exc).__name__
                 return "blocked:platform_secret_store_unavailable"
+
+
+        def _initialize_model_credential(config_path, data_dir, *, ensure):
+            from project_maya.secrets import SecretRef, build_platform_secret_store
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            llm = config["llm"]
+            credential_ref_value = llm.get("credential_ref")
+            if not credential_ref_value:
+                credential_ref_value = "secret://llm/" + llm["provider"]
+                llm["credential_ref"] = credential_ref_value
+                config_path.write_text(
+                    json.dumps(config, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+            credential_ref = SecretRef.parse(credential_ref_value)
+            store = build_platform_secret_store(data_dir)
+            if store.contains(credential_ref):
+                return "healthy"
+            if ensure:
+                print("Maya setup is incomplete: run Setup Maya and provide the model API key.")
+                return "blocked"
+            value = getpass.getpass(
+                f"Enter {llm['provider']} API key (stored with Windows DPAPI): "
+            ).strip()
+            if not value:
+                print("No API key was provided. Maya runtime startup remains blocked.")
+                return "blocked"
+            store.write(credential_ref, value)
+            return "healthy"
 
 
         def _initialize_managed_services(install_dir, data_dir):
@@ -1982,7 +2076,7 @@ def _inno_script(
         "PrivilegesRequired=lowest",
         "ArchitecturesAllowed=x64compatible",
         "ArchitecturesInstallIn64BitMode=x64compatible",
-        "Compression=lzma2",
+        "Compression=lzma2/fast",
         "SolidCompression=yes",
         "UninstallDisplayName={#MayaProductName} {#MayaEdition}",
         "OutputDir=.",

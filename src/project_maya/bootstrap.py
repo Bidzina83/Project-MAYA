@@ -24,7 +24,7 @@ from .memory import (
 )
 from .model_config import require_valid_model_config
 from .runtime import GovernedAgentRuntime, ModelEgressPolicy
-from .secrets import SecretStore, build_platform_secret_store
+from .secrets import SecretRef, SecretStore, build_platform_secret_store
 
 
 @dataclass(frozen=True)
@@ -77,7 +77,7 @@ def build_local_product(
     secret_store = build_platform_secret_store(config.deployment.data_dir)
     retriever = _build_retriever(config)
     base_memory = MemoryRetriever(retriever)
-    hermes = _build_hermes_runtime(config)
+    hermes = _build_hermes_runtime(config, secret_store)
     audit_sink = _build_audit_sink(config)
     authorization_gateway = gateway or _build_gateway(config)
     memory = GovernedMemoryRetriever(
@@ -147,13 +147,20 @@ def _build_model_egress(config: MayaConfig) -> ModelEgressPolicy | None:
     )
 
 
-def _build_hermes_runtime(config: MayaConfig) -> HermesRuntimeAdapter:
+def _build_hermes_runtime(
+    config: MayaConfig,
+    secret_store: SecretStore,
+) -> HermesRuntimeAdapter:
     factory_kwargs: dict[str, object] = {
         "model": config.llm.model,
         "provider": config.llm.provider,
     }
     if config.llm.endpoint:
         factory_kwargs["base_url"] = config.llm.endpoint
+    if config.llm.credential_ref:
+        credential_ref = SecretRef.parse(config.llm.credential_ref)
+        if secret_store.contains(credential_ref):
+            factory_kwargs["api_key"] = secret_store.read(credential_ref)
     if config.llm.timeout_seconds:
         factory_kwargs["request_overrides"] = {
             "timeout_seconds": config.llm.timeout_seconds
