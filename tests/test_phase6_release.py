@@ -1,4 +1,5 @@
 import json
+import hashlib
 import tempfile
 import unittest
 import zipfile
@@ -165,6 +166,20 @@ class TestPhase6Release(unittest.TestCase):
             ).read_text(encoding="utf-8")
             self.assertIn("maya_first_run.py", setup_launcher)
             self.assertIn("maya_runtime.py", setup_launcher)
+            self.assertIn("MAYA_CONFIG", setup_launcher)
+            first_run = (
+                release_dir
+                / "windows-app-payload"
+                / "scripts"
+                / "maya_first_run.py"
+            ).read_text(encoding="utf-8")
+            self.assertIn('"provider": "maya"', first_run)
+            self.assertIn('memory.setdefault("memory_enabled", True)', first_run)
+            self.assertIn(
+                'memory.setdefault("user_profile_enabled", True)', first_run
+            )
+            self.assertIn("MayaHermesMemoryPlugin", first_run)
+            self.assertIn("register_memory_provider", first_run)
             inno_script = (release_dir / "inno" / "project-maya-standard.iss").read_text(
                 encoding="utf-8"
             )
@@ -213,6 +228,29 @@ class TestPhase6Release(unittest.TestCase):
             self.assertIn('"edition": "standard"', standard_template)
             self.assertIn('"mode": "runtime"', standard_template)
             self.assertIn('"credential_ref": "secret://integrations/google"', standard_template)
+            self.assertIn('"retriever": "local_vector"', standard_template)
+            governance_policy = json.loads(
+                (
+                    release_dir
+                    / "windows-app-payload"
+                    / "config-templates"
+                    / "default-governance-policy.json"
+                ).read_text(encoding="utf-8")
+            )
+            capabilities = {
+                rule["capability"] for rule in governance_policy["allow"]
+            }
+            self.assertEqual(
+                capabilities,
+                {
+                    "runtime.execute",
+                    "model.egress",
+                    "memory.read",
+                    "memory.ingest",
+                    "memory.write",
+                },
+            )
+            self.assertEqual(governance_policy["default_action"], "deny")
             with zipfile.ZipFile(
                 release_dir / "project-maya-1.0.0-windows-desktop.zip"
             ) as archive:
@@ -226,6 +264,10 @@ class TestPhase6Release(unittest.TestCase):
                 )
                 self.assertIn(
                     "windows-app-payload/runtime/runtime-manifest.json",
+                    archive.namelist(),
+                )
+                self.assertIn(
+                    "windows-app-payload/app/project_maya/memory/hermes_plugin.py",
                     archive.namelist(),
                 )
                 self.assertIn(
@@ -277,6 +319,31 @@ class TestPhase6Release(unittest.TestCase):
                             "App/libreoffice/program/python-core-3.12.13/lib/lib2to3/fixes/fix_imports.py",
                             b"not required for headless conversion",
                         )
+            embedding_files = {
+                "model.onnx": b"fake-onnx-model",
+                "tokenizer.json": b"{}",
+            }
+            embedding_manifest = {
+                "model_id": "sentence-transformers/all-MiniLM-L6-v2",
+                "revision": "pinned-test-revision",
+                "license": "apache-2.0",
+                "source": "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2",
+                "dimension": 384,
+                "max_length": 256,
+                "files": {
+                    name: hashlib.sha256(content).hexdigest()
+                    for name, content in embedding_files.items()
+                },
+            }
+            with zipfile.ZipFile(
+                deps_dir / "embedding-model-runtime.zip", "w"
+            ) as archive:
+                for name, content in embedding_files.items():
+                    archive.writestr(name, content)
+                archive.writestr(
+                    "embedding-model-manifest.json",
+                    json.dumps(embedding_manifest),
+                )
             python_wheelhouse = root / "python-wheelhouse"
             python_wheelhouse.mkdir()
             with zipfile.ZipFile(
@@ -284,6 +351,15 @@ class TestPhase6Release(unittest.TestCase):
             ) as archive:
                 archive.writestr("yaml/__init__.py", "__version__ = '6.0.3'\n")
                 archive.writestr("yaml/_yaml.pyd", b"fake-native-extension")
+            for wheel_name, package_name in (
+                ("numpy-2.0.0-py3-none-any.whl", "numpy"),
+                ("onnxruntime-1.18.0-py3-none-any.whl", "onnxruntime"),
+                ("tokenizers-0.19.0-py3-none-any.whl", "tokenizers"),
+            ):
+                with zipfile.ZipFile(python_wheelhouse / wheel_name, "w") as archive:
+                    archive.writestr(
+                        f"{package_name}/__init__.py", "__version__ = 'test'\n"
+                    )
             skills_source = root / "skills-source"
             skill = skills_source / "skills" / "maya-identity"
             skill.mkdir(parents=True)
@@ -426,6 +502,13 @@ class TestPhase6Release(unittest.TestCase):
             ).read_text(encoding="utf-8")
             self.assertIn("_initialize_managed_services", first_run)
             self.assertIn('"metabase.jar"', first_run)
+            qualification = (
+                release_dir
+                / "windows-app-payload"
+                / "scripts"
+                / "maya_qualification.py"
+            ).read_text(encoding="utf-8")
+            self.assertIn('"--ensure"', qualification)
             self.assertTrue(runtime_manifest["hermes_agent"]["included"])
             services_manifest = json.loads(
                 (

@@ -36,17 +36,27 @@ authorization policy from `llm.mode`, `llm.provider`, and whether
 requirement that external model inference is governed and audited without
 logging prompts or credential references.
 
-Memory binding currently supports `memory.retriever: local_json`, which stores
-records under:
+The Standard runtime uses `memory.retriever: local_vector`, backed by SQLite
+with FTS5 and exact cosine-vector search. It stores records under:
 
 ```text
-<deployment.data_dir>/memory/records.json
+<deployment.data_dir>/memory/memory.sqlite3
 ```
 
+The backend uses WAL mode, transactional upsert, stable record identifiers,
+provenance and trust fields, one validated embedding dimension, and SQLite
+integrity checks. `local_json` remains a compatibility backend for older
+profiles and tests; it is not the Standard installer default.
+
 Assembly wraps the governed memory facade in `HermesMemoryProvider` and
-attaches it to the public `Agent` before startup. Hermes sees the runtime
-memory provider, while product code still uses the governed Maya memory facade
-directly.
+attaches it to the public `Agent` before startup. Standard setup also installs
+a Maya provider shim through Hermes' supported `memory.provider` plugin
+mechanism. Provider prefetch and explicit Information Manager tools search or
+ingest governed SMB business information in SQLite. Provider turn
+synchronization is intentionally a no-op: Hermes continues to own conversation
+sessions, operational agent memory in `MEMORY.md`, and user preferences in
+`USER.md`. The two memory roles are complementary and are not migrated into
+one another.
 
 ## Governance
 
@@ -91,6 +101,10 @@ address as secret-safe JSON, and stops the runtime when the server exits.
 
 ## Limits
 
-This assembly does not install Hermes or allow remote local API binding. It
-creates the smallest governed local runtime shape that can be validated from
-configuration and extended in later Phase 1 slices.
+This assembly does not allow remote local API binding. The release builder is
+responsible for installing the pinned Hermes artifact. The SQLite backend
+generates embeddings when the pinned managed ONNX model and its native runtime
+wheels are present. It combines FTS5 and vector results by weighted
+reciprocal-rank fusion. Missing model artifacts leave lexical search
+operational but block semantic readiness. Exact vector search remains local
+and must be benchmarked before claiming support for large memory collections.

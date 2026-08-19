@@ -81,6 +81,16 @@ release metadata. If the pinned Hermes runtime artifact or profile-specific
 heavy dependency is not actually present or configured, setup and doctor must
 report a blocked readiness item. They must not report the product as healthy.
 
+Standard setup selects Maya's `local_vector` SQLite backend, installs the
+Maya-owned provider through Hermes' supported local plugin directory and
+selects external provider `maya` without replacing Hermes session storage,
+`MEMORY.md`, or `USER.md`. Installed
+qualification must prove both public Hermes provider discovery and governed
+SQLite read/write. Semantic qualification additionally requires a pinned local
+ONNX embedding model and native runtime wheels. A payload using `local_json`,
+an unavailable Maya provider, or a non-governed memory configuration fails or
+remains blocked.
+
 If `ISCC.exe` is supplied through `--inno-compiler`, the builder may also
 compile native Inno Setup `.exe` installers. Production `.exe` installers
 must be Authenticode-signed through release infrastructure by passing

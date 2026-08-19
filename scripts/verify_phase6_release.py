@@ -152,6 +152,8 @@ def _verify_installer_bundle(path: Path) -> None:
 def _verify_payload_entries(names: list[str]) -> None:
     required = (
         "windows-app-payload/app/project_maya/__init__.py",
+        "windows-app-payload/app/project_maya/memory/sqlite_vector.py",
+        "windows-app-payload/app/project_maya/memory/hermes_plugin.py",
         "windows-app-payload/app/sitecustomize.py",
         "windows-app-payload/app/plugins/__init__.py",
         "windows-app-payload/app/plugins/browser/__init__.py",
@@ -236,6 +238,7 @@ def _verify_inno_products(release_dir: Path) -> None:
 
 
 def _verify_managed_runtime_payload(payload_dir: Path) -> None:
+    _verify_standard_memory_and_governance(payload_dir)
     runtime_manifest = json.loads(
         (payload_dir / "runtime" / "runtime-manifest.json").read_text(
             encoding="utf-8"
@@ -275,6 +278,17 @@ def _verify_managed_runtime_payload(payload_dir: Path) -> None:
             raise RuntimeError("managed Python site-packages directory is missing")
         if not any(site_packages.rglob("*")):
             raise RuntimeError("managed Python site-packages directory is empty")
+        wheel_names = {
+            str(item.get("name", "")).lower()
+            for item in runtime_manifest.get("installed_python_packages", {}).get(
+                "wheels", []
+            )
+        }
+        for dependency in ("numpy", "onnxruntime", "tokenizers"):
+            if not any(name.startswith(dependency.replace("-", "_")) for name in wheel_names):
+                raise RuntimeError(
+                    f"production payload lacks embedding runtime wheel: {dependency}"
+                )
     wheelhouse = json.loads(
         (payload_dir / "wheels" / "wheelhouse-manifest.json").read_text(
             encoding="utf-8"
@@ -291,6 +305,10 @@ def _verify_managed_runtime_payload(payload_dir: Path) -> None:
     )
     if services.get("silent_system_dependency_install"):
         raise RuntimeError("managed services silently install system dependencies")
+    if mode == "production" and not services.get("artifacts", {}).get(
+        "embedding_model", {}
+    ).get("included"):
+        raise RuntimeError("production payload lacks the pinned local embedding model")
     for name, artifact in services.get("artifacts", {}).items():
         if artifact.get("included"):
             path = payload_dir / "services" / artifact["path"]
@@ -314,6 +332,49 @@ def _verify_managed_runtime_payload(payload_dir: Path) -> None:
                 raise RuntimeError(
                     f"managed dependency is only copied, not deployable: {name}"
                 )
+
+
+def _verify_standard_memory_and_governance(payload_dir: Path) -> None:
+    config = json.loads(
+        (payload_dir / "config-templates" / "standard.json.template").read_text(
+            encoding="utf-8"
+        )
+    )
+    memory = config.get("memory", {})
+    if memory.get("retriever") != "local_vector":
+        raise RuntimeError(
+            "Standard payload does not select Maya SQLite/vector memory"
+        )
+    if memory.get("registry") != "sqlite":
+        raise RuntimeError("Standard payload lacks the SQLite memory registry")
+    if memory.get("governance_enabled") is not True:
+        raise RuntimeError("Standard payload disables governed memory")
+
+    policy = json.loads(
+        (
+            payload_dir
+            / "config-templates"
+            / "default-governance-policy.json"
+        ).read_text(encoding="utf-8")
+    )
+    if policy.get("default_action") != "deny":
+        raise RuntimeError("Standard governance policy is not deny-by-default")
+    allowed = {
+        entry.get("capability")
+        for entry in policy.get("allow", [])
+        if isinstance(entry, dict)
+    }
+    required = {
+        "runtime.execute",
+        "model.egress",
+        "memory.read",
+        "memory.ingest",
+        "memory.write",
+    }
+    if not required.issubset(allowed):
+        raise RuntimeError(
+            "Standard governance policy cannot authorize the core governed runtime"
+        )
 
 
 def _tree_sha256(root: Path) -> str:
@@ -356,7 +417,16 @@ def _verify_product_launchers(payload_dir: Path) -> None:
     first_run = (payload_dir / "scripts" / "maya_first_run.py").read_text(
         encoding="utf-8"
     )
-    for expected in ("setup\", \"plan", "setup\", \"init", "--apply"):
+    for expected in (
+        "setup\", \"plan",
+        "setup\", \"init",
+        "--apply",
+        '"provider": "maya"',
+        'memory.setdefault("memory_enabled", True)',
+        'memory.setdefault("user_profile_enabled", True)',
+        "MayaHermesMemoryPlugin",
+        "register_memory_provider",
+    ):
         if expected not in first_run:
             raise RuntimeError(
                 f"first-run setup does not run product setup action: {expected}"
@@ -461,6 +531,8 @@ def _verify_installed_qualification(payload_dir: Path) -> None:
         "doctor",
         "health_summary",
         "local_api_contract",
+        "memory_governance_store",
+        "embedding_model",
         "connector_authorization_readiness",
         "metabase_readiness",
         "document_conversion_readiness",

@@ -12,15 +12,22 @@ Governance is applied by the product-facing memory facade before:
 - `recall`
 - `search`
 
-Hermes receives a `HermesMemoryProvider` adapter during local product startup.
-That adapter does not create a second memory store; it delegates session
-prefetch, recall, remember, and turn synchronization to
-`GovernedMemoryRetriever`.
+Hermes retains its built-in conversation sessions, `MEMORY.md`, and `USER.md`.
+Those records support Hermes operation and user preferences and are not moved
+into Maya persistent memory. The installed external `maya` provider exposes
+governed retrieval and explicit ingestion for SMB operational and business
+information. Its turn synchronization hook is intentionally a no-op.
+
+The Standard installer additionally configures the public Hermes memory-plugin
+loader with provider `maya`. The installed provider uses
+`LocalSQLiteVectorRetriever` and the configured Maya authorization policy and
+audit sink. It does not create a Hermes-owned database or cloud memory account.
 
 The first capabilities are:
 
 - `memory.write`
 - `memory.read`
+- `memory.ingest`
 
 Memory authorization decisions are written to the local runtime audit sink as:
 
@@ -41,6 +48,12 @@ values, or connector payloads.
 
 ## Limits
 
-This is a minimal Phase 1 guard. Future work should add richer memory
-classification, retention policy, trust metadata checks, provenance-aware
-read policy, and governed vector retrieval.
+Authorization and secret-safe audit are active for memory reads, ingestion,
+embedding rebuilds, and writes.
+The SQLite store persists trust and provenance fields, validates vector
+dimensions, and supports governed full-text, vector, and hybrid retrieval. A
+pinned offline ONNX model performs embedding generation when its disclosed and
+hashed artifact is installed. Missing semantic artifacts leave lexical search
+available but block semantic readiness. Richer classification, retention
+enforcement, contradiction resolution, and a benchmarked large-collection
+vector index remain follow-on work.

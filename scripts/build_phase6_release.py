@@ -33,6 +33,7 @@ from project_maya.release import (  # noqa: E402
     sign_mapping_for_release,
     write_canonical_json,
 )
+from project_maya.memory import inspect_embedding_model  # noqa: E402
 
 
 HERMES_RUNTIME_COMMIT = "b13e2fd6948a59eeb59fe618914147d97a2ee90a"
@@ -56,6 +57,7 @@ HEAVY_DEPENDENCY_SLOTS = (
     ("java", (".zip", ".7z", ".tar.gz", ".tgz")),
     ("libreoffice", (".zip", ".7z", ".msi")),
     ("poppler", (".zip", ".7z")),
+    ("embedding_model", (".zip",)),
 )
 
 
@@ -370,6 +372,10 @@ def _build_minimal_wheel(out_dir: Path) -> Path:
         "Requires-Dist: pypdf>=4.0; extra == \"documents\"\n"
         "Requires-Dist: reportlab>=4.0; extra == \"documents\"\n"
         "Requires-Dist: PyMuPDF>=1.24; extra == \"documents-preview\"\n"
+        "Provides-Extra: embeddings\n"
+        "Requires-Dist: numpy>=1.26,<3; extra == \"embeddings\"\n"
+        "Requires-Dist: onnxruntime>=1.18,<2; extra == \"embeddings\"\n"
+        "Requires-Dist: tokenizers>=0.19,<1; extra == \"embeddings\"\n"
     ).encode("utf-8")
     entries[f"{dist_info}/WHEEL"] = (
         "Wheel-Version: 1.0\n"
@@ -600,11 +606,7 @@ def _build_windows_app_payload(
     )
     (config_templates_dir / "default-governance-policy.json").write_text(
         json.dumps(
-            {
-                "schema_version": 1,
-                "default_action": "deny",
-                "rules": [],
-            },
+            _standard_governance_policy(),
             indent=2,
             sort_keys=True,
         )
@@ -628,6 +630,9 @@ def _build_windows_app_payload(
             "setlocal",
             'set "MAYA_APP_DIR=%~dp0..\\app"',
             'set "MAYA_INSTALL_DIR=%~dp0.."',
+            'set "MAYA_DATA_DIR=%LOCALAPPDATA%\\Maya the Info Manager\\maya-data"',
+            'set "MAYA_CONFIG=%MAYA_DATA_DIR%\\config\\maya.json"',
+            'set "HERMES_HOME=%MAYA_DATA_DIR%\\hermes"',
             'set "MAYA_RUNTIME_PYTHON=%~dp0..\\runtime\\python\\python.cmd"',
             'set "MAYA_RUNTIME_BOOTSTRAP=%~dp0..\\runtime\\maya_runtime.py"',
             'set "PYTHONPATH=%MAYA_APP_DIR%;%PYTHONPATH%"',
@@ -847,6 +852,7 @@ def _write_runtime_bootstrap(runtime_dir: Path) -> None:
                 "default_data_dir = Path(os.environ.get('LOCALAPPDATA', str(Path.home()))) / 'Maya the Info Manager' / 'maya-data'",
                 "maya_data_dir = Path(os.environ.get('MAYA_DATA_DIR', str(default_data_dir)))",
                 "os.environ.setdefault('MAYA_DATA_DIR', str(maya_data_dir))",
+                "os.environ.setdefault('MAYA_CONFIG', str(maya_data_dir / 'config' / 'maya.json'))",
                 "os.environ.setdefault('HERMES_HOME', str(maya_data_dir / 'hermes'))",
                 "os.environ.setdefault('PYTHONDONTWRITEBYTECODE', '1')",
                 "services_manifest = install_dir / 'services' / 'managed-services.json'",
@@ -859,6 +865,9 @@ def _write_runtime_bootstrap(runtime_dir: Path) -> None:
                 "            managed_bins.append(str((install_dir / 'services' / executable).parent))",
                 "    if managed_bins:",
                 "        os.environ['PATH'] = os.pathsep.join([*managed_bins, os.environ.get('PATH', '')])",
+                "    embedding = services.get('artifacts', {}).get('embedding_model', {})",
+                "    if embedding.get('included') and embedding.get('path'):",
+                "        os.environ.setdefault('MAYA_EMBEDDING_MODEL_DIR', str(install_dir / 'services' / embedding['path']))",
                 "for path in (app_dir, site_packages):",
                 "    value = str(path)",
                 "    if value not in sys.path:",
@@ -1202,6 +1211,12 @@ def _stage_dependency_artifacts(
             continue
         source_sha256 = sha256_file(match)
         runtime_path = _stage_managed_dependency_runtime(services_dir, slot, match)
+        if slot == "embedding_model":
+            embedding_status = inspect_embedding_model(runtime_path)
+            if embedding_status.get("status") != "ready":
+                raise RuntimeError(
+                    "embedding model artifact lacks a valid pinned manifest"
+                )
         executable = _managed_dependency_executable(services_dir, slot, runtime_path)
         staged[slot] = {
             "included": True,
@@ -1325,7 +1340,8 @@ def _find_dependency_artifact(
 ) -> Path | None:
     for path in sorted(sources):
         name = path.name.lower()
-        if not path.is_file() or slot not in name:
+        slot_names = {slot, slot.replace("_", "-")}
+        if not path.is_file() or not any(value in name for value in slot_names):
             continue
         if any(name.endswith(suffix) for suffix in suffixes):
             return path
@@ -1476,6 +1492,50 @@ def _iter_payload_files(payload_dir: Path) -> tuple[Path, ...]:
     return tuple(sorted(path for path in payload_dir.rglob("*") if path.is_file()))
 
 
+def _standard_governance_policy() -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "default_action": "deny",
+        "allow": [
+            {
+                "actor_id": "local-user",
+                "capability": "runtime.execute",
+                "target": "hermes-agent",
+                "operation": "run",
+                "reason_code": "standard.local_runtime",
+            },
+            {
+                "actor_id": "local-user",
+                "capability": "model.egress",
+                "target": "*",
+                "operation": "infer",
+                "reason_code": "standard.configured_model",
+            },
+            {
+                "actor_id": "local-user",
+                "capability": "memory.read",
+                "target": "*",
+                "operation": "*",
+                "reason_code": "standard.governed_memory_read",
+            },
+            {
+                "actor_id": "local-user",
+                "capability": "memory.ingest",
+                "target": "*",
+                "operation": "read_and_ingest",
+                "reason_code": "standard.governed_business_memory_ingest",
+            },
+            {
+                "actor_id": "local-user",
+                "capability": "memory.write",
+                "target": "*",
+                "operation": "*",
+                "reason_code": "standard.governed_memory_write",
+            },
+        ],
+    }
+
+
 def _standard_config_template() -> str:
     return json.dumps(
         {
@@ -1531,7 +1591,7 @@ def _standard_config_template() -> str:
             },
             "memory": {
                 "hermes_provider": "local",
-                "retriever": "local_json",
+                "retriever": "local_vector",
                 "registry": "sqlite",
                 "governance_enabled": True,
             },
@@ -1588,6 +1648,9 @@ def _first_run_script() -> str:
             install_dir = args.install_dir.resolve()
             data_dir = args.data_dir.resolve()
             config_path = args.config.resolve()
+            os.environ["MAYA_DATA_DIR"] = str(data_dir)
+            os.environ["MAYA_CONFIG"] = str(config_path)
+            os.environ["HERMES_HOME"] = str(data_dir / "hermes")
             config_path.parent.mkdir(parents=True, exist_ok=True)
             data_dir.mkdir(parents=True, exist_ok=True)
             if not config_path.exists():
@@ -1622,6 +1685,10 @@ def _first_run_script() -> str:
                 if source.is_file():
                     shutil.copy2(source, updates_dir / name)
             _initialize_managed_services(install_dir, data_dir)
+            hermes_memory_status = _initialize_hermes_memory(data_dir)
+            print(json.dumps({"operation": "hermes_memory", "status": hermes_memory_status}, sort_keys=True))
+            if hermes_memory_status != "configured":
+                return 1
             secret_status = _initialize_local_api_secret(data_dir)
             print(json.dumps({"operation": "first_run", "config": str(config_path), "data_dir": str(data_dir), "created_config": True}, sort_keys=True))
             print(json.dumps({"operation": "local_api_secret", "status": secret_status}, sort_keys=True))
@@ -1682,6 +1749,55 @@ def _first_run_script() -> str:
             return "healthy"
 
 
+        def _initialize_hermes_memory(data_dir):
+            try:
+                import yaml
+                hermes_home = data_dir / "hermes"
+                plugin_dir = hermes_home / "plugins" / "maya"
+                plugin_dir.mkdir(parents=True, exist_ok=True)
+                (plugin_dir / "__init__.py").write_text(
+                    "from project_maya.memory.hermes_plugin import MayaHermesMemoryPlugin\n\n"
+                    "def register(ctx):\n"
+                    "    ctx.register_memory_provider(MayaHermesMemoryPlugin())\n",
+                    encoding="utf-8",
+                )
+                hermes_config = hermes_home / "config.yaml"
+                existing = {}
+                if hermes_config.is_file():
+                    existing = yaml.safe_load(
+                        hermes_config.read_text(encoding="utf-8-sig")
+                    ) or {}
+                if not isinstance(existing, dict):
+                    return "blocked:invalid_hermes_config"
+                memory = existing.get("memory") or {}
+                if not isinstance(memory, dict):
+                    return "blocked:invalid_hermes_memory_config"
+                memory.update(
+                    {
+                        "provider": "maya",
+                    }
+                )
+                memory.setdefault("memory_enabled", True)
+                memory.setdefault("user_profile_enabled", True)
+                existing["memory"] = memory
+                temporary = hermes_config.with_suffix(".yaml.tmp")
+                temporary.write_text(
+                    yaml.safe_dump(existing, sort_keys=False), encoding="utf-8"
+                )
+                temporary.replace(hermes_config)
+                from project_maya.memory.hermes_plugin import MayaHermesMemoryPlugin
+                provider = MayaHermesMemoryPlugin(
+                    data_dir / "config" / "maya.json"
+                )
+                if not provider.is_available():
+                    return "blocked:maya_memory_provider_unavailable"
+                provider.initialize("maya-setup", platform="project_maya")
+                provider.shutdown()
+                return "configured"
+            except Exception as exc:
+                return "blocked:" + type(exc).__name__
+
+
         def _initialize_managed_services(install_dir, data_dir):
             manifest_path = install_dir / "services" / "managed-services.json"
             if not manifest_path.is_file():
@@ -1737,7 +1853,12 @@ def _qualification_script() -> str:
             "if not callable(factory):",
             "    print(json.dumps({'component': 'hermes-agent', 'status': 'blocked', 'reason': 'AIAgent factory unavailable'}))",
             "    raise SystemExit(1)",
-            "print(json.dumps({'component': 'hermes-agent', 'status': 'available', 'factory': 'run_agent:AIAgent'}))",
+            "from plugins.memory import load_memory_provider",
+            "provider = load_memory_provider('maya')",
+            "if provider is None or not provider.is_available():",
+            "    print(json.dumps({'component': 'hermes-agent', 'status': 'blocked', 'reason': 'Maya governed memory provider unavailable'}))",
+            "    raise SystemExit(1)",
+            "print(json.dumps({'component': 'hermes-agent', 'status': 'available', 'factory': 'run_agent:AIAgent', 'memory_provider': 'maya', 'governed': True}))",
         ])
         LOCAL_API_PROBE = "\n".join([
             "import json, sys",
@@ -1772,6 +1893,44 @@ def _qualification_script() -> str:
             "    raise SystemExit(1)",
             "print(json.dumps({'component': 'managed-services', 'status': 'artifacts-present', 'required': required}))",
         ])
+        EMBEDDING_PROBE = "\n".join([
+            "import json, os",
+            "from pathlib import Path",
+            "from project_maya.memory import PinnedOnnxEmbeddingModel, inspect_embedding_model",
+            "model_dir = Path(os.environ['MAYA_EMBEDDING_MODEL_DIR']) if os.environ.get('MAYA_EMBEDDING_MODEL_DIR') else None",
+            "status = inspect_embedding_model(model_dir)",
+            "if status.get('status') != 'ready':",
+            "    print(json.dumps({'component': 'embedding-model', 'status': 'blocked', 'reason': status.get('status')}))",
+            "    raise SystemExit(1)",
+            "model = PinnedOnnxEmbeddingModel(model_dir)",
+            "vector = model.embed(['Maya local embedding qualification'])[0]",
+            "if len(vector) != model.dimension:",
+            "    raise SystemExit(2)",
+            "print(json.dumps({'component': 'embedding-model', 'status': 'ready', 'model_id': model.model_id, 'dimension': model.dimension}))",
+        ])
+        MEMORY_GOVERNANCE_PROBE = "\n".join([
+            "import json, sys",
+            "from pathlib import Path",
+            "from project_maya.bootstrap import build_local_product",
+            "from project_maya.config import config_from_mapping",
+            "from project_maya.governance import load_policy_gateway",
+            "from project_maya.memory import inspect_local_vector_store",
+            "config = config_from_mapping(json.loads(Path(sys.argv[1]).read_text(encoding='utf-8')))",
+            "if config.memory.retriever != 'local_vector' or not config.memory.governance_enabled:",
+            "    print(json.dumps({'component': 'memory', 'status': 'blocked', 'reason': 'governed local_vector is not configured'}))",
+            "    raise SystemExit(1)",
+            "product = build_local_product(config, gateway=load_policy_gateway(config.governance.policy_file))",
+            "try:",
+            "    product.memory.remember({'id': 'qualification-record', 'content': 'qualification'})",
+            "    record = product.memory.recall('qualification-record')",
+            "finally:",
+            "    product.stop()",
+            "status = inspect_local_vector_store(config.deployment.data_dir / 'memory' / 'memory.sqlite3')",
+            "if record is None or status.get('status') != 'ready':",
+            "    print(json.dumps({'component': 'memory', 'status': 'blocked', 'reason': 'governed persistence unavailable'}))",
+            "    raise SystemExit(1)",
+            "print(json.dumps({'component': 'memory', 'status': 'ready', 'backend': 'local_vector', 'governed': True, 'records': status.get('records', 0)}))",
+        ])
 
 
         def main(argv=None):
@@ -1787,9 +1946,12 @@ def _qualification_script() -> str:
                 data_dir = root / "maya-data"
                 config_path = data_dir / "config" / "maya.json"
                 first_run = _run(
-                    _python_command(install_dir, str(install_dir / "scripts" / "maya_first_run.py"), "--install-dir", str(install_dir), "--config", str(config_path), "--data-dir", str(data_dir)),
+                    _python_command(install_dir, str(install_dir / "scripts" / "maya_first_run.py"), "--install-dir", str(install_dir), "--config", str(config_path), "--data-dir", str(data_dir), "--ensure"),
                     env,
                 )
+                env["MAYA_DATA_DIR"] = str(data_dir)
+                env["MAYA_CONFIG"] = str(config_path)
+                env["HERMES_HOME"] = str(data_dir / "hermes")
                 commands = {
                     "setup_plan": _python_command(install_dir, "-m", "project_maya.cli", "setup", "plan", "--config", str(config_path)),
                     "setup_init_dry_run": _python_command(install_dir, "-m", "project_maya.cli", "setup", "init", "--config", str(config_path)),
@@ -1797,6 +1959,8 @@ def _qualification_script() -> str:
                     "doctor": _python_command(install_dir, "-m", "project_maya.cli", "doctor", "--config", str(config_path)),
                     "health_summary": _python_command(install_dir, "-m", "project_maya.cli", "health", "summary", "--config", str(config_path)),
                     "local_api_contract": _python_command(install_dir, "-c", LOCAL_API_PROBE, str(config_path)),
+                    "memory_governance_store": _python_command(install_dir, "-c", MEMORY_GOVERNANCE_PROBE, str(config_path)),
+                    "embedding_model": _python_command(install_dir, "-c", EMBEDDING_PROBE),
                     "connector_authorization_readiness": _python_command(install_dir, "-c", CONNECTOR_PROBE, str(config_path)),
                     "metabase_readiness": _python_command(install_dir, "-c", SERVICE_ARTIFACT_PROBE, str(install_dir), "metabase", "java"),
                     "document_conversion_readiness": _python_command(install_dir, "-c", SERVICE_ARTIFACT_PROBE, str(install_dir), "libreoffice"),

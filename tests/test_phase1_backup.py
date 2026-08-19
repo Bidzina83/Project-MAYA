@@ -1,4 +1,5 @@
 import json
+import sqlite3
 import tempfile
 import unittest
 import zipfile
@@ -13,11 +14,58 @@ from project_maya import (
     inspect_backup_archive,
     restore_local_backup,
 )
+from project_maya.memory import LocalSQLiteVectorRetriever
 from project_maya.cli import main as maya_cli
 from tests.test_phase0_contracts import valid_config_mapping
 
 
 class TestPhase1Backup(unittest.TestCase):
+    def test_backup_snapshots_live_sqlite_memory_without_wal_sidecars(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp) / "maya-data"
+            memory_path = data_dir / "memory" / "memory.sqlite3"
+            retriever = LocalSQLiteVectorRetriever(memory_path)
+            retriever.upsert(
+                {
+                    "id": "customer-1",
+                    "content": "Customer-controlled durable memory",
+                    "embedding": [1.0, 0.0],
+                }
+            )
+            config_data = valid_config_mapping()
+            config_data["deployment"]["data_dir"] = str(data_dir)
+            config_data["memory"]["retriever"] = "local_vector"
+            config = config_from_mapping(config_data)
+            destination = Path(tmp) / "sqlite-backup.zip"
+
+            result = create_local_backup(config, destination=destination)
+
+            with zipfile.ZipFile(result.archive_path) as archive:
+                names = set(archive.namelist())
+                snapshot = Path(tmp) / "snapshot.sqlite3"
+                snapshot.write_bytes(
+                    archive.read("maya-data/memory/memory.sqlite3")
+                )
+            retriever.close()
+
+            self.assertIn("maya-data/memory/memory.sqlite3", names)
+            self.assertNotIn("maya-data/memory/memory.sqlite3-wal", names)
+            self.assertNotIn("maya-data/memory/memory.sqlite3-shm", names)
+            connection = sqlite3.connect(snapshot)
+            try:
+                self.assertEqual(
+                    connection.execute("PRAGMA integrity_check").fetchone()[0],
+                    "ok",
+                )
+                self.assertEqual(
+                    connection.execute(
+                        "SELECT COUNT(*) FROM memory_records"
+                    ).fetchone()[0],
+                    1,
+                )
+            finally:
+                connection.close()
+
     def test_create_local_backup_archives_state_and_normalized_config(self):
         with tempfile.TemporaryDirectory() as tmp:
             data_dir = Path(tmp) / "maya-data"

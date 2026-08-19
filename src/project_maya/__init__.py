@@ -186,10 +186,18 @@ from .release import (
 )
 from .setup import SetupAction, SetupPlan, SetupSeverity, plan_setup
 from .memory import (
+    BusinessMemoryService,
+    EmbeddingModel,
+    EmbeddingModelError,
     GovernedMemoryRetriever,
     HermesMemoryProvider,
+    LocalSQLiteVectorRetriever,
+    MayaHermesMemoryPlugin,
     MemoryRetriever,
+    PinnedOnnxEmbeddingModel,
     Retriever,
+    inspect_embedding_model,
+    inspect_local_vector_store,
 )
 from .memory import LocalJsonRetriever
 from .runtime import GovernedAgentRuntime, ModelEgressPolicy
@@ -236,6 +244,7 @@ __all__ = [
     "BackupInspection",
     "BackupManifest",
     "BackupResult",
+    "BusinessMemoryService",
     "BROKER_PROTOCOL_VERSION",
     "BrokerConformanceReport",
     "BrokerInstanceIdentity",
@@ -269,6 +278,8 @@ __all__ = [
     "DoctorReport",
     "DoctorStatus",
     "Edition",
+    "EmbeddingModel",
+    "EmbeddingModelError",
     "GovernanceDecision",
     "GovernedMetabaseViewSpec",
     "GovernedAgentRuntime",
@@ -280,6 +291,9 @@ __all__ = [
     "IntegrationResetError",
     "IntegrationResetResult",
     "LocalJsonRetriever",
+    "LocalSQLiteVectorRetriever",
+    "MayaHermesMemoryPlugin",
+    "PinnedOnnxEmbeddingModel",
     "LocalAPI",
     "LocalAPIAuthenticator",
     "LocalAPIError",
@@ -386,6 +400,8 @@ __all__ = [
     "generate_instance_identity",
     "get_connector_contract",
     "inspect_document",
+    "inspect_local_vector_store",
+    "inspect_embedding_model",
     "inspect_metabase_lifecycle",
     "load_policy_gateway",
     "load_config_profile",

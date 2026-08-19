@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import sqlite3
+import tempfile
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -149,28 +151,33 @@ def create_local_backup(
     archived_files: list[Path] = []
     temporary = archive_path.with_suffix(archive_path.suffix + ".tmp")
     try:
-        with zipfile.ZipFile(
-            temporary,
-            "w",
-            compression=zipfile.ZIP_DEFLATED,
-        ) as archive:
-            archive.writestr(
-                "maya-config.json",
-                json.dumps(config_to_mapping(config), indent=2, sort_keys=True)
-                + "\n",
-            )
-            files += 1
-            for path in _iter_backup_files(data_dir):
-                archive.write(path, _archive_name(data_dir, path))
+        with tempfile.TemporaryDirectory(prefix="maya-backup-") as snapshot_dir:
+            with zipfile.ZipFile(
+                temporary,
+                "w",
+                compression=zipfile.ZIP_DEFLATED,
+            ) as archive:
+                archive.writestr(
+                    "maya-config.json",
+                    json.dumps(config_to_mapping(config), indent=2, sort_keys=True)
+                    + "\n",
+                )
                 files += 1
-                archived_files.append(path)
-            manifest = _build_manifest(config, archived_files, files + 1)
-            archive.writestr(
-                "maya-backup-manifest.json",
-                json.dumps(manifest.redacted_summary(), indent=2, sort_keys=True)
-                + "\n",
-            )
-            files += 1
+                for path in _iter_backup_files(data_dir):
+                    archive_source = path
+                    if _is_memory_database(data_dir, path):
+                        archive_source = Path(snapshot_dir) / "memory.sqlite3"
+                        _snapshot_sqlite_database(path, archive_source)
+                    archive.write(archive_source, _archive_name(data_dir, path))
+                    files += 1
+                    archived_files.append(path)
+                manifest = _build_manifest(config, archived_files, files + 1)
+                archive.writestr(
+                    "maya-backup-manifest.json",
+                    json.dumps(manifest.redacted_summary(), indent=2, sort_keys=True)
+                    + "\n",
+                )
+                files += 1
         temporary.replace(archive_path)
     except Exception as exc:
         try:
@@ -267,11 +274,42 @@ def _iter_backup_files(data_dir: Path):
             continue
         if _excluded_from_default_backup(data_dir, resolved):
             continue
+        if _is_memory_database_sidecar(data_dir, resolved):
+            continue
         yield resolved
 
 
 def _archive_name(data_dir: Path, path: Path) -> str:
     return "maya-data/" + path.relative_to(data_dir.resolve()).as_posix()
+
+
+def _is_memory_database(data_dir: Path, path: Path) -> bool:
+    return path == (data_dir.resolve() / "memory" / "memory.sqlite3")
+
+
+def _is_memory_database_sidecar(data_dir: Path, path: Path) -> bool:
+    database = data_dir.resolve() / "memory" / "memory.sqlite3"
+    return path in {
+        database.with_name(database.name + "-wal"),
+        database.with_name(database.name + "-shm"),
+    }
+
+
+def _snapshot_sqlite_database(source: Path, destination: Path) -> None:
+    """Create a transaction-consistent SQLite snapshot, including WAL state."""
+
+    source_connection = sqlite3.connect(source, timeout=30.0)
+    destination_connection = sqlite3.connect(destination)
+    try:
+        source_connection.backup(destination_connection)
+        integrity = destination_connection.execute(
+            "PRAGMA integrity_check"
+        ).fetchone()[0]
+        if integrity != "ok":
+            raise BackupError("memory database snapshot failed integrity check")
+    finally:
+        destination_connection.close()
+        source_connection.close()
 
 
 def _excluded_from_default_backup(data_dir: Path, path: Path) -> bool:

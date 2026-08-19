@@ -87,6 +87,24 @@ class MemoryRetriever:
             raise ValueError("limit must be positive")
         return self._retriever.search(query, category=category, limit=limit)
 
+    def search_hybrid(
+        self,
+        query: str,
+        *,
+        query_vector: list[float] | None = None,
+        category: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        method = getattr(self._retriever, "search_hybrid", None)
+        if callable(method):
+            return method(
+                query,
+                query_vector=query_vector,
+                category=category,
+                limit=limit,
+            )
+        return self.search(query, category=category, limit=limit)
+
 
 class GovernedMemoryRetriever:
     """Governed public memory facade for assembled Maya products."""
@@ -141,6 +159,44 @@ class GovernedMemoryRetriever:
             metadata={"category": category or "*"},
         )
         return self._memory.search(query, category=category, limit=limit)
+
+    def search_hybrid(
+        self,
+        query: str,
+        *,
+        query_vector: list[float] | None = None,
+        category: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        self._authorize(
+            capability="memory.read",
+            target=category or "*",
+            operation="hybrid_search",
+            metadata={"category": category or "*"},
+        )
+        return self._memory.search_hybrid(
+            query,
+            query_vector=query_vector,
+            category=category,
+            limit=limit,
+        )
+
+    def authorize_ingest(self, source_ref: str) -> None:
+        self._authorize(
+            capability="memory.ingest",
+            target=source_ref,
+            operation="read_and_ingest",
+            metadata={"source_ref": source_ref},
+        )
+
+    def authorize_embedding_rebuild(self, memory_ids: list[str]) -> None:
+        for memory_id in memory_ids:
+            self._authorize(
+                capability="memory.write",
+                target=memory_id,
+                operation="rebuild_embedding",
+                metadata={"memory_id": memory_id},
+            )
 
     def _authorize(
         self,

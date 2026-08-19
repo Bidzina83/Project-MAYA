@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import builtins
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -44,6 +45,14 @@ from .governance import DenyByDefaultGateway, load_policy_gateway
 from .integrations import IntegrationResetError, reset_integration_state
 from .local_api import build_local_api_http_server
 from .audit import LocalJsonlAuditSink
+from .memory import (
+    BusinessMemoryService,
+    GovernedMemoryRetriever,
+    LocalSQLiteVectorRetriever,
+    MemoryRetriever,
+    PinnedOnnxEmbeddingModel,
+    inspect_embedding_model,
+)
 from .metabase import (
     MetabaseCapabilityError,
     apply_metabase_provisioning,
@@ -381,6 +390,25 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Optional migration report path.",
     )
+    memory_parser = subparsers.add_parser(
+        "memory", help="Operate Maya governed SMB business memory."
+    )
+    memory_subparsers = memory_parser.add_subparsers(
+        dest="memory_command", required=True
+    )
+    memory_status = memory_subparsers.add_parser("status")
+    memory_status.add_argument("--config", type=Path, required=True)
+    memory_search = memory_subparsers.add_parser("search")
+    memory_search.add_argument("--config", type=Path, required=True)
+    memory_search.add_argument("--query", required=True)
+    memory_search.add_argument("--category")
+    memory_search.add_argument("--limit", type=int, default=10)
+    memory_search.add_argument("--include-content", action="store_true")
+    memory_ingest = memory_subparsers.add_parser("ingest")
+    memory_ingest.add_argument("--config", type=Path, required=True)
+    memory_ingest.add_argument("--source", type=Path, required=True)
+    memory_rebuild = memory_subparsers.add_parser("rebuild-embeddings")
+    memory_rebuild.add_argument("--config", type=Path, required=True)
     update_parser = subparsers.add_parser(
         "update",
         help="Inspect local update and rollback readiness.",
@@ -705,6 +733,8 @@ def main(argv: list[str] | None = None) -> int:
             backup_path=args.backup_path,
             report_path=args.report_path,
         )
+    if args.command == "memory":
+        return _memory(args)
     if args.command == "update":
         return _update(args.config, rollback=args.rollback)
     if args.command == "documents":
@@ -1267,6 +1297,87 @@ def _repair_target_ref(config, path: Path) -> str:
     except ValueError:
         return "maya-data" if resolved == root else "external"
     return f"maya-data/{relative}" if relative else "maya-data"
+
+
+def _memory(args) -> int:
+    retriever = None
+    try:
+        config = _load_config(args.config)
+        if config.memory.retriever != "local_vector":
+            raise ValueError("business memory requires local_vector")
+        retriever = LocalSQLiteVectorRetriever(
+            config.deployment.data_dir / "memory" / "memory.sqlite3"
+        )
+        governed = GovernedMemoryRetriever(
+            MemoryRetriever(retriever),
+            _build_cli_gateway(config),
+            actor_id="local-user",
+            audit_sink=_build_cli_audit_sink(config),
+        )
+        model_dir_value = os.environ.get("MAYA_EMBEDDING_MODEL_DIR")
+        model_dir = Path(model_dir_value) if model_dir_value else None
+        model_status = inspect_embedding_model(model_dir)
+        model = (
+            PinnedOnnxEmbeddingModel(model_dir)
+            if model_dir is not None and model_status.get("status") == "ready"
+            else None
+        )
+        service = BusinessMemoryService(retriever, governed, model)
+        if args.memory_command == "status":
+            _print_payload(
+                {
+                    "backend": retriever.stats(),
+                    "embedding_model": model_status,
+                    "hermes_memory_ownership": "unchanged",
+                }
+            )
+            return 0 if model_status.get("status") == "ready" else 1
+        if args.memory_command == "search":
+            results = service.search(
+                args.query, category=args.category, limit=args.limit
+            )
+            if not args.include_content:
+                results = [
+                    {
+                        "id": item.get("id"),
+                        "category": item.get("category"),
+                        "hybrid_score": item.get("hybrid_score"),
+                        "source_hash": item.get("source_hash"),
+                    }
+                    for item in results
+                ]
+            _print_payload(
+                {
+                    "status": "ready",
+                    "semantic": service.semantic_ready,
+                    "results": results,
+                }
+            )
+            return 0
+        if args.memory_command == "ingest":
+            _print_payload(
+                service.ingest_document(
+                    args.source, config.deployment.data_dir / "documents"
+                )
+            )
+            return 0
+        if args.memory_command == "rebuild-embeddings":
+            _print_payload(service.rebuild_embeddings())
+            return 0
+    except (OSError, ValueError, RuntimeError):
+        _print_payload(
+            {
+                "error": {
+                    "code": "business_memory_operation_failed",
+                    "message": "business memory operation failed",
+                }
+            }
+        )
+        return 1
+    finally:
+        if retriever is not None:
+            retriever.close()
+    return 2
 
 
 def _documents(args) -> int:

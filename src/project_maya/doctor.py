@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 
 from .agent import AgentState
 from .agent.contracts import AgentRuntime
@@ -18,6 +20,7 @@ from .dependencies import (
 from .documents import document_capability_checks
 from .governance import load_policy_gateway
 from .metabase import metabase_capability_checks
+from .memory import inspect_embedding_model, inspect_local_vector_store
 from .model_config import validate_model_config
 from .release import platform_qualification_for
 from .secrets import SecretStore, SecretStoreStatus
@@ -66,6 +69,7 @@ def run_doctor(
     checks.append(_data_dir_check(config))
     checks.append(_disk_space_check(config))
     checks.append(_memory_store_check(config))
+    checks.append(_embedding_model_check(config))
     checks.append(_governance_policy_check(config))
     checks.append(_audit_log_check(config))
     checks.append(_managed_directory_check(config, "backup.state", "backups"))
@@ -212,6 +216,35 @@ def _disk_space_check(config: MayaConfig) -> DoctorCheck:
 
 
 def _memory_store_check(config: MayaConfig) -> DoctorCheck:
+    if config.memory.retriever == "local_vector":
+        store_path = config.deployment.data_dir / "memory" / "memory.sqlite3"
+        try:
+            status = inspect_local_vector_store(store_path)
+        except Exception as exc:
+            return DoctorCheck(
+                "memory.store",
+                DoctorStatus.FAIL,
+                f"local_vector memory store is unreadable: {type(exc).__name__}",
+            )
+        if status["status"] == "missing":
+            return DoctorCheck(
+                "memory.store",
+                DoctorStatus.WARN,
+                "local_vector memory store will be created on first startup",
+            )
+        if status["status"] != "ready":
+            return DoctorCheck(
+                "memory.store",
+                DoctorStatus.FAIL,
+                "local_vector memory store failed SQLite integrity check",
+            )
+        return DoctorCheck(
+            "memory.store",
+            DoctorStatus.PASS,
+            "local_vector memory store valid; "
+            f"records={status['records']}; vectors={status['vectors']}; "
+            f"schema={status['schema_version']}",
+        )
     if config.memory.retriever != "local_json":
         return DoctorCheck(
             "memory.store",
@@ -243,6 +276,28 @@ def _memory_store_check(config: MayaConfig) -> DoctorCheck:
         "memory.store",
         DoctorStatus.PASS,
         f"local_json memory store valid; records={len(raw)}",
+    )
+
+
+def _embedding_model_check(config: MayaConfig) -> DoctorCheck:
+    if config.memory.retriever != "local_vector":
+        return DoctorCheck(
+            "memory.embedding",
+            DoctorStatus.WARN,
+            "semantic embeddings are not used by the configured retriever",
+        )
+    value = os.environ.get("MAYA_EMBEDDING_MODEL_DIR")
+    status = inspect_embedding_model(Path(value) if value else None)
+    if status.get("status") != "ready":
+        return DoctorCheck(
+            "memory.embedding",
+            DoctorStatus.WARN,
+            "pinned local embedding model unavailable; lexical search remains active",
+        )
+    return DoctorCheck(
+        "memory.embedding",
+        DoctorStatus.PASS,
+        f"local embedding model ready; dimension={status['dimension']}",
     )
 
 
