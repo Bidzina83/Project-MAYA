@@ -426,11 +426,18 @@ def _verify_product_launchers(payload_dir: Path) -> None:
         'memory.setdefault("user_profile_enabled", True)',
         "MayaHermesMemoryPlugin",
         "register_memory_provider",
+        'parser.add_argument("--non-interactive"',
+        "not sys.stdin.isatty()",
     ):
         if expected not in first_run:
             raise RuntimeError(
                 f"first-run setup does not run product setup action: {expected}"
             )
+    qualification = (payload_dir / "scripts" / "maya_qualification.py").read_text(
+        encoding="utf-8"
+    )
+    if '"--non-interactive"' not in qualification:
+        raise RuntimeError("installed qualification may invoke interactive first-run setup")
 
 
 def _verify_compiled_installers_are_signed(inno_dir: Path) -> None:

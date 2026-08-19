@@ -1644,6 +1644,7 @@ def _first_run_script() -> str:
             parser.add_argument("--config", type=Path, required=True)
             parser.add_argument("--data-dir", type=Path, required=True)
             parser.add_argument("--ensure", action="store_true")
+            parser.add_argument("--non-interactive", action="store_true")
             args = parser.parse_args(argv)
             install_dir = args.install_dir.resolve()
             data_dir = args.data_dir.resolve()
@@ -1692,7 +1693,11 @@ def _first_run_script() -> str:
             secret_status = _initialize_local_api_secret(data_dir)
             print(json.dumps({"operation": "first_run", "config": str(config_path), "data_dir": str(data_dir), "created_config": True}, sort_keys=True))
             print(json.dumps({"operation": "local_api_secret", "status": secret_status}, sort_keys=True))
-            model_status = _initialize_model_credential(config_path, data_dir, ensure=args.ensure)
+            model_status = _initialize_model_credential(
+                config_path,
+                data_dir,
+                allow_prompt=not (args.ensure or args.non_interactive),
+            )
             print(json.dumps({"operation": "model_credential", "status": model_status}, sort_keys=True))
             if model_status == "blocked":
                 return 1
@@ -1720,7 +1725,7 @@ def _first_run_script() -> str:
                 return "blocked:platform_secret_store_unavailable"
 
 
-        def _initialize_model_credential(config_path, data_dir, *, ensure):
+        def _initialize_model_credential(config_path, data_dir, *, allow_prompt):
             from project_maya.secrets import SecretRef, build_platform_secret_store
             config = json.loads(config_path.read_text(encoding="utf-8"))
             llm = config["llm"]
@@ -1736,12 +1741,16 @@ def _first_run_script() -> str:
             store = build_platform_secret_store(data_dir)
             if store.contains(credential_ref):
                 return "healthy"
-            if ensure:
+            if not allow_prompt or not sys.stdin.isatty():
                 print("Maya setup is incomplete: run Setup Maya and provide the model API key.")
                 return "blocked"
-            value = getpass.getpass(
-                f"Enter {llm['provider']} API key (stored with Windows DPAPI): "
-            ).strip()
+            try:
+                value = getpass.getpass(
+                    f"Enter {llm['provider']} API key (stored with Windows DPAPI): "
+                ).strip()
+            except (EOFError, KeyboardInterrupt):
+                print("No API key was provided. Maya runtime startup remains blocked.")
+                return "blocked"
             if not value:
                 print("No API key was provided. Maya runtime startup remains blocked.")
                 return "blocked"
@@ -1946,7 +1955,7 @@ def _qualification_script() -> str:
                 data_dir = root / "maya-data"
                 config_path = data_dir / "config" / "maya.json"
                 first_run = _run(
-                    _python_command(install_dir, str(install_dir / "scripts" / "maya_first_run.py"), "--install-dir", str(install_dir), "--config", str(config_path), "--data-dir", str(data_dir), "--ensure"),
+                    _python_command(install_dir, str(install_dir / "scripts" / "maya_first_run.py"), "--install-dir", str(install_dir), "--config", str(config_path), "--data-dir", str(data_dir), "--non-interactive"),
                     env,
                 )
                 env["MAYA_DATA_DIR"] = str(data_dir)

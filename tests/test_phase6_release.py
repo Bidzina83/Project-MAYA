@@ -180,6 +180,8 @@ class TestPhase6Release(unittest.TestCase):
             )
             self.assertIn("MayaHermesMemoryPlugin", first_run)
             self.assertIn("register_memory_provider", first_run)
+            self.assertIn('parser.add_argument("--non-interactive"', first_run)
+            self.assertIn("not sys.stdin.isatty()", first_run)
             inno_script = (release_dir / "inno" / "project-maya-standard.iss").read_text(
                 encoding="utf-8"
             )
@@ -508,7 +510,7 @@ class TestPhase6Release(unittest.TestCase):
                 / "scripts"
                 / "maya_qualification.py"
             ).read_text(encoding="utf-8")
-            self.assertIn('"--ensure"', qualification)
+            self.assertIn('"--non-interactive"', qualification)
             self.assertTrue(runtime_manifest["hermes_agent"]["included"])
             services_manifest = json.loads(
                 (
