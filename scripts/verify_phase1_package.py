@@ -1066,13 +1066,19 @@ def _verify_installed_phase4_operator_surfaces(
             "--config",
             str(config_path),
         ],
-        expected_exit=1,
+        expected_exit=(0, 1),
         cwd=work_dir,
         env=_clean_env(),
     )
     health_payload = json.loads(health_result.stdout)
     if "categories" not in health_payload:
         raise RuntimeError("installed health summary omitted categories")
+    health_status = health_payload.get("status")
+    expected_status_by_exit = {0: "degraded", 1: "blocked"}
+    if health_status != expected_status_by_exit[health_result.returncode]:
+        raise RuntimeError(
+            "installed health summary status does not match its readiness exit code"
+        )
     if health_payload.get("network_used"):
         raise RuntimeError("installed health summary used network")
     backup_path = work_dir / "phase4-backup.zip"
@@ -1323,7 +1329,7 @@ def _verify_installed_enterprise_byo_surfaces(
         ],
         cwd=work_dir,
         env=_clean_env(),
-        expected_exit=1,
+        expected_exit=0,
     )
     if "model.config" not in doctor_result.stdout:
         raise RuntimeError("installed doctor did not report model config")
@@ -1331,6 +1337,8 @@ def _verify_installed_enterprise_byo_surfaces(
         raise RuntimeError("installed doctor did not report connector config")
     if "health=unavailable" not in doctor_result.stdout:
         raise RuntimeError("installed doctor did not report redacted connector health")
+    if "warn\thermes.health\tnot_started" not in doctor_result.stdout:
+        raise RuntimeError("installed doctor did not report Hermes as not started")
     if "secret://" in doctor_result.stdout:
         raise RuntimeError("installed doctor printed a secret ref")
 
@@ -1806,7 +1814,7 @@ def _run(
 def _run_allow_exit(
     command: list[str],
     *,
-    expected_exit: int,
+    expected_exit: int | tuple[int, ...],
     cwd: Path | None = None,
     env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
@@ -1818,10 +1826,13 @@ def _run_allow_exit(
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
-    if result.returncode != expected_exit:
+    expected_exits = (
+        (expected_exit,) if isinstance(expected_exit, int) else expected_exit
+    )
+    if result.returncode not in expected_exits:
         joined = " ".join(command)
         raise RuntimeError(
-            f"command returned {result.returncode}, expected {expected_exit}: "
+            f"command returned {result.returncode}, expected one of {expected_exits}: "
             f"{joined}\n{result.stdout}"
         )
     return result

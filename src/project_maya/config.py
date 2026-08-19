@@ -170,6 +170,10 @@ class MayaConfig:
             raise ConfigError("local_api.bind must be loopback in Phase 1")
         if not self.memory.governance_enabled:
             raise ConfigError("memory.governance_enabled must be true")
+        if self.memory.retriever not in {"local_json", "local_vector"}:
+            raise ConfigError("memory.retriever must be local_json or local_vector")
+        if self.memory.retriever == "local_vector" and self.memory.registry != "sqlite":
+            raise ConfigError("memory.retriever=local_vector requires memory.registry=sqlite")
         if not self.governance.audit_enabled:
             raise ConfigError("governance.audit_enabled must be true")
         for name, integration in self.integrations.items():

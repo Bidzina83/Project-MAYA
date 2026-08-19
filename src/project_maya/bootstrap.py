@@ -20,11 +20,18 @@ from .memory import (
     GovernedMemoryRetriever,
     HermesMemoryProvider,
     LocalJsonRetriever,
+    LocalSQLiteVectorRetriever,
     MemoryRetriever,
+    Retriever,
 )
 from .model_config import require_valid_model_config
 from .runtime import GovernedAgentRuntime, ModelEgressPolicy
 from .secrets import SecretRef, SecretStore, build_platform_secret_store
+
+
+_HERMES_DIRECT_PROVIDER_ENDPOINTS = {
+    "openai": "https://api.openai.com/v1",
+}
 
 
 @dataclass(frozen=True)
@@ -32,7 +39,7 @@ class LocalMayaProduct:
     """Assembled local Maya components for Phase 1."""
 
     agent: Agent
-    retriever: LocalJsonRetriever
+    retriever: Retriever
     memory: GovernedMemoryRetriever
     memory_provider: HermesMemoryProvider
     runtime: GovernedAgentRuntime
@@ -54,7 +61,12 @@ class LocalMayaProduct:
 
     def stop(self) -> None:
         """Stop the assembled Maya runtime and release runtime resources."""
-        self.agent.stop()
+        try:
+            self.agent.stop()
+        finally:
+            close = getattr(self.retriever, "close", None)
+            if callable(close):
+                close()
 
     def __enter__(self) -> "LocalMayaProduct":
         self.start()
@@ -116,13 +128,16 @@ def build_local_product(
     )
 
 
-def _build_retriever(config: MayaConfig) -> LocalJsonRetriever:
-    if config.memory.retriever != "local_json":
-        raise ValueError(
-            "Phase 1 local product supports memory.retriever='local_json'"
+def _build_retriever(config: MayaConfig) -> Retriever:
+    if config.memory.retriever == "local_vector":
+        return LocalSQLiteVectorRetriever(
+            config.deployment.data_dir / "memory" / "memory.sqlite3"
         )
-    store_path = config.deployment.data_dir / "memory" / "records.json"
-    return LocalJsonRetriever(store_path)
+    if config.memory.retriever == "local_json":
+        return LocalJsonRetriever(
+            config.deployment.data_dir / "memory" / "records.json"
+        )
+    raise ValueError(f"unsupported memory.retriever={config.memory.retriever}")
 
 
 def _build_gateway(config: MayaConfig) -> ActionAuthorizationGateway:
@@ -155,8 +170,11 @@ def _build_hermes_runtime(
         "model": config.llm.model,
         "provider": config.llm.provider,
     }
-    if config.llm.endpoint:
-        factory_kwargs["base_url"] = config.llm.endpoint
+    endpoint = config.llm.endpoint or _HERMES_DIRECT_PROVIDER_ENDPOINTS.get(
+        config.llm.provider.strip().lower()
+    )
+    if endpoint:
+        factory_kwargs["base_url"] = endpoint
     if config.llm.credential_ref:
         credential_ref = SecretRef.parse(config.llm.credential_ref)
         if secret_store.contains(credential_ref):

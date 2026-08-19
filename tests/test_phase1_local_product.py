@@ -81,19 +81,22 @@ class TestPhase1LocalProduct(unittest.TestCase):
         self.assertNotIn("secret://integrations/google", output)
         self.assertIn("fail\thermes.compatibility", output)
 
-    def test_maya_doctor_cli_reports_unsupported_assembly(self):
+    def test_maya_doctor_cli_reports_assembly_failure(self):
         with tempfile.TemporaryDirectory() as tmp:
             config = valid_config_mapping()
             config["runtime"]["enabled_profiles"] = ["maya-core"]
             config_path = Path(tmp) / "maya.json"
             config_path.write_text(json.dumps(config), encoding="utf-8")
 
-            with patch("builtins.print") as printed:
+            with patch(
+                "project_maya.cli.build_local_product",
+                side_effect=RuntimeError("assembly unavailable"),
+            ), patch("builtins.print") as printed:
                 exit_code = maya_cli(["doctor", "--config", str(config_path)])
 
         self.assertEqual(exit_code, 1)
         output = "\n".join(call.args[0] for call in printed.call_args_list)
-        self.assertIn("fail\truntime.assembly", output)
+        self.assertIn("fail\truntime.assembly\tassembly unavailable", output)
 
     def test_maya_run_cli_executes_and_stops_local_product(self):
         events = []

@@ -58,10 +58,12 @@ met.
   Doctor, installed qualification, and the Maya data folder. They are not a
   replacement for the guided desktop setup experience.
 - The installed qualification script exercises setup plan/init, doctor, health
-  summary, update check, rollback check, migration dry run, backup/restore dry
-  run, broker status, broker conformance, and secret-safe output checks from
-  the installed payload. Missing Hermes runtime or heavy profile dependencies
-  are reported as blocked readiness, not healthy operation.
+  summary, governed SQLite memory read/write, Hermes provider discovery,
+  update check, rollback check, migration dry run, backup/restore dry run,
+  broker status, broker conformance, and secret-safe output checks from the
+  installed payload. Missing Hermes runtime, unavailable Maya memory provider,
+  or heavy profile dependencies are reported as blocked readiness, not healthy
+  operation.
 - Compiled Windows `.exe` installers must be Authenticode-signed with
   `signtool.exe` and a release-infrastructure certificate selector. The
   builder allows unsigned compiled installers only when

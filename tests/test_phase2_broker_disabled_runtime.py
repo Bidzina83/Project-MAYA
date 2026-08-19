@@ -79,6 +79,39 @@ class BrokerDisabledRuntime:
 
 
 class TestPhase2BrokerDisabledRuntimePath(unittest.TestCase):
+    def test_openai_secret_is_supplied_with_direct_api_endpoint(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp) / "maya-data"
+            config_data = enterprise_broker_disabled_mapping()
+            config_data["deployment"]["data_dir"] = str(data_dir)
+            config_data["runtime"]["enabled_profiles"] = ["maya-core"]
+            config_data["runtime"]["hermes_factory"] = (
+                f"{__name__}:BrokerDisabledRuntime"
+            )
+            config_data["memory"]["retriever"] = "local_json"
+            config_data["governance"]["policy_file"] = str(
+                data_dir / "governance" / "missing-policy.json"
+            )
+            secret_store = StaticSecretStore()
+            secret_store.write(
+                SecretRef.parse("secret://llm/openai"),
+                "test-openai-key",
+            )
+
+            BrokerDisabledRuntime.events = []
+            with patch(
+                "project_maya.bootstrap.build_platform_secret_store",
+                return_value=secret_store,
+            ):
+                product = build_local_product(config_from_mapping(config_data))
+            product.start()
+            product.stop()
+
+        init_kwargs = BrokerDisabledRuntime.events[0][1]
+        self.assertEqual(init_kwargs["provider"], "openai")
+        self.assertEqual(init_kwargs["base_url"], "https://api.openai.com/v1")
+        self.assertEqual(init_kwargs["api_key"], "test-openai-key")
+
     def test_enterprise_broker_disabled_runs_memory_audit_and_local_api(self):
         with tempfile.TemporaryDirectory() as tmp:
             data_dir = Path(tmp) / "maya-data"
