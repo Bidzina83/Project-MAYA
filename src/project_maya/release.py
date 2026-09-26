@@ -93,6 +93,7 @@ class ReleaseProvenance:
     commit: str
     builder: str
     hermes_runtime_commit: str
+    source_tree_clean: bool = True
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any]) -> "ReleaseProvenance":
@@ -101,6 +102,7 @@ class ReleaseProvenance:
             commit=str(data["commit"]),
             builder=str(data["builder"]),
             hermes_runtime_commit=str(data["hermes_runtime_commit"]),
+            source_tree_clean=bool(data.get("source_tree_clean", True)),
         )
 
     def to_mapping(self) -> dict[str, str]:
@@ -109,6 +111,7 @@ class ReleaseProvenance:
             "commit": self.commit,
             "builder": self.builder,
             "hermes_runtime_commit": self.hermes_runtime_commit,
+            "source_tree_clean": self.source_tree_clean,
         }
 
 

@@ -114,6 +114,9 @@ class TestPhase6Release(unittest.TestCase):
             self.assertEqual(verified.platform, "windows-desktop")
             self.assertTrue((release_dir / verified.sbom_ref).is_file())
             self.assertTrue((release_dir / verified.provenance_ref).is_file())
+            self.assertTrue(
+                (release_dir / "project_maya-1.0.0-py3-none-any.whl").is_file()
+            )
             contents = "\n".join(
                 path.relative_to(release_dir).as_posix()
                 for path in release_dir.rglob("*")
@@ -188,6 +191,9 @@ class TestPhase6Release(unittest.TestCase):
             self.assertIn("AllowNoIcons=yes", inno_script)
             self.assertIn("Tasks: startmenuicon", inno_script)
             self.assertIn("Tasks: desktopicon", inno_script)
+            self.assertNotIn(
+                "project-maya-1.0.0-windows-desktop.zip", inno_script
+            )
             runtime_manifest = json.loads(
                 (
                     release_dir
@@ -296,6 +302,12 @@ class TestPhase6Release(unittest.TestCase):
             runtime_dir = root / "python-runtime"
             runtime_dir.mkdir()
             (runtime_dir / "python.exe").write_bytes(b"fake-python")
+            (runtime_dir / "Lib" / "test").mkdir(parents=True)
+            (runtime_dir / "Lib" / "test" / "test_runtime.py").write_text(
+                "raise AssertionError('must not ship')\n",
+                encoding="utf-8",
+            )
+            (runtime_dir / "cached.pyc").write_bytes(b"cached-bytecode")
             hermes_wheel = root / (
                 "hermes_agent-0.17.0-py3-none-any.whl"
             )
@@ -361,6 +373,14 @@ class TestPhase6Release(unittest.TestCase):
                 with zipfile.ZipFile(python_wheelhouse / wheel_name, "w") as archive:
                     archive.writestr(
                         f"{package_name}/__init__.py", "__version__ = 'test'\n"
+                    )
+                    archive.writestr(
+                        f"{package_name}/tests/test_runtime.py",
+                        "raise AssertionError('must not ship')\n",
+                    )
+                    archive.writestr(
+                        f"{package_name}/__pycache__/runtime.pyc",
+                        b"cached-bytecode",
                     )
             skills_source = root / "skills-source"
             skill = skills_source / "skills" / "maya-identity"
@@ -452,6 +472,20 @@ class TestPhase6Release(unittest.TestCase):
                     / "_yaml.pyd"
                 ).is_file()
             )
+            installed_runtime = release_dir / "windows-app-payload" / "runtime"
+            self.assertFalse((installed_runtime / "python" / "Lib" / "test").exists())
+            self.assertFalse((installed_runtime / "python" / "cached.pyc").exists())
+            self.assertFalse(
+                (installed_runtime / "site-packages" / "numpy" / "tests").exists()
+            )
+            self.assertFalse(
+                (
+                    installed_runtime
+                    / "site-packages"
+                    / "numpy"
+                    / "__pycache__"
+                ).exists()
+            )
             services = json.loads(
                 (
                     release_dir
@@ -530,6 +564,11 @@ class TestPhase6Release(unittest.TestCase):
                 ).read_text(encoding="utf-8")
             )
             self.assertEqual(len(skills_manifest["skills"]), 1)
+            self.assertEqual(
+                skills_manifest["source"],
+                f"https://github.com/{build_release_module.MAYA_SKILLS_REPO}",
+            )
+            self.assertNotIn(str(root), json.dumps(skills_manifest))
             self.assertTrue(
                 (release_dir / "windows-app-payload" / "assets" / "maya.ico").is_file()
             )

@@ -59,6 +59,10 @@ HEAVY_DEPENDENCY_SLOTS = (
     ("poppler", (".zip", ".7z")),
     ("embedding_model", (".zip",)),
 )
+FORBIDDEN_RUNTIME_DIRECTORY_NAMES = frozenset(
+    {"__pycache__", ".pytest_cache", "test", "tests"}
+)
+FORBIDDEN_RUNTIME_FILE_SUFFIXES = frozenset({".pyc", ".pyo"})
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -70,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("release output directory must be empty")
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    wheel = _build_wheel(out_dir)
+    wheel = _build_wheel(out_dir, version=args.version)
     app_payload = _build_windows_app_payload(
         out_dir,
         wheel,
@@ -92,7 +96,6 @@ def main(argv: list[str] | None = None) -> int:
     inno_artifacts = _build_inno_setup_products(
         out_dir,
         wheel,
-        installer,
         app_payload,
         version=args.version,
         platform=args.platform,
@@ -126,6 +129,7 @@ def main(argv: list[str] | None = None) -> int:
         commit=_git_commit(),
         builder="scripts/build_phase6_release.py",
         hermes_runtime_commit=HERMES_RUNTIME_COMMIT,
+        source_tree_clean=_git_tree_clean(),
     )
     write_canonical_json(provenance_path, provenance.to_mapping())
 
@@ -308,13 +312,15 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _build_wheel(out_dir: Path) -> Path:
+def _build_wheel(out_dir: Path, *, version: str) -> Path:
     with tempfile.TemporaryDirectory(prefix="maya-phase6-build-") as tmp:
         tmp_path = Path(tmp)
         dist_dir = tmp_path / "dist"
         build_dir = tmp_path / "build"
         build_base = tmp_path / "build-base"
         try:
+            build_env = os.environ.copy()
+            build_env["PROJECT_MAYA_BUILD_VERSION"] = version
             subprocess.run(
                 [
                     sys.executable,
@@ -333,6 +339,7 @@ def _build_wheel(out_dir: Path) -> Path:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
+                env=build_env,
             )
             wheels = sorted(dist_dir.glob("*.whl"))
             if len(wheels) != 1:
@@ -341,13 +348,13 @@ def _build_wheel(out_dir: Path) -> Path:
             shutil.copy2(wheels[0], destination)
             return destination
         except (subprocess.CalledProcessError, RuntimeError):
-            return _build_minimal_wheel(out_dir)
+            return _build_minimal_wheel(out_dir, version=version)
 
 
-def _build_minimal_wheel(out_dir: Path) -> Path:
+def _build_minimal_wheel(out_dir: Path, *, version: str) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
-    wheel_path = out_dir / "project_maya-0.0.0-py3-none-any.whl"
-    dist_info = "project_maya-0.0.0.dist-info"
+    wheel_path = out_dir / f"project_maya-{version}-py3-none-any.whl"
+    dist_info = f"project_maya-{version}.dist-info"
     entries: dict[str, bytes] = {}
     for source in sorted((REPO_ROOT / "src" / "project_maya").rglob("*")):
         if not source.is_file():
@@ -359,7 +366,7 @@ def _build_minimal_wheel(out_dir: Path) -> Path:
     entries[f"{dist_info}/METADATA"] = (
         "Metadata-Version: 2.1\n"
         "Name: project-maya\n"
-        "Version: 0.0.0\n"
+        f"Version: {version}\n"
         "Summary: Project MAYA public API and runtime integrations\n"
         "Requires-Python: >=3.11,<3.14\n"
         "Requires-Dist: cryptography>=42\n"
@@ -921,6 +928,7 @@ def _stage_managed_python_runtime(
         if not source.is_dir():
             raise RuntimeError("--managed-python-runtime must be a directory")
         shutil.copytree(source, python_dir, dirs_exist_ok=True)
+        _remove_forbidden_runtime_content(python_dir)
         executable = _find_managed_python_executable(python_dir)
         if executable is None:
             raise RuntimeError(
@@ -1186,9 +1194,37 @@ def _wheel_install_relative_path(member_name: str) -> Path | None:
             category = parts[index + 1] if index + 1 < len(parts) else ""
             if category in {"purelib", "platlib"}:
                 remainder = parts[index + 2 :]
-                return Path(*remainder) if remainder else None
+                installed_path = Path(*remainder) if remainder else None
+                if installed_path and _is_forbidden_runtime_path(installed_path):
+                    return None
+                return installed_path
             return None
-    return path
+    return None if _is_forbidden_runtime_path(path) else path
+
+
+def _is_forbidden_runtime_path(path: Path) -> bool:
+    if any(
+        part.lower() in FORBIDDEN_RUNTIME_DIRECTORY_NAMES
+        for part in path.parts[:-1]
+    ):
+        return True
+    return path.suffix.lower() in FORBIDDEN_RUNTIME_FILE_SUFFIXES
+
+
+def _remove_forbidden_runtime_content(runtime_root: Path) -> None:
+    for root, directory_names, file_names in os.walk(runtime_root, topdown=True):
+        root_path = Path(root)
+        forbidden_directories = [
+            name
+            for name in directory_names
+            if name.lower() in FORBIDDEN_RUNTIME_DIRECTORY_NAMES
+        ]
+        for name in forbidden_directories:
+            shutil.rmtree(root_path / name)
+            directory_names.remove(name)
+        for name in file_names:
+            if Path(name).suffix.lower() in FORBIDDEN_RUNTIME_FILE_SUFFIXES:
+                (root_path / name).unlink()
 
 
 def _stage_dependency_artifacts(
@@ -1356,7 +1392,9 @@ def _stage_skills_overlay(
     manifest = {
         "schema_version": 1,
         "source_repo": MAYA_SKILLS_REPO,
-        "source": str(source_dir.resolve()) if source_dir else None,
+        "source": f"https://github.com/{MAYA_SKILLS_REPO}",
+        "source_commit": _git_commit(source_dir) if source_dir else None,
+        "source_tree_clean": _git_tree_clean(source_dir) if source_dir else None,
         "allowlist": tuple(allowlist),
         "skills": [],
     }
@@ -2107,7 +2145,6 @@ def _payload_qualification_mode(app_payload: Path) -> str:
 def _build_inno_setup_products(
     out_dir: Path,
     wheel: Path,
-    installer_bundle: Path,
     app_payload: Path,
     *,
     version: str,
@@ -2139,7 +2176,6 @@ def _build_inno_setup_products(
                 edition=edition,
                 version=version,
                 wheel=wheel,
-                installer_bundle=installer_bundle,
                 app_payload=app_payload,
             ),
             encoding="utf-8",
@@ -2226,7 +2262,6 @@ def _inno_script(
     edition: str,
     version: str,
     wheel: Path,
-    installer_bundle: Path,
     app_payload: Path,
 ) -> str:
     title = "Standard" if edition == "standard" else "Enterprise"
@@ -2273,7 +2308,6 @@ def _inno_script(
             "[Files]",
             f'Source: "..\\{app_payload.name}\\*"; DestDir: "{{app}}"; Flags: ignoreversion recursesubdirs createallsubdirs',
             f'Source: "..\\{wheel.name}"; DestDir: "{{app}}\\release"; Flags: ignoreversion',
-            f'Source: "..\\{installer_bundle.name}"; DestDir: "{{app}}\\release"; Flags: ignoreversion',
             'Source: "..\\release-manifest.json"; DestDir: "{app}\\release"; Flags: ignoreversion',
             'Source: "..\\update-manifest.json"; DestDir: "{app}\\release"; Flags: ignoreversion',
             'Source: "..\\rollback.json"; DestDir: "{app}\\release"; Flags: ignoreversion',
@@ -2463,11 +2497,12 @@ def _sign(payload: dict[str, object]) -> dict[str, object]:
     )
 
 
-def _git_commit() -> str:
+def _git_commit(repo_root: Path | None = None) -> str:
+    root = (repo_root or REPO_ROOT).resolve()
     try:
         result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=REPO_ROOT,
+            ["git", "-c", f"safe.directory={root}", "rev-parse", "HEAD"],
+            cwd=root,
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -2476,6 +2511,29 @@ def _git_commit() -> str:
     except (OSError, subprocess.CalledProcessError):
         return "unknown"
     return result.stdout.strip()
+
+
+def _git_tree_clean(repo_root: Path | None = None) -> bool:
+    root = (repo_root or REPO_ROOT).resolve()
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "-c",
+                f"safe.directory={root}",
+                "status",
+                "--porcelain=v1",
+                "--untracked-files=all",
+            ],
+            cwd=root,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return False
+    return not result.stdout.strip()
 
 
 if __name__ == "__main__":

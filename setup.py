@@ -1,3 +1,5 @@
+import os
+
 from setuptools import find_packages, setup
 
 
@@ -21,7 +23,7 @@ packages = find_packages(
 
 setup(
     name='project_maya',
-    version='0.0.0',
+    version=os.environ.get('PROJECT_MAYA_BUILD_VERSION', '0.0.0'),
     description='Project MAYA - packaged for CI',
     packages=packages,
     package_dir={"": "src"},

@@ -98,3 +98,18 @@ The manifest records `model_id`, immutable `revision`, `license`, HTTPS
 download a model during installation. Embedding rebuild computes all vectors
 first, authorizes every persistent-memory update, then replaces the derived
 vectors in one SQLite transaction.
+
+Release engineering prepares the approved artifact explicitly:
+
+```text
+python scripts/prepare_phase6_embedding_model.py \
+  --download \
+  --work-dir <ignored-build-dir>/embedding-model \
+  --archive <prepared-deps-dir>/embedding-model-runtime.zip
+```
+
+`--download` is release-time consent to fetch only the files pinned in the
+script. `--source-dir` packages previously downloaded files without network
+access. Both paths enforce the immutable upstream revision and expected file
+hashes. The generated model files and ZIP remain release inputs and must not be
+committed to the repository.
