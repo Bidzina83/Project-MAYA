@@ -559,6 +559,11 @@ class TestPhase6Release(unittest.TestCase):
                 / "maya_qualification.py"
             ).read_text(encoding="utf-8")
             self.assertIn('"--non-interactive"', qualification)
+            self.assertIn("QUALIFICATION_CREDENTIAL_PROBE", qualification)
+            self.assertIn('"first_run_missing_credential"', qualification)
+            self.assertIn('"expected_blocks"', qualification)
+            self.assertIn('if status == "blocked":', qualification)
+            self.assertIn("return 1", qualification)
             self.assertTrue(runtime_manifest["hermes_agent"]["included"])
             services_manifest = json.loads(
                 (

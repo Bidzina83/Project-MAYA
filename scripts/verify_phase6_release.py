@@ -529,9 +529,18 @@ def _verify_installed_qualification(payload_dir: Path) -> None:
         raise RuntimeError("installed qualification did not emit JSON") from exc
     if payload.get("qualification_status") not in {"ready", "blocked"}:
         raise RuntimeError("installed qualification failed:\n" + result.stdout)
+    expected_returncode = 0 if payload.get("qualification_status") == "ready" else 1
+    if result.returncode != expected_returncode:
+        raise RuntimeError(
+            "installed qualification status does not match its exit code:\n"
+            + result.stdout
+        )
     if not payload.get("secret_safe"):
         raise RuntimeError("installed qualification output is not secret-safe")
     required_commands = {
+        "first_run_missing_credential",
+        "qualification_credential",
+        "first_run",
         "setup_plan",
         "setup_init_dry_run",
         "hermes_runtime",

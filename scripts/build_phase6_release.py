@@ -1940,6 +1940,23 @@ def _qualification_script() -> str:
 
 
         SECRET_MARKERS = ("secret://", "access_token", "refresh_token", "password", "api_key")
+        QUALIFICATION_CREDENTIAL_PROBE = "\n".join([
+            "import json, secrets, sys",
+            "from pathlib import Path",
+            "from project_maya.secrets import SecretRef, build_platform_secret_store",
+            "data_dir = Path(sys.argv[1])",
+            "try:",
+            "    store = build_platform_secret_store(data_dir)",
+            "    store.write(SecretRef.parse('secret://llm/openai'), secrets.token_urlsafe(32))",
+            "    status = store.health().status.value",
+            "except Exception as exc:",
+            "    print(json.dumps({'component': 'qualification-credential', 'status': 'blocked', 'reason': type(exc).__name__}))",
+            "    raise SystemExit(1)",
+            "if status != 'healthy':",
+            "    print(json.dumps({'component': 'qualification-credential', 'status': 'blocked', 'reason': status}))",
+            "    raise SystemExit(1)",
+            "print(json.dumps({'component': 'qualification-credential', 'status': 'ready', 'backend': 'platform'}))",
+        ])
         HERMES_PROBE = "\n".join([
             "import importlib.util, json, sys",
             "run_agent = importlib.util.find_spec('run_agent')",
@@ -2043,13 +2060,21 @@ def _qualification_script() -> str:
                 root = Path(tmp)
                 data_dir = root / "maya-data"
                 config_path = data_dir / "config" / "maya.json"
-                first_run = _run(
+                first_run_missing_credential = _run(
                     _python_command(install_dir, str(install_dir / "scripts" / "maya_first_run.py"), "--install-dir", str(install_dir), "--config", str(config_path), "--data-dir", str(data_dir), "--non-interactive"),
                     env,
                 )
                 env["MAYA_DATA_DIR"] = str(data_dir)
                 env["MAYA_CONFIG"] = str(config_path)
                 env["HERMES_HOME"] = str(data_dir / "hermes")
+                qualification_credential = _run(
+                    _python_command(install_dir, "-c", QUALIFICATION_CREDENTIAL_PROBE, str(data_dir)),
+                    env,
+                )
+                first_run = _run(
+                    _python_command(install_dir, str(install_dir / "scripts" / "maya_first_run.py"), "--install-dir", str(install_dir), "--config", str(config_path), "--data-dir", str(data_dir), "--non-interactive"),
+                    env,
+                )
                 commands = {
                     "setup_plan": _python_command(install_dir, "-m", "project_maya.cli", "setup", "plan", "--config", str(config_path)),
                     "setup_init_dry_run": _python_command(install_dir, "-m", "project_maya.cli", "setup", "init", "--config", str(config_path)),
@@ -2067,7 +2092,11 @@ def _qualification_script() -> str:
                     "broker_status": _python_command(install_dir, "-m", "project_maya.cli", "broker", "status", "--config", str(config_path)),
                     "broker_conformance": _python_command(install_dir, "-m", "project_maya.cli", "broker", "conformance", "--config", str(config_path)),
                 }
-                results = {"first_run": first_run}
+                results = {
+                    "first_run_missing_credential": first_run_missing_credential,
+                    "qualification_credential": qualification_credential,
+                    "first_run": first_run,
+                }
                 for name, command in commands.items():
                     results[name] = _run(command, env)
                 legacy = root / "legacy-memory.sqlite"
@@ -2078,6 +2107,15 @@ def _qualification_script() -> str:
                 results["backup_create"] = _run(_python_command(install_dir, "-m", "project_maya.cli", "backup", "--config", str(config_path), "--to", str(backup_path)), env)
                 results["backup_inspect"] = _run(_python_command(install_dir, "-m", "project_maya.cli", "backup", "inspect", "--from", str(backup_path)), env)
                 results["restore_dry_run"] = _run(_python_command(install_dir, "-m", "project_maya.cli", "restore", "--from", str(backup_path), "--to", str(root / "restore")), env)
+                expected_missing_credential = (
+                    first_run_missing_credential["returncode"] == 1
+                    and "provide the model API key" in first_run_missing_credential["output"]
+                )
+                expected_blocks = (
+                    ["first_run_missing_credential"]
+                    if expected_missing_credential
+                    else []
+                )
                 secret_safe = not any(marker in (item["output"] or "").lower() for item in results.values() for marker in SECRET_MARKERS)
                 hard_failures = {
                     name: item for name, item in results.items()
@@ -2085,13 +2123,17 @@ def _qualification_script() -> str:
                 }
                 blocked = {
                     name: item for name, item in results.items()
-                    if item["returncode"] == 1
+                    if item["returncode"] == 1 and name not in expected_blocks
                 }
                 status = "blocked" if blocked else "ready"
                 if hard_failures or not secret_safe:
                     status = "failed"
-                print(json.dumps({"qualification_status": status, "secret_safe": secret_safe, "blocked": sorted(blocked), "hard_failures": sorted(hard_failures), "commands": results}, sort_keys=True))
-                return 0 if status in {"ready", "blocked"} else 2
+                print(json.dumps({"qualification_status": status, "secret_safe": secret_safe, "expected_blocks": expected_blocks, "blocked": sorted(blocked), "hard_failures": sorted(hard_failures), "commands": results}, sort_keys=True))
+                if status == "ready":
+                    return 0
+                if status == "blocked":
+                    return 1
+                return 2
 
 
         def _run(command, env):
