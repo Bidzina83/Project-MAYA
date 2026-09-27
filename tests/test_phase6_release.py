@@ -1,5 +1,6 @@
 import json
 import hashlib
+import importlib.util
 import tempfile
 import unittest
 import zipfile
@@ -170,6 +171,18 @@ class TestPhase6Release(unittest.TestCase):
             self.assertIn("maya_first_run.py", setup_launcher)
             self.assertIn("maya_runtime.py", setup_launcher)
             self.assertIn("MAYA_CONFIG", setup_launcher)
+            self.assertIn('call "%MAYA_RUNTIME_PYTHON%"', setup_launcher)
+            cli_launcher = (
+                release_dir / "windows-app-payload" / "bin" / "maya-cli.cmd"
+            ).read_text(encoding="utf-8")
+            self.assertIn('call "%MAYA_RUNTIME_PYTHON%"', cli_launcher)
+            qualification_launcher = (
+                release_dir
+                / "windows-app-payload"
+                / "bin"
+                / "maya-self-check.cmd"
+            ).read_text(encoding="utf-8")
+            self.assertIn('call "%MAYA_RUNTIME_PYTHON%"', qualification_launcher)
             first_run = (
                 release_dir
                 / "windows-app-payload"
@@ -185,6 +198,7 @@ class TestPhase6Release(unittest.TestCase):
             self.assertIn("register_memory_provider", first_run)
             self.assertIn('parser.add_argument("--non-interactive"', first_run)
             self.assertIn("not sys.stdin.isatty()", first_run)
+            self.assertIn("blocked:legacy_memory_migration_required", first_run)
             inno_script = (release_dir / "inno" / "project-maya-standard.iss").read_text(
                 encoding="utf-8"
             )
@@ -577,6 +591,94 @@ class TestPhase6Release(unittest.TestCase):
             )
             self.assertIn("SetupIconFile", inno_script)
             self.assertIn('IconFilename: "{app}\\assets\\maya.ico"', inno_script)
+
+    def test_first_run_upgrades_empty_legacy_standard_memory_config(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            install_dir = root / "install"
+            data_dir = root / "data"
+            templates = install_dir / "config-templates"
+            templates.mkdir(parents=True)
+            data_dir.mkdir()
+            template = build_release_module._standard_config_template()
+            (templates / "standard.json.template").write_text(
+                template, encoding="utf-8"
+            )
+            config_path = data_dir / "config" / "maya.json"
+            config_path.parent.mkdir()
+            config = json.loads(
+                template.replace("${MAYA_INSTANCE_ID}", "preserved-instance").replace(
+                    "${MAYA_DATA_DIR}", data_dir.as_posix()
+                )
+            )
+            config["memory"]["retriever"] = "local_json"
+            config["llm"]["credential_ref"] = "secret://llm/preserved"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            module = self._load_generated_first_run(root)
+
+            status = module._prepare_standard_config(
+                install_dir, data_dir, config_path
+            )
+
+            updated = json.loads(config_path.read_text(encoding="utf-8"))
+            self.assertEqual(status, "upgraded_empty_legacy_memory")
+            self.assertEqual(updated["memory"]["retriever"], "local_vector")
+            self.assertEqual(updated["memory"]["registry"], "sqlite")
+            self.assertEqual(updated["memory"]["hermes_provider"], "local")
+            self.assertEqual(updated["product"]["instance_id"], "preserved-instance")
+            self.assertEqual(
+                updated["llm"]["credential_ref"], "secret://llm/preserved"
+            )
+
+    def test_first_run_blocks_nonempty_legacy_memory_without_migration(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            install_dir = root / "install"
+            data_dir = root / "data"
+            templates = install_dir / "config-templates"
+            templates.mkdir(parents=True)
+            (data_dir / "memory").mkdir(parents=True)
+            template = build_release_module._standard_config_template()
+            (templates / "standard.json.template").write_text(
+                template, encoding="utf-8"
+            )
+            config_path = data_dir / "config" / "maya.json"
+            config_path.parent.mkdir()
+            config = json.loads(
+                template.replace("${MAYA_INSTANCE_ID}", "preserved-instance").replace(
+                    "${MAYA_DATA_DIR}", data_dir.as_posix()
+                )
+            )
+            config["memory"]["retriever"] = "local_json"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            (data_dir / "memory" / "records.json").write_text(
+                json.dumps([{"id": "business-record", "content": "keep me"}]),
+                encoding="utf-8",
+            )
+            module = self._load_generated_first_run(root)
+
+            status = module._prepare_standard_config(
+                install_dir, data_dir, config_path
+            )
+
+            unchanged = json.loads(config_path.read_text(encoding="utf-8"))
+            self.assertEqual(status, "blocked:legacy_memory_migration_required")
+            self.assertEqual(unchanged["memory"]["retriever"], "local_json")
+
+    @staticmethod
+    def _load_generated_first_run(root):
+        script_path = root / "maya_first_run.py"
+        script_path.write_text(
+            build_release_module._first_run_script(), encoding="utf-8"
+        )
+        spec = importlib.util.spec_from_file_location(
+            "generated_maya_first_run", script_path
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+
 
     def test_release_builder_rejects_unadvertised_platform(self):
         with tempfile.TemporaryDirectory() as tmp:

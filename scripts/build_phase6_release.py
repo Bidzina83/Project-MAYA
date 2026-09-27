@@ -647,7 +647,7 @@ def _build_windows_app_payload(
             "echo Maya managed Python runtime is missing.",
             "exit /b 1",
             ":run_managed",
-            '"%MAYA_RUNTIME_PYTHON%" "%MAYA_RUNTIME_BOOTSTRAP%" -m project_maya.cli %*',
+            'call "%MAYA_RUNTIME_PYTHON%" "%MAYA_RUNTIME_BOOTSTRAP%" -m project_maya.cli %*',
             "exit /b %ERRORLEVEL%",
             "",
         ]
@@ -685,7 +685,7 @@ def _build_windows_app_payload(
             "set MAYA_EXIT=1",
             "goto setup_done",
             ":setup_managed",
-            '"%MAYA_RUNTIME_PYTHON%" "%MAYA_RUNTIME_BOOTSTRAP%" "%~dp0..\\scripts\\maya_first_run.py" --install-dir "%~dp0.." --config "%MAYA_CONFIG%" --data-dir "%MAYA_DATA_DIR%" %*',
+            'call "%MAYA_RUNTIME_PYTHON%" "%MAYA_RUNTIME_BOOTSTRAP%" "%~dp0..\\scripts\\maya_first_run.py" --install-dir "%~dp0.." --config "%MAYA_CONFIG%" --data-dir "%MAYA_DATA_DIR%" %*',
             "set MAYA_EXIT=%ERRORLEVEL%",
             ":setup_done",
             "echo.",
@@ -725,7 +725,7 @@ def _build_windows_app_payload(
             "set MAYA_EXIT=1",
             "goto qualification_done",
             ":qualification_managed",
-            '"%MAYA_RUNTIME_PYTHON%" "%MAYA_RUNTIME_BOOTSTRAP%" "%~dp0..\\scripts\\maya_qualification.py" --install-dir "%~dp0.."',
+            'call "%MAYA_RUNTIME_PYTHON%" "%MAYA_RUNTIME_BOOTSTRAP%" "%~dp0..\\scripts\\maya_qualification.py" --install-dir "%~dp0.."',
             "set MAYA_EXIT=%ERRORLEVEL%",
             ":qualification_done",
             "echo.",
@@ -1692,11 +1692,10 @@ def _first_run_script() -> str:
             os.environ["HERMES_HOME"] = str(data_dir / "hermes")
             config_path.parent.mkdir(parents=True, exist_ok=True)
             data_dir.mkdir(parents=True, exist_ok=True)
-            if not config_path.exists():
-                template = (install_dir / "config-templates" / "standard.json.template").read_text(encoding="utf-8")
-                rendered = template.replace("${MAYA_INSTANCE_ID}", str(uuid.uuid4()))
-                rendered = rendered.replace("${MAYA_DATA_DIR}", str(data_dir).replace("\\", "/"))
-                config_path.write_text(rendered + "\n", encoding="utf-8")
+            config_status = _prepare_standard_config(install_dir, data_dir, config_path)
+            print(json.dumps({"operation": "standard_config", "status": config_status}, sort_keys=True))
+            if config_status.startswith("blocked:"):
+                return 1
             policy_dir = data_dir / "governance" / "policies"
             policy_dir.mkdir(parents=True, exist_ok=True)
             for directory in (
@@ -1729,7 +1728,7 @@ def _first_run_script() -> str:
             if hermes_memory_status != "configured":
                 return 1
             secret_status = _initialize_local_api_secret(data_dir)
-            print(json.dumps({"operation": "first_run", "config": str(config_path), "data_dir": str(data_dir), "created_config": True}, sort_keys=True))
+            print(json.dumps({"operation": "first_run", "config": str(config_path), "data_dir": str(data_dir), "created_config": config_status == "created"}, sort_keys=True))
             print(json.dumps({"operation": "local_api_secret", "status": secret_status}, sort_keys=True))
             model_status = _initialize_model_credential(
                 config_path,
@@ -1748,6 +1747,58 @@ def _first_run_script() -> str:
                 if result.returncode != 0:
                     return result.returncode
             return 0
+
+
+        def _prepare_standard_config(install_dir, data_dir, config_path):
+            if not config_path.exists():
+                template = (install_dir / "config-templates" / "standard.json.template").read_text(encoding="utf-8")
+                rendered = template.replace("${MAYA_INSTANCE_ID}", str(uuid.uuid4()))
+                rendered = rendered.replace("${MAYA_DATA_DIR}", str(data_dir).replace("\\", "/"))
+                config_path.write_text(rendered + "\n", encoding="utf-8")
+                return "created"
+
+            try:
+                config = json.loads(config_path.read_text(encoding="utf-8-sig"))
+            except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+                print("Existing Maya configuration is unreadable: " + type(exc).__name__)
+                return "blocked:invalid_existing_config"
+            if (
+                not isinstance(config, dict)
+                or not isinstance(config.get("product"), dict)
+                or config["product"].get("edition") != "standard"
+            ):
+                return "existing"
+            memory = config.get("memory")
+            if not isinstance(memory, dict) or memory.get("retriever") != "local_json":
+                return "existing"
+
+            legacy_store = data_dir / "memory" / "records.json"
+            if legacy_store.is_file():
+                try:
+                    records = json.loads(legacy_store.read_text(encoding="utf-8-sig"))
+                except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+                    print("Legacy Maya memory is unreadable: " + type(exc).__name__)
+                    return "blocked:legacy_memory_unreadable"
+                if not isinstance(records, list):
+                    print("Legacy Maya memory must contain a JSON list.")
+                    return "blocked:legacy_memory_unreadable"
+                if records:
+                    print(
+                        "Existing local_json business memory requires an explicit "
+                        "dry-run migration before Maya can enable local_vector memory."
+                    )
+                    return "blocked:legacy_memory_migration_required"
+
+            memory["retriever"] = "local_vector"
+            memory["registry"] = "sqlite"
+            memory["hermes_provider"] = "local"
+            temporary = config_path.with_suffix(config_path.suffix + ".tmp")
+            temporary.write_text(
+                json.dumps(config, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            temporary.replace(config_path)
+            return "upgraded_empty_legacy_memory"
 
 
         def _initialize_local_api_secret(data_dir):
