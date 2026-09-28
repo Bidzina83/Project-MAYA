@@ -91,6 +91,11 @@ ONNX embedding model and native runtime wheels. A payload using `local_json`,
 an unavailable Maya provider, or a non-governed memory configuration fails or
 remains blocked.
 
+The embedded Windows runtime explicitly loads the bundled pywin32 module and
+DLL directories without executing arbitrary `.pth` files or registering system
+components. Windows qualification exercises native file locking and a real
+concurrent log write; importability alone is not logging readiness.
+
 If `ISCC.exe` is supplied through `--inno-compiler`, the builder may also
 compile native Inno Setup `.exe` installers. Production `.exe` installers
 must be Authenticode-signed through release infrastructure by passing

@@ -438,6 +438,13 @@ def _verify_product_launchers(payload_dir: Path) -> None:
     )
     if '"--non-interactive"' not in qualification:
         raise RuntimeError("installed qualification may invoke interactive first-run setup")
+    for expected in (
+        "portalocker.lock(stream, portalocker.LOCK_EX)",
+        "ConcurrentRotatingFileHandler",
+        "Windows logging write failed",
+    ):
+        if expected not in qualification:
+            raise RuntimeError("installed qualification lacks Windows logging checks")
 
 
 def _verify_compiled_installers_are_signed(inno_dir: Path) -> None:

@@ -1,6 +1,9 @@
 import json
 import hashlib
 import importlib.util
+import os
+import runpy
+import sys
 import tempfile
 import unittest
 import zipfile
@@ -30,6 +33,25 @@ from scripts.verify_phase6_release import main as verify_phase6_release
 
 
 class TestPhase6Release(unittest.TestCase):
+    @unittest.skipUnless(os.name == "nt", "Windows embedded runtime bootstrap")
+    def test_bootstrap_loads_curated_pywin32_paths_without_executing_pth(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runtime = Path(tmp) / "runtime"
+            site = runtime / "site-packages"
+            for relative in ("win32", "win32/lib", "pythonwin", "pywin32_system32"):
+                (site / relative).mkdir(parents=True, exist_ok=True)
+            (site / "unexpected.pth").write_text("import sys; raise RuntimeError('unexpected pth execution')")
+            build_release_module._write_runtime_bootstrap(runtime)
+            handle = object()
+            with patch.object(sys, "path", list(sys.path)), patch.dict(os.environ), patch(
+                "os.add_dll_directory", return_value=handle
+            ) as add_dll:
+                state = runpy.run_path(str(runtime / "maya_runtime.py"))
+                for relative in ("win32", "win32/lib", "pythonwin"):
+                    self.assertIn(str(site / relative), sys.path)
+                add_dll.assert_called_once_with(str(site / "pywin32_system32"))
+                self.assertEqual(state["_dll_directory_handles"], [handle])
+
     def test_signed_update_manifest_verifies_and_rejects_tampering(self):
         payload = self._update_payload()
         signed = self._sign(payload)
@@ -563,6 +585,8 @@ class TestPhase6Release(unittest.TestCase):
             self.assertIn('"first_run_missing_credential"', qualification)
             self.assertIn("manager.get_provider('maya') is not provider", qualification)
             self.assertIn("provider.validate_ready()", qualification)
+            self.assertIn("portalocker.lock(stream, portalocker.LOCK_EX)", qualification)
+            self.assertIn("Windows logging write failed", qualification)
             self.assertIn('"expected_blocks"', qualification)
             self.assertIn('if status == "blocked":', qualification)
             self.assertIn("return 1", qualification)
