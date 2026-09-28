@@ -173,6 +173,8 @@ def _first_invalid_reason(config: MayaConfig) -> str | None:
         return "llm.provider is required"
     if not llm.model.strip():
         return "llm.model is required"
+    if llm.model.strip().lower() == "configured-during-setup":
+        return "llm.model requires an explicit model selection in Setup Maya"
     if llm.credential_ref is not None:
         try:
             SecretRef.parse(llm.credential_ref)

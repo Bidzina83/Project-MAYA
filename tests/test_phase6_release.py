@@ -33,6 +33,23 @@ from scripts.verify_phase6_release import main as verify_phase6_release
 
 
 class TestPhase6Release(unittest.TestCase):
+    def test_first_run_requires_explicit_model_selection_and_preserves_existing(self):
+        namespace = {"__name__": "first_run_test"}
+        exec(build_release_module._first_run_script(), namespace)
+        select = namespace["_initialize_model_selection"]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "maya.json"
+            original = {"llm": {"model": "configured-during-setup", "provider": "openai"}}
+            path.write_text(json.dumps(original))
+            with patch("builtins.input", side_effect=AssertionError("must not prompt")):
+                self.assertEqual(select(path, allow_prompt=False), "blocked")
+            self.assertEqual(json.loads(path.read_text()), original)
+            with patch("sys.stdin.isatty", return_value=True), patch("builtins.input", return_value="test-model-id"):
+                self.assertEqual(select(path, allow_prompt=True), "configured")
+            self.assertEqual(json.loads(path.read_text())["llm"]["model"], "test-model-id")
+            with patch("builtins.input", side_effect=AssertionError("must preserve selection")):
+                self.assertEqual(select(path, allow_prompt=True), "configured")
+
     @unittest.skipUnless(os.name == "nt", "Windows embedded runtime bootstrap")
     def test_bootstrap_loads_curated_pywin32_paths_without_executing_pth(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -587,6 +604,8 @@ class TestPhase6Release(unittest.TestCase):
             self.assertIn("provider.validate_ready()", qualification)
             self.assertIn("portalocker.lock(stream, portalocker.LOCK_EX)", qualification)
             self.assertIn("Windows logging write failed", qualification)
+            self.assertIn("inject_memory_provider_tools(tool_host)", qualification)
+            self.assertIn("Maya business memory tools are unavailable", qualification)
             self.assertIn('"expected_blocks"', qualification)
             self.assertIn('if status == "blocked":', qualification)
             self.assertIn("return 1", qualification)

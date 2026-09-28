@@ -39,6 +39,14 @@ def enterprise_broker_disabled_mapping():
 
 
 class TestPhase2ModelConfig(unittest.TestCase):
+    def test_setup_placeholder_is_not_a_ready_model(self):
+        data = valid_config_mapping()
+        data["llm"]["model"] = "configured-during-setup"
+        config = config_from_mapping(data)
+        self.assertFalse(validate_model_config(config).valid)
+        with self.assertRaisesRegex(ConfigError, "explicit model selection"):
+            build_local_product(config)
+
     def test_customer_owned_model_credential_ref_validates_redacted(self):
         config_data = enterprise_broker_disabled_mapping()
 

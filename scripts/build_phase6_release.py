@@ -1748,6 +1748,12 @@ def _first_run_script() -> str:
             print(json.dumps({"operation": "model_credential", "status": model_status}, sort_keys=True))
             if model_status == "blocked":
                 return 1
+            selection_status = _initialize_model_selection(
+                config_path, allow_prompt=not (args.ensure or args.non_interactive)
+            )
+            print(json.dumps({"operation": "model_selection", "status": selection_status}, sort_keys=True))
+            if selection_status == "blocked":
+                return 1
             for command in (
                 _python_command(install_dir, "-m", "project_maya.cli", "setup", "plan", "--config", str(config_path)),
                 _python_command(install_dir, "-m", "project_maya.cli", "setup", "init", "--config", str(config_path), "--apply"),
@@ -1822,6 +1828,28 @@ def _first_run_script() -> str:
                 if os.name == "nt":
                     return "blocked:" + type(exc).__name__
                 return "blocked:platform_secret_store_unavailable"
+
+
+        def _initialize_model_selection(config_path, *, allow_prompt):
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            model = str(config["llm"].get("model") or "").strip()
+            if model and model.lower() != "configured-during-setup":
+                return "configured"
+            if not allow_prompt or not sys.stdin.isatty():
+                print("Maya setup is incomplete: run Setup Maya and select a model ID.")
+                return "blocked"
+            try:
+                model = input("Enter the model ID available to your provider account (not an API key): ").strip()
+            except (EOFError, KeyboardInterrupt):
+                return "blocked"
+            if not model or model.lower() == "configured-during-setup" or model.startswith("sk-") or any(c.isspace() for c in model):
+                print("A valid model ID is required. Maya runtime startup remains blocked.")
+                return "blocked"
+            config["llm"]["model"] = model
+            temporary = config_path.with_suffix(config_path.suffix + ".tmp")
+            temporary.write_text(json.dumps(config, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            temporary.replace(config_path)
+            return "configured"
 
 
         def _initialize_model_credential(config_path, data_dir, *, allow_prompt):
@@ -1965,6 +1993,10 @@ def _qualification_script() -> str:
             "if status != 'healthy':",
             "    print(json.dumps({'component': 'qualification-credential', 'status': 'blocked', 'reason': status}))",
             "    raise SystemExit(1)",
+            "config_path = data_dir / 'config' / 'maya.json'",
+            "config = json.loads(config_path.read_text(encoding='utf-8'))",
+            "config['llm']['model'] = 'maya-offline-qualification'",
+            "config_path.write_text(json.dumps(config), encoding='utf-8')",
             "print(json.dumps({'component': 'qualification-credential', 'status': 'ready', 'backend': 'platform'}))",
         ])
         HERMES_PROBE = "\n".join([
@@ -1983,7 +2015,7 @@ def _qualification_script() -> str:
             "if provider is None or not provider.is_available():",
             "    print(json.dumps({'component': 'hermes-agent', 'status': 'blocked', 'reason': 'Maya governed memory provider unavailable'}))",
             "    raise SystemExit(1)",
-            "from agent.memory_manager import MemoryManager",
+            "from agent.memory_manager import MemoryManager, inject_memory_provider_tools",
             "from types import SimpleNamespace",
             "from project_maya.adapters.hermes import HermesAIAgentRuntime",
             "manager = MemoryManager()",
@@ -1994,6 +2026,12 @@ def _qualification_script() -> str:
             "    runtime.attach_memory(object())",
             "    runtime.start(agent_name='maya-installed-qualification')",
             "    provider.validate_ready()",
+            "    tool_host = SimpleNamespace(_memory_manager=manager, tools=[], enabled_toolsets=None)",
+            "    inject_memory_provider_tools(tool_host)",
+            "    names = {tool['function']['name'] for tool in tool_host.tools}",
+            "    expected = {'maya_business_memory_search', 'maya_business_memory_ingest', 'maya_business_memory_rebuild_embeddings'}",
+            "    if not expected.issubset(names):",
+            "        raise RuntimeError('Maya business memory tools are unavailable')",
             "    if manager.get_provider('maya') is not provider or len(manager.providers) != 1:",
             "        raise RuntimeError('Maya memory registration is not unique')",
             "finally:",

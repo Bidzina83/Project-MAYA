@@ -169,6 +169,7 @@ def _build_hermes_runtime(
     factory_kwargs: dict[str, object] = {
         "model": config.llm.model,
         "provider": config.llm.provider,
+        "quiet_mode": True,
     }
     endpoint = config.llm.endpoint or _HERMES_DIRECT_PROVIDER_ENDPOINTS.get(
         config.llm.provider.strip().lower()

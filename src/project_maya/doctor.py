@@ -18,7 +18,7 @@ from .dependencies import (
     evaluate_enabled_profile_readiness,
 )
 from .documents import document_capability_checks
-from .governance import load_policy_gateway
+from .governance import ActionRequest, load_policy_gateway
 from .metabase import metabase_capability_checks
 from .memory import inspect_embedding_model, inspect_local_vector_store
 from .model_config import validate_model_config
@@ -310,12 +310,25 @@ def _governance_policy_check(config: MayaConfig) -> DoctorCheck:
             "policy file missing; default deny gateway will be used",
         )
     try:
-        load_policy_gateway(policy_file)
+        gateway = load_policy_gateway(policy_file)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return DoctorCheck(
             "governance.policy",
             DoctorStatus.FAIL,
             f"policy file invalid: {exc}",
+        )
+    actions = [
+        ActionRequest("local-user", "runtime.execute", "hermes-agent", "run"),
+        ActionRequest("local-user", "memory.read", "*", "search"),
+    ]
+    if config.llm.mode != "local":
+        actions.append(ActionRequest("local-user", "model.egress", f"model:{config.llm.provider}", "infer"))
+    denied = sorted(action.capability for action in actions if not gateway.authorize(action).allowed)
+    if denied:
+        return DoctorCheck(
+            "governance.policy",
+            DoctorStatus.WARN,
+            "policy file valid; local-user readiness blocked: " + ", ".join(denied),
         )
     return DoctorCheck(
         "governance.policy",

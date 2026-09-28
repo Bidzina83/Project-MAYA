@@ -30,6 +30,27 @@ class FakeMemoryManager:
 
 
 class TestPhase1Policy(unittest.TestCase):
+    def test_doctor_warns_when_parseable_policy_denies_runtime_readiness(self):
+        from project_maya import DoctorStatus, config_from_mapping
+        from project_maya.doctor import _governance_policy_check
+        from tests.test_phase0_contracts import valid_config_mapping
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "policy.json"
+            data = valid_config_mapping()
+            data["governance"]["policy_file"] = str(path)
+            path.write_text(json.dumps({"schema_version": 1, "default_action": "deny", "rules": []}))
+            check = _governance_policy_check(config_from_mapping(data))
+            self.assertEqual(check.status, DoctorStatus.WARN)
+            for capability in ("runtime.execute", "memory.read", "model.egress"):
+                self.assertIn(capability, check.message)
+            path.write_text(json.dumps({"allow": [
+                {"actor_id": "local-user", "capability": "runtime.execute", "target": "hermes-agent", "operation": "run"},
+                {"actor_id": "local-user", "capability": "memory.read", "operation": "search"},
+                {"actor_id": "local-user", "capability": "model.egress", "target": "model:" + data["llm"]["provider"], "operation": "infer"},
+            ]}))
+            self.assertEqual(_governance_policy_check(config_from_mapping(data)).status, DoctorStatus.PASS)
+
     def test_policy_gateway_allows_matching_rule(self):
         with tempfile.TemporaryDirectory() as tmp:
             policy_path = Path(tmp) / "policy.json"

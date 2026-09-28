@@ -326,6 +326,7 @@ class TestPhase1LocalProduct(unittest.TestCase):
         self.assertEqual(events[0][0], "init")
         self.assertEqual(events[0][1]["model"], "maya-model")
         self.assertEqual(events[0][1]["provider"], "openrouter")
+        self.assertTrue(events[0][1]["quiet_mode"])
         runtime_requests = [
             request
             for request in gateway.requests

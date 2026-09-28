@@ -96,6 +96,13 @@ DLL directories without executing arbitrary `.pth` files or registering system
 components. Windows qualification exercises native file locking and a real
 concurrent log write; importability alone is not logging readiness.
 
+First-run setup requires an explicit provider model ID and blocks unattended
+startup while the starter model placeholder remains. Offline qualification
+uses an isolated synthetic model ID and credential, never a paid model call.
+Product construction requests Hermes quiet mode to suppress credential-fragment
+startup output. Provider tool injection is checked separately from Hermes'
+early diagnostic tool listing.
+
 If `ISCC.exe` is supplied through `--inno-compiler`, the builder may also
 compile native Inno Setup `.exe` installers. Production `.exe` installers
 must be Authenticode-signed through release infrastructure by passing
