@@ -90,6 +90,15 @@ class TestPhase1MemoryProvider(unittest.TestCase):
         events = []
 
         class FakeMemoryManager:
+            provider = None
+
+            @property
+            def providers(self):
+                return [self.provider] if self.provider else []
+
+            def get_provider(self, name):
+                return next((p for p in self.providers if p.name == name), None)
+
             def add_provider(self, provider):
                 events.append(("memory", provider.name, provider.is_available()))
                 self.provider = provider

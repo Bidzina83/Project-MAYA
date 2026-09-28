@@ -10,6 +10,15 @@ from tests.test_phase0_contracts import valid_config_mapping
 
 
 class FakeMemoryManager:
+    provider = None
+
+    @property
+    def providers(self):
+        return [self.provider] if self.provider else []
+
+    def get_provider(self, name):
+        return next((p for p in self.providers if p.name == name), None)
+
     def add_provider(self, provider):
         self.provider = provider
 

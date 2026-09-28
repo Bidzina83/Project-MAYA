@@ -23,6 +23,12 @@ loader with provider `maya`. The installed provider uses
 `LocalSQLiteVectorRetriever` and the configured Maya authorization policy and
 audit sink. It does not create a Hermes-owned database or cloud memory account.
 
+The runtime adapter reuses this initialized plugin rather than registering a
+second external provider. Conflicting providers, rejected registration, and
+uninitialized plugins fail startup. The direct-attachment compatibility bridge
+is used only when no external provider exists; it also leaves conversation
+turn persistence to Hermes. Hermes owns shutdown of the registered provider.
+
 The first capabilities are:
 
 - `memory.write`

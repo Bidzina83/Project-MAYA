@@ -76,6 +76,14 @@ class MayaHermesMemoryPlugin:
         self._config = config
         self._session_id = session_id
 
+    def validate_ready(self) -> None:
+        """Validate an already initialized provider without resetting its session."""
+        self._require_provider()
+        self._require_business()
+        config = self._require_config()
+        if not self._session_id or not self.is_available() or config != self._load_config():
+            raise RuntimeError("Maya memory provider is unavailable or configuration changed")
+
     def system_prompt_block(self) -> str:
         return (
             "Maya governed local memory is authoritative for SMB business and "

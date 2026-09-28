@@ -133,6 +133,13 @@ class TestPhase1Runtime(unittest.TestCase):
             def __init__(self):
                 self.provider = None
 
+            @property
+            def providers(self):
+                return [self.provider] if self.provider else []
+
+            def get_provider(self, name):
+                return next((p for p in self.providers if p.name == name), None)
+
             def add_provider(self, provider):
                 self.provider = provider
                 events.append(("add_provider", provider.name, provider.is_available()))
@@ -188,7 +195,7 @@ class TestPhase1Runtime(unittest.TestCase):
         self.assertIn(("add_provider", "maya", True), events)
         self.assertIn(("begin_session", "session-1", "project_maya"), events)
         self.assertIn(("prefetch", "hello memory", 5), events)
-        self.assertIn(("synchronize_turn", "conversation_turn"), events)
+        self.assertFalse(any(event[0] == "synchronize_turn" for event in events))
         self.assertIn(("context", True), events)
         self.assertIn(("shutdown_memory_provider",), events)
         self.assertIn(("end_session", "session-1"), events)
@@ -200,6 +207,13 @@ class TestPhase1Runtime(unittest.TestCase):
         class FakeMemoryManager:
             def __init__(self):
                 self.provider = None
+
+            @property
+            def providers(self):
+                return [self.provider] if self.provider else []
+
+            def get_provider(self, name):
+                return next((p for p in self.providers if p.name == name), None)
 
             def add_provider(self, provider):
                 self.provider = provider
@@ -285,6 +299,26 @@ class TestPhase1Runtime(unittest.TestCase):
             [request.capability for request in gateway.requests],
             ["memory.read", "memory.write", "memory.read"],
         )
+
+    def test_memory_registration_rejects_conflicts_and_silent_rejection(self):
+        from project_maya.adapters.hermes import HermesAIAgentRuntime
+        from project_maya.memory.hermes_plugin import MayaHermesMemoryPlugin
+
+        for provider, message in (
+            (types.SimpleNamespace(name="maya"), "Conflicting"),
+            (types.SimpleNamespace(name="other"), "Another external"),
+            (None, "rejected"),
+            (MayaHermesMemoryPlugin(), "not initialized"),
+        ):
+            with self.subTest(message=message):
+                manager = types.SimpleNamespace(
+                    providers=[provider] if provider else [],
+                    get_provider=lambda name: provider if provider and provider.name == name else None,
+                    add_provider=lambda p: None,
+                )
+                runtime = HermesAIAgentRuntime(types.SimpleNamespace(_memory_manager=manager))
+                with self.assertRaisesRegex(RuntimeError, message):
+                    runtime.attach_memory(object())
 
     def test_public_agent_executes_through_governed_hermes_adapter(self):
         runtime = RuntimeDouble()

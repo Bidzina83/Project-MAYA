@@ -151,6 +151,24 @@ class TestPhase1SQLiteVectorMemory(unittest.TestCase):
 
             self.assertTrue(plugin.is_available())
             plugin.initialize("session-1", platform="project_maya")
+            from types import SimpleNamespace
+            from unittest.mock import Mock, patch
+            from project_maya.adapters.hermes import HermesAIAgentRuntime
+
+            manager = SimpleNamespace(
+                providers=[plugin],
+                get_provider=lambda name: plugin if name == "maya" else None,
+                add_provider=Mock(side_effect=AssertionError("duplicate registration")),
+            )
+            runtime = HermesAIAgentRuntime(SimpleNamespace(
+                _memory_manager=manager,
+                shutdown_memory_provider=plugin.shutdown,
+            ))
+            with patch.object(plugin, "initialize", side_effect=AssertionError("duplicate initialization")):
+                runtime.attach_memory(object())
+                runtime.start(agent_name="maya")
+            manager.add_provider.assert_not_called()
+            plugin.validate_ready()
             ingest = json.loads(
                 plugin.handle_tool_call(
                     "maya_business_memory_ingest", {"path": str(document)}
@@ -162,7 +180,13 @@ class TestPhase1SQLiteVectorMemory(unittest.TestCase):
             )
             context = plugin.prefetch("Northwind monthly")
             tools = {item["name"] for item in plugin.get_tool_schemas()}
-            plugin.shutdown()
+            config_data["deployment"]["data_dir"] = str(data_dir / "changed")
+            config_path.write_text(json.dumps(config_data), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "configuration changed"):
+                plugin.validate_ready()
+            runtime.stop()
+            with self.assertRaisesRegex(RuntimeError, "not initialized"):
+                plugin.validate_ready()
 
             status = inspect_local_vector_store(
                 data_dir / "memory" / "memory.sqlite3"

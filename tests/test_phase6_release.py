@@ -561,6 +561,8 @@ class TestPhase6Release(unittest.TestCase):
             self.assertIn('"--non-interactive"', qualification)
             self.assertIn("QUALIFICATION_CREDENTIAL_PROBE", qualification)
             self.assertIn('"first_run_missing_credential"', qualification)
+            self.assertIn("manager.get_provider('maya') is not provider", qualification)
+            self.assertIn("provider.validate_ready()", qualification)
             self.assertIn('"expected_blocks"', qualification)
             self.assertIn('if status == "blocked":', qualification)
             self.assertIn("return 1", qualification)

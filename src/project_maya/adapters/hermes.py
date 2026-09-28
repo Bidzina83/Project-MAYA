@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 from importlib import import_module
 from typing import Any, Callable
@@ -217,6 +216,7 @@ class HermesAIAgentRuntime:
         self._agent = agent
         self._memory_provider: Any | None = None
         self._hermes_memory_provider: Any | None = None
+        self._initialize_memory = False
         self._started = False
 
     def attach_memory(self, memory_provider: Any) -> None:
@@ -225,16 +225,33 @@ class HermesAIAgentRuntime:
             self._agent.attach_memory(memory_provider)
             return
         manager = getattr(self._agent, "_memory_manager", None)
-        if manager is None or not hasattr(manager, "add_provider"):
+        if manager is None or not all(
+            hasattr(manager, method) for method in ("add_provider", "get_provider", "providers")
+        ):
             raise HermesRuntimeUnavailableError(
                 "Hermes AIAgent memory manager is unavailable"
             )
+        from project_maya.memory.hermes_plugin import MayaHermesMemoryPlugin
+
+        existing = manager.get_provider("maya")
+        if existing is not None:
+            if not isinstance(existing, MayaHermesMemoryPlugin):
+                raise HermesRuntimeUnavailableError("Conflicting Maya memory provider registered")
+            existing.validate_ready()
+            self._hermes_memory_provider = existing
+            self._initialize_memory = False
+            return
+        if any(provider.name != "builtin" for provider in manager.providers):
+            raise HermesRuntimeUnavailableError("Another external memory provider is registered")
         bridge = HermesMemoryProviderBridge(memory_provider)
         manager.add_provider(bridge)
+        if manager.get_provider("maya") is not bridge:
+            raise HermesRuntimeUnavailableError("Hermes rejected Maya memory registration")
         self._hermes_memory_provider = bridge
+        self._initialize_memory = True
 
     def start(self, *, agent_name: str) -> None:
-        if self._hermes_memory_provider is not None:
+        if self._hermes_memory_provider is not None and self._initialize_memory:
             session_id = getattr(self._agent, "session_id", None) or agent_name
             self._hermes_memory_provider.initialize(
                 session_id=session_id,
@@ -304,26 +321,8 @@ class HermesMemoryProviderBridge:
         session_id: str = "",
         messages: list[dict[str, Any]] | None = None,
     ) -> None:
-        if not hasattr(self._maya, "synchronize_turn"):
-            return
-        effective_session = session_id or self._session_id
-        digest = hashlib.sha256(
-            f"{effective_session}\0{user_content}\0{assistant_content}".encode(
-                "utf-8"
-            )
-        ).hexdigest()[:16]
-        self._maya.synchronize_turn(
-            [
-                {
-                    "id": f"hermes-turn:{effective_session}:{digest}",
-                    "category": "conversation_turn",
-                    "source": "hermes-agent",
-                    "session_id": effective_session,
-                    "user_content": user_content,
-                    "assistant_content": assistant_content,
-                }
-            ]
-        )
+        # Hermes owns conversation persistence; Maya stores explicit business records.
+        return None
 
     def get_tool_schemas(self) -> list[dict[str, Any]]:
         return [
