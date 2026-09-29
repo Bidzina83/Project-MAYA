@@ -259,6 +259,8 @@ def _verify_managed_runtime_payload(payload_dir: Path) -> None:
     if hermes.get("artifact_status") == "pinned_requirement_recorded":
         raise RuntimeError("Hermes runtime is only recorded as a Git requirement")
     if mode == "production":
+        if runtime_manifest.get("governance_boundary", {}).get("qualified") is not True:
+            raise RuntimeError("production payload lacks qualified fail-closed Hermes governance")
         if python.get("status") != "included":
             raise RuntimeError("production payload lacks included managed Python")
         if not hermes.get("included") or not hermes.get("artifact"):
@@ -551,6 +553,7 @@ def _verify_installed_qualification(payload_dir: Path) -> None:
         "setup_plan",
         "setup_init_dry_run",
         "hermes_runtime",
+        "hermes_governance_boundary",
         "doctor",
         "health_summary",
         "local_api_contract",

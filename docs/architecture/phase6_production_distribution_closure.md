@@ -2,6 +2,12 @@
 
 ## Status
 
+Native governance Stage 1 now ships as Maya-owned plugin code, but the current
+Hermes pin has fail-open middleware and uncovered auxiliary inference. New
+payloads are `local_smoke_blocked` and startup refuses this unsafe contract.
+Artifact presence is not production qualification. See
+`hermes_native_governance.md` for the required runtime changes and acceptance gate.
+
 Implementation complete for signed Phase 6 release metadata, Windows
 release-bundle generation, Standard and Enterprise Inno Setup product sources,
 signed update and rollback verification, platform support boundary reporting,

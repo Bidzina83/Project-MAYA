@@ -263,6 +263,14 @@ produce audit reports.
 
 ## 8. Governance and Authorization
 
+The Maya-owned native Hermes governance plugin adapts model and tool execution
+middleware to the local gateway. Observer hooks are not security gates. Runtime
+activation requires a qualified fail-closed contract covering main and auxiliary
+inference, mandatory middleware, and trusted identity propagation. The current
+pinned Hermes runtime does not meet that contract; production qualification
+remains blocked. Unknown and unbounded tools are denied. Implementation status
+and acceptance work are tracked in `docs/architecture/hermes_native_governance.md`.
+
 The local action authorization gateway evaluates actor, tenant, capability,
 target, data classification, memory trust, connector scopes, customer policy,
 approval requirements, idempotency, and replay information.

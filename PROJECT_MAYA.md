@@ -181,6 +181,14 @@ reproducible derivatives.
 
 ## Governance and Action Authorization
 
+Maya owns a native Hermes governance plugin that adapts model and tool
+execution middleware to the existing local gateway, not a second policy engine.
+Observer hooks are not security gates. The current pinned Hermes middleware is
+fail-open and does not cover auxiliary inference; activation and production
+qualification remain blocked until the fail-closed execution contract is
+qualified. Unknown and unbounded tools remain denied. The staged contract and
+remaining acceptance work are in `docs/architecture/hermes_native_governance.md`.
+
 The local action authorization gateway evaluates:
 
 - actor and tenant identity;

@@ -33,6 +33,25 @@ from scripts.verify_phase6_release import main as verify_phase6_release
 
 
 class TestPhase6Release(unittest.TestCase):
+    def test_first_run_registers_governance_but_blocks_unsafe_hermes(self):
+        namespace = {"__name__": "first_run_test"}
+        exec(build_release_module._first_run_script(), namespace)
+        from project_maya.hermes_plugins.governance import GovernanceBoundaryError
+        with tempfile.TemporaryDirectory() as tmp, patch(
+            "project_maya.hermes_plugins.governance.ensure_governance_registered",
+            side_effect=GovernanceBoundaryError("governance.hermes_contract_unsupported"),
+        ):
+            data_dir = Path(tmp)
+            self.assertEqual(
+                namespace["_initialize_hermes_governance"](data_dir),
+                "blocked:hermes_governance_contract_unavailable",
+            )
+            entry = data_dir / "hermes" / "plugins" / "maya-governance" / "__init__.py"
+            self.assertEqual(entry.read_text(), "from project_maya.hermes_plugins.governance import register\n")
+        qualification = build_release_module._qualification_script()
+        self.assertIn('"hermes_governance_boundary"', qualification)
+        self.assertIn("ensure_governance_registered", qualification)
+
     def test_first_run_requires_explicit_model_selection_and_preserves_existing(self):
         namespace = {"__name__": "first_run_test"}
         exec(build_release_module._first_run_script(), namespace)
@@ -501,7 +520,8 @@ class TestPhase6Release(unittest.TestCase):
                     / "runtime-manifest.json"
                 ).read_text(encoding="utf-8")
             )
-            self.assertEqual(runtime_manifest["qualification_mode"], "production")
+            self.assertEqual(runtime_manifest["qualification_mode"], "local_smoke_blocked")
+            self.assertFalse(runtime_manifest["governance_boundary"]["qualified"])
             self.assertEqual(runtime_manifest["python"]["status"], "included")
             self.assertEqual(
                 runtime_manifest["python"]["executable"],

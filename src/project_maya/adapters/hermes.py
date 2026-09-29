@@ -35,12 +35,14 @@ class HermesRuntimeAdapter:
         runtime_version: str | None = None,
         supported_contract: str | None = None,
         factory_kwargs: dict[str, Any] | None = None,
+        startup_guard: Callable[[], None] | None = None,
     ) -> None:
         self._factory = factory
         self._factory_path = factory_path
         self._runtime_version = runtime_version or "unknown"
         self._supported_contract = supported_contract or self.contract_version
         self._factory_kwargs = dict(factory_kwargs or {})
+        self._startup_guard = startup_guard
         self._runtime: Any | None = None
         self._pending_memory: list[Any] = []
         self._pending_plugins: list[tuple[str, Any | None]] = []
@@ -49,6 +51,8 @@ class HermesRuntimeAdapter:
 
     def compatibility(self) -> RuntimeCompatibility:
         try:
+            if self._startup_guard is not None:
+                self._startup_guard()
             factory = self._resolve_factory()
         except Exception as exc:
             return RuntimeCompatibility(
@@ -170,6 +174,8 @@ class HermesRuntimeAdapter:
         self._started = False
 
     def _build_runtime(self, *, agent_name: str) -> Any:
+        if self._startup_guard is not None:
+            self._startup_guard()
         factory = self._resolve_factory()
         kwargs = dict(self._factory_kwargs)
         kwargs.setdefault("agent_name", agent_name)

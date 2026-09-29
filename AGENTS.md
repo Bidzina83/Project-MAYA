@@ -70,6 +70,13 @@ release currently requires a compatible Hermes runtime.
 
 The governing principle is:
 
+Maya's native Hermes governance plugin must enforce model and tool execution
+boundaries through the existing local gateway. Observer hooks are not security
+gates. The current pinned Hermes middleware is fail-open and auxiliary inference
+is uncovered; plugin activation and production qualification remain blocked
+until a qualified fail-closed runtime contract covers those paths. Unknown and
+unbounded tools remain denied. See `docs/architecture/hermes_native_governance.md`.
+
 > Hermes executes Maya. Local governance authorizes Maya. Customer-controlled
 > records define Maya's durable state.
 

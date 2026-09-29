@@ -8,6 +8,7 @@ from typing import Any
 from .agent.contracts import AgentRuntime, RuntimeCompatibility, RuntimeHealth
 from .audit import AuditRecord, AuditSink, NullAuditSink
 from .governance import ActionAuthorizationGateway, ActionDeniedError, ActionRequest
+from .hermes_plugins.governance import bind_request_identity
 
 
 @dataclass(frozen=True)
@@ -95,7 +96,8 @@ class GovernedAgentRuntime:
                 metadata=self._model_egress.metadata,
             )
             self._authorize(egress, event_type="authorization.model_egress")
-        return self._runtime.run(request, **kwargs)
+        with bind_request_identity(self._actor_id, data_classification):
+            return self._runtime.run(request, **kwargs)
 
     def health(self) -> RuntimeHealth:
         return self._runtime.health()

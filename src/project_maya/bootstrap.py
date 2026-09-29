@@ -26,6 +26,7 @@ from .memory import (
 )
 from .model_config import require_valid_model_config
 from .runtime import GovernedAgentRuntime, ModelEgressPolicy
+from .hermes_plugins.governance import ensure_governance_registered
 from .secrets import SecretRef, SecretStore, build_platform_secret_store
 
 
@@ -189,4 +190,9 @@ def _build_hermes_runtime(
         runtime_version=config.runtime.hermes_runtime_version,
         supported_contract=config.runtime.hermes_compatibility,
         factory_kwargs=factory_kwargs,
+        startup_guard=(
+            ensure_governance_registered
+            if config.runtime.hermes_factory == "run_agent:AIAgent"
+            else None
+        ),
     )

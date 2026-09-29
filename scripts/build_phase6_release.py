@@ -37,6 +37,7 @@ from project_maya.memory import inspect_embedding_model  # noqa: E402
 
 
 HERMES_RUNTIME_COMMIT = "b13e2fd6948a59eeb59fe618914147d97a2ee90a"
+HERMES_GOVERNANCE_QUALIFIED = False
 PRODUCT_DISPLAY_NAME = "Maya the Info Manager"
 WINDOWS_APP_PAYLOAD_DIR = "windows-app-payload"
 MAYA_SKILLS_REPO = "Bidzina83/Hermes-Agent-Maya-Skills"
@@ -499,6 +500,8 @@ def _build_windows_app_payload(
         and hermes_manifest["included"]
         and python_dependency_manifest["status"] == "included"
         and all(item["included"] for item in dependency_manifest["artifacts"].values())
+        # The current Hermes pin has fail-open middleware and uncovered aux calls.
+        and HERMES_GOVERNANCE_QUALIFIED
     )
     (wheels_dir / "requirements-pinned.txt").write_text(
         "\n".join(
@@ -520,6 +523,12 @@ def _build_windows_app_payload(
                 "production" if production_qualified else "local_smoke_blocked"
             ),
             "python": python_manifest,
+            "governance_boundary": {
+                "plugin": "project_maya.hermes_plugins.governance",
+                "contract": "project-maya.hermes-governance.v1",
+                "qualified": False,
+                "status": "blocked_until_fail_closed_hermes_qualified",
+            },
             "hermes_agent": {
                 "package": "hermes-agent",
                 "source": "git+https://github.com/Bidzina83/hermes-agent.git",
@@ -561,6 +570,11 @@ def _build_windows_app_payload(
                 "included": True,
                 "status": "installed",
                 "notes": "project_maya payload is installed from the built wheel",
+            },
+            "maya-governance-boundary": {
+                "included": True,
+                "status": "blocked_until_fail_closed_hermes_qualified",
+                "notes": "native plugin code ships; the current Hermes pin is not an enforceable fail-closed runtime",
             },
             "hermes-agent": {
                 "included": bool(hermes_manifest["included"]),
@@ -1737,6 +1751,10 @@ def _first_run_script() -> str:
             print(json.dumps({"operation": "hermes_memory", "status": hermes_memory_status}, sort_keys=True))
             if hermes_memory_status != "configured":
                 return 1
+            governance_status = _initialize_hermes_governance(data_dir)
+            print(json.dumps({"operation": "hermes_governance", "status": governance_status}, sort_keys=True))
+            if governance_status != "configured":
+                return 1
             secret_status = _initialize_local_api_secret(data_dir)
             print(json.dumps({"operation": "first_run", "config": str(config_path), "data_dir": str(data_dir), "created_config": config_status == "created"}, sort_keys=True))
             print(json.dumps({"operation": "local_api_secret", "status": secret_status}, sort_keys=True))
@@ -1934,6 +1952,23 @@ def _first_run_script() -> str:
                 return "blocked:" + type(exc).__name__
 
 
+        def _initialize_hermes_governance(data_dir):
+            from project_maya.hermes_plugins.governance import (
+                GovernanceBoundaryError, ensure_governance_registered,
+            )
+            plugin_dir = data_dir / "hermes" / "plugins" / "maya-governance"
+            plugin_dir.mkdir(parents=True, exist_ok=True)
+            (plugin_dir / "__init__.py").write_text(
+                "from project_maya.hermes_plugins.governance import register\n",
+                encoding="utf-8",
+            )
+            try:
+                ensure_governance_registered()
+            except GovernanceBoundaryError:
+                return "blocked:hermes_governance_contract_unavailable"
+            return "configured"
+
+
         def _initialize_managed_services(install_dir, data_dir):
             manifest_path = install_dir / "services" / "managed-services.json"
             if not manifest_path.is_file():
@@ -2067,6 +2102,15 @@ def _qualification_script() -> str:
             "print(json.dumps({'component': 'local-api', 'status': 'blocked', 'reason': 'non-loopback or remote access configured'}))",
             "raise SystemExit(1)",
         ])
+        GOVERNANCE_BOUNDARY_PROBE = "\n".join([
+            "from project_maya.hermes_plugins.governance import GovernanceBoundaryError, ensure_governance_registered",
+            "try:",
+            "    ensure_governance_registered()",
+            "except GovernanceBoundaryError:",
+            "    print('Hermes mandatory governance boundary: blocked')",
+            "    raise SystemExit(1)",
+            "print('Hermes mandatory governance boundary: available; live qualification still required')",
+        ])
         CONNECTOR_PROBE = "\n".join([
             "import json, sys",
             "from pathlib import Path",
@@ -2160,6 +2204,7 @@ def _qualification_script() -> str:
                     "setup_plan": _python_command(install_dir, "-m", "project_maya.cli", "setup", "plan", "--config", str(config_path)),
                     "setup_init_dry_run": _python_command(install_dir, "-m", "project_maya.cli", "setup", "init", "--config", str(config_path)),
                     "hermes_runtime": _python_command(install_dir, "-c", HERMES_PROBE, str(install_dir)),
+                    "hermes_governance_boundary": _python_command(install_dir, "-c", GOVERNANCE_BOUNDARY_PROBE),
                     "doctor": _python_command(install_dir, "-m", "project_maya.cli", "doctor", "--config", str(config_path)),
                     "health_summary": _python_command(install_dir, "-m", "project_maya.cli", "health", "summary", "--config", str(config_path)),
                     "local_api_contract": _python_command(install_dir, "-c", LOCAL_API_PROBE, str(config_path)),
