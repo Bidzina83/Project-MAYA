@@ -78,11 +78,23 @@ class TestPhase1DoctorLocalState(unittest.TestCase):
                     {
                         "allow": [
                             {
-                                "actor_id": "operator",
+                                "actor_id": "local-user",
                                 "capability": "runtime.execute",
                                 "target": "hermes-agent",
                                 "operation": "run",
-                            }
+                            },
+                            {
+                                "actor_id": "local-user",
+                                "capability": "memory.read",
+                                "target": "*",
+                                "operation": "search",
+                            },
+                            {
+                                "actor_id": "local-user",
+                                "capability": "model.egress",
+                                "target": "model:openai",
+                                "operation": "infer",
+                            },
                         ]
                     }
                 ),
@@ -112,6 +124,37 @@ class TestPhase1DoctorLocalState(unittest.TestCase):
         self.assertEqual(checks["backup.state"].status, DoctorStatus.PASS)
         self.assertEqual(checks["migration.state"].status, DoctorStatus.PASS)
         self.assertIn("records=1", checks["memory.store"].message)
+
+    def test_doctor_warns_for_valid_but_insufficient_policy(self):
+        for actor_id in ("operator", "local-user"):
+            with self.subTest(actor_id=actor_id), tempfile.TemporaryDirectory() as tmp:
+                policy_path = Path(tmp) / "policy.json"
+                policy_path.write_text(
+                    json.dumps({"allow": [{
+                        "actor_id": actor_id,
+                        "capability": "runtime.execute",
+                        "target": "hermes-agent",
+                        "operation": "run",
+                    }]}),
+                    encoding="utf-8",
+                )
+                config_data = valid_config_mapping()
+                config_data["deployment"]["data_dir"] = tmp
+                config_data["governance"]["policy_file"] = str(policy_path)
+                report = run_doctor(
+                    config_from_mapping(config_data),
+                    HermesRuntimeAdapter(factory_path="missing.hermes:factory"),
+                    lifecycle_state=AgentState.STOPPED,
+                )
+                check = next(c for c in report.checks if c.name == "governance.policy")
+                self.assertEqual(check.status, DoctorStatus.WARN)
+                self.assertIn("policy file valid; local-user readiness blocked", check.message)
+                self.assertIn("memory.read", check.message)
+                self.assertIn("model.egress", check.message)
+                if actor_id == "operator":
+                    self.assertIn("runtime.execute", check.message)
+                else:
+                    self.assertNotIn("runtime.execute", check.message)
 
     def test_doctor_fails_disk_space_when_data_dir_parent_is_missing(self):
         with tempfile.TemporaryDirectory() as tmp:
