@@ -53,7 +53,7 @@ jobs:
         env:
           UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/maya-g0-native-env
           UV_CACHE_DIR: ${{ runner.temp }}/maya-g0-dependency-cache
-        run: uv sync --project .codex-build/g0-ci-a/source --locked --no-install-project --extra dev --extra messaging --extra anthropic --no-build --no-python-downloads --python 3.13
+        run: uv sync --project .codex-build/g0-ci-a/source --locked --no-install-project --extra dev --extra messaging --extra anthropic --extra bedrock --no-build --no-python-downloads --python 3.13
       - name: Run native controls offline
         env:
           G0_MODE: ${{ inputs.mode }}

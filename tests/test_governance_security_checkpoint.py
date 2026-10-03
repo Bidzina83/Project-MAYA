@@ -36,6 +36,8 @@ class TestSecurityCheckpoint(unittest.TestCase):
         self.assertIn("--mode security --security-checkpoint", commands)
         self.assertIn("--mode bounded --security-checkpoint", commands)
         self.assertIn("--ordinary-baseline", commands)
+        self.assertIn("--extra bedrock", commands)
+        self.assertIn("--locked", commands)
         self.assertNotIn("build_phase6_release", commands)
 
     def test_overlay_is_exact_and_does_not_rewrite_g0_patch_series(self):

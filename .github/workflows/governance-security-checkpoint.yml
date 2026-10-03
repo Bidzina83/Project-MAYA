@@ -38,7 +38,7 @@ jobs:
         env:
           UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/maya-security-native-env
           UV_CACHE_DIR: ${{ runner.temp }}/maya-security-dependency-cache
-        run: uv sync --project .codex-build/security-a/source --locked --no-install-project --extra dev --extra messaging --extra anthropic --no-build --no-python-downloads --python 3.13
+        run: uv sync --project .codex-build/security-a/source --locked --no-install-project --extra dev --extra messaging --extra anthropic --extra bedrock --no-build --no-python-downloads --python 3.13
       - name: Run security probes and native regression controls offline
         env:
           SECURITY_PYTHON: ${{ runner.temp }}/maya-security-native-env/bin/python

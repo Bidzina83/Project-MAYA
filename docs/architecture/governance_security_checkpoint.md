@@ -145,6 +145,15 @@ checks. It needs the committed/pushed candidate, then reviewed receipts. It does
 not install customer software, use credentials, build an installer or enable G1.
 Until those receipts are accepted, step 4 above is not complete.
 
+The first Linux run (37146339919) passed all 193 focused native checks, then
+blocked before bounded regressions: native Bedrock import triggered lazy
+installation of boto3 with unlocked transitive dependencies. The evidence shows
+botocore 1.42.97 and s3transfer 0.16.1 instead of locked 1.42.89 and 0.16.0.
+Both native workflows now prepare the existing Bedrock extra through locked sync;
+the runner requires that extra and sets HERMES_DISABLE_LAZY_INSTALLS=1. This is
+test-environment preparation, not enabling Bedrock in Maya or changing native
+patches. Fresh Linux receipts are still required; the failed run is not accepted.
+
 ## Commands
 
 ```text

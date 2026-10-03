@@ -87,6 +87,8 @@ class TestGovernanceBaseline(unittest.TestCase):
             self.assertNotIn(key, env)
         self.assertEqual(env["HERMES_HOME"], str(Path("isolated/hermes")))
         self.assertEqual(env["UV_OFFLINE"], "1")
+        self.assertEqual(env["HERMES_DISABLE_LAZY_INSTALLS"], "1")
+        self.assertIn('"bedrock"', native.PREFLIGHT)
 
     def test_linux_job_is_manual_pinned_and_does_not_build_an_installer(self):
         import yaml
@@ -99,6 +101,7 @@ class TestGovernanceBaseline(unittest.TestCase):
         commands = "\n".join(s.get("run", "") for s in steps)
         self.assertIn("--locked", commands)
         self.assertIn("--no-install-project", commands)
+        self.assertIn("--extra bedrock", commands)
         self.assertIn("run_governance_native_regressions.py", commands)
         self.assertNotIn("build_phase6_release", commands)
 

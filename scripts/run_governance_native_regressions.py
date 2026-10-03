@@ -26,7 +26,7 @@ versions={}
 for p in lock["package"]:
     versions.setdefault(canonical(p["name"]),set()).add(p["version"])
 required=list(project["dependencies"])
-for extra in ("dev","messaging","anthropic"):
+for extra in ("dev","messaging","anthropic","bedrock"):
     required.extend(project["optional-dependencies"][extra])
 missing=[]
 for raw in required:
@@ -95,7 +95,8 @@ def clean_environment(home, python=None):
     env.update(HOME=str(home), USERPROFILE=str(home), APPDATA=str(home),
                LOCALAPPDATA=str(home), HERMES_HOME=str(home / "hermes"),
                PYTHONNOUSERSITE="1", PYTHONDONTWRITEBYTECODE="1",
-               PYTEST_DISABLE_PLUGIN_AUTOLOAD="1", UV_OFFLINE="1")
+               PYTEST_DISABLE_PLUGIN_AUTOLOAD="1", UV_OFFLINE="1",
+               HERMES_DISABLE_LAZY_INSTALLS="1")
     if python is not None and os.name == "posix":
         # Hosted Python can need its own shared library; never inherit loader paths.
         library = Path(python).resolve().parent.parent / "lib"
