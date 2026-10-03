@@ -27,6 +27,7 @@ class TestHermesGovernancePlugin(unittest.TestCase):
         self.audit = Mock()
         self.gateway = PolicyAuthorizationGateway((
             PolicyRule("model.egress", target="model:openai", operation="infer", actor_id="alice"),
+            PolicyRule("model.output", target="model:openai", operation="disclose", actor_id="alice"),
             PolicyRule("memory.read", operation="search", actor_id="alice"),
             PolicyRule("file.read", operation="read", actor_id="alice"),
         ))
@@ -54,15 +55,30 @@ class TestHermesGovernancePlugin(unittest.TestCase):
         return SimpleNamespace(
             MAYA_GOVERNANCE_CONTRACT={"version": CONTRACT_VERSION, "capabilities": list(REQUIRED_CAPABILITIES)},
             run_llm_execution_middleware=Mock(), run_tool_execution_middleware=Mock(),
+            run_tool_result_middleware=Mock(), run_model_output_middleware=Mock(),
+            require_single_attempt_client=Mock(),
             require_middleware=Mock(), validate_mandatory_middleware=Mock(return_value=True),
         )
 
     def test_registers_native_mandatory_execution_adapters(self):
         ctx, module = Mock(), self.contract()
         self.plugin.register(ctx, runtime_module=module)
-        self.assertEqual(ctx.register_middleware.call_count, 2)
-        self.assertEqual(module.require_middleware.call_count, 2)
+        self.assertEqual(ctx.register_middleware.call_count, 4)
+        self.assertEqual(module.require_middleware.call_count, 4)
         self.assertEqual(ctx.register_middleware.call_args_list[0].args[0], "llm_execution")
+        self.assertEqual(ctx.register_middleware.call_args_list[-1].args[0], "model_output")
+
+    def test_model_output_requires_identity_policy_and_secret_safe_content(self):
+        output = {"final_response": "synthetic safe answer", "messages": []}
+        context = self.context | {"model": "test-model", "stage": "before_return"}
+        with self.assertRaisesRegex(GovernanceBoundaryError, "identity_missing"):
+            self.plugin.model_output(result=output, **context)
+        with bind_request_identity("mallory"), self.assertRaisesRegex(GovernanceBoundaryError, "action_denied"):
+            self.plugin.model_output(result=output, **context)
+        with bind_request_identity("alice"):
+            self.assertEqual(self.plugin.model_output(result=output, **context), output)
+            with self.assertRaisesRegex(GovernanceBoundaryError, "sensitive_payload"):
+                self.plugin.model_output(result={"final_response": "sk-proj-syntheticcredential0123456789"}, **context)
 
     def test_startup_guard_blocks_before_factory_construction(self):
         factory = Mock()
@@ -89,6 +105,15 @@ class TestHermesGovernancePlugin(unittest.TestCase):
                 self.assertEqual(self.model(execute), "synthetic response")
         self.assertEqual(execute.call_count, 3)
         self.assertEqual(self.audit.write.call_count, 3)
+
+    def test_provider_transport_failure_is_not_a_policy_failure(self):
+        failure = RuntimeError("synthetic transport failure")
+        execute = Mock(side_effect=failure)
+        with bind_request_identity("alice"), self.assertRaises(RuntimeError) as caught:
+            self.model(execute)
+        self.assertIs(caught.exception, failure)
+        execute.assert_called_once()
+        self.assertEqual(self.audit.write.call_count, 1)
 
     def test_changed_endpoint_provider_or_model_never_executes(self):
         for context in ({"base_url": "https://other.example/v1"}, {"provider": "other"}):
@@ -156,7 +181,7 @@ class TestHermesGovernancePlugin(unittest.TestCase):
         execute = Mock(return_value="synthetic document")
         with bind_request_identity("alice"):
             self.plugin.tool_execution(tool_name="read_file", args={"path": "note.txt"}, next_call=execute)
-            self.assertEqual(execute.call_args.args[0]["path"], str((root / "note.txt").resolve()))
+            self.assertEqual(execute.call_args.args[0]["path"], (root / "note.txt").resolve().as_posix())
             execute.reset_mock()
             with self.assertRaisesRegex(GovernanceBoundaryError, "outside_root"):
                 self.plugin.tool_execution(tool_name="read_file", args={"path": "../outside.txt"}, next_call=execute)

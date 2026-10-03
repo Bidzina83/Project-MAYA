@@ -1,0 +1,256 @@
+--- a/hermes_state.py
++++ b/hermes_state.py
+@@ -960,11 +960,14 @@
+                     try:
+                         result = fn(self._conn)
+                         self._conn.commit()
+-                    except BaseException:
++                    except BaseException as failure:
+                         try:
+                             self._conn.rollback()
+                         except Exception:
+                             pass
++                        if mandatory_middleware_enabled():
++                            if isinstance(failure, Exception) and not isinstance(failure, MandatoryMiddlewareError):
++                                raise MandatoryMiddlewareError("session_write_failed") from None
+                         raise
+                 # Success — periodic best-effort checkpoint.
+                 self._write_count += 1
+@@ -983,8 +986,12 @@
+                         time.sleep(jitter)
+                         continue
+                 # Non-lock error or retries exhausted — propagate.
++                if mandatory_middleware_enabled():
++                    raise MandatoryMiddlewareError("session_write_failed") from None
+                 raise
+         # Retries exhausted (shouldn't normally reach here).
++        if mandatory_middleware_enabled():
++            raise MandatoryMiddlewareError("session_write_failed") from None
+         raise last_err or sqlite3.OperationalError(
+             "database is locked after max retries"
+         )
+@@ -1369,24 +1376,22 @@
+         cwd: str = None,
+     ) -> None:
+         """Shared INSERT OR IGNORE for session rows."""
++        values = (
++            session_id, source, user_id, model,
++            json.dumps(model_config) if model_config else None,
++            system_prompt, parent_session_id, cwd, time.time(),
++        )
++        descriptor = {"session_id": session_id, "operation": "create", "payload": dict(zip(
++            ("id", "source", "user_id", "model", "model_config", "system_prompt", "parent_session_id", "cwd", "started_at"), values,
++        ))}
+         def _do(conn):
+             conn.execute(
+                 """INSERT OR IGNORE INTO sessions (id, source, user_id, model, model_config,
+                    system_prompt, parent_session_id, cwd, started_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+-                (
+-                    session_id,
+-                    source,
+-                    user_id,
+-                    model,
+-                    json.dumps(model_config) if model_config else None,
+-                    system_prompt,
+-                    parent_session_id,
+-                    cwd,
+-                    time.time(),
+-                ),
+-            )
+-        self._execute_write(_do)
++                values,
++            )
++        self._execute_write(_do, session_write=descriptor)
+ 
+     def create_session(self, session_id: str, source: str, **kwargs) -> str:
+         """Create a new session record. Returns the session_id."""
+@@ -1580,7 +1585,10 @@
+                 "UPDATE sessions SET system_prompt = ? WHERE id = ?",
+                 (system_prompt, session_id),
+             )
+-        self._execute_write(_do)
++        self._execute_write(_do, session_write={
++            "session_id": session_id, "operation": "metadata",
++            "payload": {"system_prompt": system_prompt},
++        })
+ 
+     def update_session_model(self, session_id: str, model: str) -> None:
+         """Update the model for a session after a mid-session switch.
+@@ -2593,14 +2601,16 @@
+             "timestamp": timestamp,
+         }])[0]
+ 
+-    def append_messages(self, session_id: str, messages: List[Dict[str, Any]]) -> List[int]:
+-        """Prepare and authorize all serialized rows before one native transaction."""
+-        columns = (
++    _SESSION_MESSAGE_COLUMNS = (
+             "session_id", "role", "content", "tool_call_id", "tool_calls",
+             "tool_name", "timestamp", "token_count", "finish_reason", "reasoning",
+             "reasoning_content", "reasoning_details", "codex_reasoning_items",
+             "codex_message_items", "platform_message_id", "observed",
+-        )
++    )
++
++    def append_messages(self, session_id: str, messages: List[Dict[str, Any]]) -> List[int]:
++        """Prepare and authorize all serialized rows before one native transaction."""
++        columns = self._SESSION_MESSAGE_COLUMNS
+         try:
+             prepared = tuple(self._prepare_append_row(session_id=session_id, **dict(msg)) for msg in messages)
+         except Exception:
+@@ -2632,17 +2642,19 @@
+ 
+         return self._execute_write(_do, session_write=descriptor)
+ 
+-    def _insert_message_rows(self, conn, session_id: str, messages: List[Dict[str, Any]]) -> tuple[int, int]:
+-        """Insert *messages* as fresh active rows for *session_id*.
+-
+-        Shared by :meth:`replace_messages` (delete-then-insert) and
+-        :meth:`archive_and_compact` (soft-archive-then-insert). Runs inside the
+-        caller's write transaction (takes the live ``conn``). Returns
+-        ``(inserted_count, tool_call_count)``. Does NOT touch sessions.* counters
+-        — the caller owns that, since the two flows reconcile counts differently.
+-        """
++    def _prepare_message_rows(self, session_id: str, messages: List[Dict[str, Any]]):
++        """Prepare immutable native rewrite values before destructive operations."""
++        try:
++            return self._prepare_message_rows_unchecked(session_id, messages)
++        except Exception:
++            from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++            if mandatory_middleware_enabled():
++                raise MandatoryMiddlewareError("session_write_failed") from None
++            raise
++
++    def _prepare_message_rows_unchecked(self, session_id: str, messages: List[Dict[str, Any]]):
+         now_ts = time.time()
+-        inserted = 0
++        rows = []
+         tool_calls_total = 0
+         for msg in messages:
+             role = msg.get("role", "unknown")
+@@ -2656,7 +2668,9 @@
+                     else:
+                         message_timestamp = float(ts_value)
+                 except (TypeError, ValueError):
+-                    logger.debug("Ignoring invalid explicit message timestamp: %r", msg.get("timestamp"))
++                    from hermes_cli.middleware import mandatory_middleware_enabled
++                    if not mandatory_middleware_enabled():
++                        logger.debug("Ignoring invalid explicit message timestamp: %r", msg.get("timestamp"))
+             reasoning_details = msg.get("reasoning_details") if role == "assistant" else None
+             codex_reasoning_items = (
+                 msg.get("codex_reasoning_items") if role == "assistant" else None
+@@ -2680,12 +2694,7 @@
+                 msg.get("platform_message_id") or msg.get("message_id")
+             )
+ 
+-            conn.execute(
+-                """INSERT INTO messages (session_id, role, content, tool_call_id,
+-                   tool_calls, tool_name, timestamp, token_count, finish_reason,
+-                   reasoning, reasoning_content, reasoning_details, codex_reasoning_items,
+-                   codex_message_items, platform_message_id, observed)
+-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
++            rows.append(
+                 (
+                     session_id,
+                     role,
+@@ -2705,13 +2714,25 @@
+                     1 if msg.get("observed") else 0,
+                 ),
+             )
+-            inserted += 1
+             if tool_calls is not None:
+                 tool_calls_total += (
+                     len(tool_calls) if isinstance(tool_calls, list) else 1
+                 )
+             now_ts = max(now_ts + 1e-6, message_timestamp + 1e-6)
+-        return inserted, tool_calls_total
++        return tuple(rows), tool_calls_total
++
++    def _insert_prepared_message_rows(self, conn, rows):
++        columns = self._SESSION_MESSAGE_COLUMNS
++        for values in rows:
++            conn.execute(
++                "INSERT INTO messages (" + ", ".join(columns) + ") VALUES (" +
++                ", ".join("?" for _ in columns) + ")", values,
++            )
++
++    def _insert_message_rows(self, conn, session_id: str, messages: List[Dict[str, Any]]) -> tuple[int, int]:
++        rows, tool_calls = self._prepare_message_rows(session_id, messages)
++        self._insert_prepared_message_rows(conn, rows)
++        return len(rows), tool_calls
+ 
+     def replace_messages(self, session_id: str, messages: List[Dict[str, Any]]) -> None:
+         """Atomically replace every message for a session.
+@@ -2725,6 +2746,10 @@
+         the same id, use :meth:`archive_and_compact` instead.
+         """
+ 
++        rows, total_tool_calls = self._prepare_message_rows(session_id, messages)
++        descriptor = {"session_id": session_id, "operation": "rewrite", "payload": {
++            "rows": [dict(zip(self._SESSION_MESSAGE_COLUMNS, values)) for values in rows],
++        }}
+         def _do(conn):
+             conn.execute(
+                 "DELETE FROM messages WHERE session_id = ?", (session_id,)
+@@ -2733,15 +2758,14 @@
+                 "UPDATE sessions SET message_count = 0, tool_call_count = 0 WHERE id = ?",
+                 (session_id,),
+             )
+-            total_messages, total_tool_calls = self._insert_message_rows(
+-                conn, session_id, messages
+-            )
++            self._insert_prepared_message_rows(conn, rows)
++            total_messages = len(rows)
+             conn.execute(
+                 "UPDATE sessions SET message_count = ?, tool_call_count = ? WHERE id = ?",
+                 (total_messages, total_tool_calls, session_id),
+             )
+ 
+-        self._execute_write(_do)
++        self._execute_write(_do, session_write=descriptor)
+ 
+     def archive_and_compact(
+         self, session_id: str, compacted_messages: List[Dict[str, Any]]
+@@ -2770,6 +2794,10 @@
+         matching what the live load returns. Returns the new active count.
+         """
+ 
++        rows, tool_calls_total = self._prepare_message_rows(session_id, compacted_messages)
++        descriptor = {"session_id": session_id, "operation": "compact", "payload": {
++            "rows": [dict(zip(self._SESSION_MESSAGE_COLUMNS, values)) for values in rows],
++        }}
+         def _do(conn):
+             # Soft-archive the live turns: active=0 hides them from the live
+             # context load, compacted=1 marks them as "summarized away" (vs
+@@ -2782,9 +2810,8 @@
+                 "WHERE session_id = ? AND active = 1",
+                 (session_id,),
+             )
+-            inserted, tool_calls_total = self._insert_message_rows(
+-                conn, session_id, compacted_messages
+-            )
++            self._insert_prepared_message_rows(conn, rows)
++            inserted = len(rows)
+             # message_count / tool_call_count reflect the LIVE (active) set —
+             # the archived rows are still on disk but not part of the live count.
+             conn.execute(
+@@ -2793,7 +2820,7 @@
+             )
+             return inserted
+ 
+-        return self._execute_write(_do)
++        return self._execute_write(_do, session_write=descriptor)
+ 
+ 
+     def get_messages(
+@@ -4006,7 +4033,9 @@
+                 "UPDATE sessions SET message_count = 0, tool_call_count = 0 WHERE id = ?",
+                 (session_id,),
+             )
+-        self._execute_write(_do)
++        self._execute_write(_do, session_write={
++            "session_id": session_id, "operation": "delete", "payload": {"messages": "all"},
++        })
+ 
+     @staticmethod
+     def _remove_session_files(sessions_dir: Optional[Path], session_id: str) -> None:

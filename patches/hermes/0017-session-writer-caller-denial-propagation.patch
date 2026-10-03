@@ -1,0 +1,115 @@
+--- a/run_agent.py
++++ b/run_agent.py
+@@ -523,6 +523,10 @@
+ 
+     def _ensure_db_session(self) -> None:
+         """Create session DB row on first use. Disables _session_db on failure."""
++        if not self._session_db:
++            from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++            if mandatory_middleware_enabled():
++                raise MandatoryMiddlewareError("session_write_failed")
+         if self._session_db_created or not self._session_db:
+             return
+         source = _session_source_for_agent(self.platform)
+@@ -540,6 +544,11 @@
+             self._session_db_created = True
+         except Exception as e:
+             # Transient failure (e.g. SQLite lock). Keep _session_db alive —
++            from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++            if mandatory_middleware_enabled():
++                if isinstance(e, MandatoryMiddlewareError):
++                    raise
++                raise MandatoryMiddlewareError("session_write_failed") from None
+             # _session_db_created stays False so next run_conversation() retries.
+             logger.warning(
+                 "Session DB creation failed (will retry next turn): %s", e
+@@ -1602,6 +1611,9 @@
+         can drift after message-sequence repair.
+         """
+         if not self._session_db:
++            from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++            if mandatory_middleware_enabled():
++                raise MandatoryMiddlewareError("session_write_failed")
+             return
+         self._apply_persist_user_message_override(messages)
+         self._validate_persistence_payload(
+@@ -1613,8 +1625,6 @@
+         try:
+             # Retry row creation if the earlier attempt failed transiently.
+             if not self._session_db_created:
+-                if mandatory:
+-                    raise MandatoryMiddlewareError("session_write_unqualified")
+                 self._ensure_db_session()
+             # Positional flushing used to slice at
+             # max(len(conversation_history), _last_flushed_db_idx). That
+--- a/gateway/session.py
++++ b/gateway/session.py
+@@ -1409,6 +1409,10 @@
+                      _flush_messages_to_session_db(), preventing the
+                      duplicate-write bug (#860).
+         """
++        if not self._db and not skip_db:
++            from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++            if mandatory_middleware_enabled():
++                raise MandatoryMiddlewareError("session_write_failed")
+         if self._db and not skip_db:
+             try:
+                 self._db.append_message(
+@@ -1433,6 +1437,11 @@
+                     timestamp=message.get("timestamp"),
+                 )
+             except Exception as e:
++                from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++                if mandatory_middleware_enabled():
++                    if isinstance(e, MandatoryMiddlewareError):
++                        raise
++                    raise MandatoryMiddlewareError("session_write_failed") from None
+                 logger.debug("Session DB operation failed: %s", e)
+     
+     def rewrite_transcript(self, session_id: str, messages: List[Dict[str, Any]]) -> None:
+@@ -1441,10 +1450,19 @@
+         Used by /retry, /undo, and /compress to persist modified conversation
+         history. state.db is the canonical store.
+         """
++        if not self._db:
++            from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++            if mandatory_middleware_enabled():
++                raise MandatoryMiddlewareError("session_write_failed")
+         if self._db:
+             try:
+                 self._db.replace_messages(session_id, messages)
+             except Exception as e:
++                from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++                if mandatory_middleware_enabled():
++                    if isinstance(e, MandatoryMiddlewareError):
++                        raise
++                    raise MandatoryMiddlewareError("session_write_failed") from None
+                 logger.debug("Failed to rewrite transcript in DB: %s", e)
+ 
+     def load_transcript(self, session_id: str) -> List[Dict[str, Any]]:
+--- a/gateway/mirror.py
++++ b/gateway/mirror.py
+@@ -70,6 +70,11 @@
+         return True
+ 
+     except Exception as e:
++        from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++        if mandatory_middleware_enabled():
++            if isinstance(e, MandatoryMiddlewareError):
++                raise
++            raise MandatoryMiddlewareError("session_write_failed") from None
+         logger.debug(
+             "Mirror failed for %s:%s:%s:%s: %s",
+             platform,
+@@ -166,6 +171,11 @@
+             content=message.get("content"),
+         )
+     except Exception as e:
++        from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++        if mandatory_middleware_enabled():
++            if isinstance(e, MandatoryMiddlewareError):
++                raise
++            raise MandatoryMiddlewareError("session_write_failed") from None
+         logger.debug("Mirror SQLite write failed: %s", e)
+     finally:
+         if db is not None:

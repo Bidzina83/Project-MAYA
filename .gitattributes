@@ -1,0 +1,4 @@
+/patches/hermes/*.patch text eol=lf whitespace=-blank-at-eol
+/tests/fixtures/hermes_middleware/* text eol=lf
+# Preserve upstream snapshots byte-for-byte for provenance checks.
+/tests/fixtures/hermes_middleware/*.py whitespace=-blank-at-eol

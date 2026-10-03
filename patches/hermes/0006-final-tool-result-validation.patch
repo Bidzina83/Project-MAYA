@@ -1,0 +1,311 @@
+diff --git a/hermes_cli/middleware.py b/hermes_cli/middleware.py
+index 5eee9f5..8dc6627 100644
+--- a/hermes_cli/middleware.py
++++ b/hermes_cli/middleware.py
+@@ -20,6 +20,7 @@ MIDDLEWARE_SCHEMA_VERSION = "hermes.middleware.v1"
+ 
+ TOOL_REQUEST_MIDDLEWARE = "tool_request"
+ TOOL_EXECUTION_MIDDLEWARE = "tool_execution"
++TOOL_RESULT_MIDDLEWARE = "tool_result"
+ LLM_REQUEST_MIDDLEWARE = "llm_request"
+ LLM_EXECUTION_MIDDLEWARE = "llm_execution"
+ 
+@@ -30,6 +31,7 @@ API_EXECUTION_MIDDLEWARE = LLM_EXECUTION_MIDDLEWARE
+ VALID_MIDDLEWARE: set[str] = {
+     TOOL_REQUEST_MIDDLEWARE,
+     TOOL_EXECUTION_MIDDLEWARE,
++    TOOL_RESULT_MIDDLEWARE,
+     LLM_REQUEST_MIDDLEWARE,
+     LLM_EXECUTION_MIDDLEWARE,
+ }
+@@ -38,7 +40,7 @@ VALID_MIDDLEWARE: set[str] = {
+ # worker paths have also been qualified against the built runtime artifact.
+ _mandatory_enabled = False
+ _mandatory_callbacks: Dict[str, Callable] = {}
+-_EXECUTION_KINDS = (LLM_EXECUTION_MIDDLEWARE, TOOL_EXECUTION_MIDDLEWARE)
++_EXECUTION_KINDS = (LLM_EXECUTION_MIDDLEWARE, TOOL_EXECUTION_MIDDLEWARE, TOOL_RESULT_MIDDLEWARE)
+ 
+ 
+ class MandatoryMiddlewareError(RuntimeError):
+@@ -48,7 +50,7 @@ class MandatoryMiddlewareError(RuntimeError):
+         allowed = {
+             "invalid_binding", "binding_replaced", "gate_missing", "next_call_reused",
+             "callback_failed", "gate_bypassed", "route_ambiguous", "route_missing",
+-            "auxiliary_failed", "unsupported_plugin_caller",
++            "auxiliary_failed", "unsupported_plugin_caller", "tool_failed",
+         }
+         reason = code.removeprefix("mandatory_middleware.") if isinstance(code, str) else "callback_failed"
+         if reason not in allowed:
+@@ -57,7 +59,7 @@ class MandatoryMiddlewareError(RuntimeError):
+ 
+ 
+ def enable_mandatory_middleware() -> None:
+-    """Require both execution gates for the lifetime of this process.
++    """Require all mandatory boundaries for the lifetime of this process.
+ 
+     The host must opt in before plugin discovery or agent construction. There
+     is deliberately no runtime disable/reset API: unloading plugins must deny.
+@@ -83,7 +85,7 @@ def require_middleware(kind: str, callback: Callable) -> None:
+ 
+ 
+ def validate_mandatory_middleware() -> bool:
+-    """Validate live registration, not just an earlier discovery snapshot."""
++    """Validate all three live bindings, not an earlier discovery snapshot."""
+     if not _mandatory_enabled:
+         return False
+     for kind in _EXECUTION_KINDS:
+@@ -280,6 +282,34 @@ def run_tool_execution_middleware(
+     )
+ 
+ 
++def run_tool_result_middleware(tool_name: str, args: Dict[str, Any], result: Any, **context: Any) -> Any:
++    """Validate the final tool result after execution and result transforms.
++
++    This candidate fork extension reuses the native middleware registry. The
++    required validator is the last callback and receives no execution callback.
++    """
++    if not _mandatory_enabled:
++        return result
++    try:
++        if not validate_mandatory_middleware():
++            raise MandatoryMiddlewareError("gate_missing")
++        required = _mandatory_callbacks[TOOL_RESULT_MIDDLEWARE]
++        callbacks = _get_middleware_callbacks(TOOL_RESULT_MIDDLEWARE)
++        callbacks = [callback for callback in callbacks if callback != required] + [required]
++        effective_args = deepcopy(args)
++        for callback in callbacks:
++            result = callback(**middleware_payload(
++                tool_name=tool_name, args=deepcopy(effective_args), result=result, **context,
++            ))
++            if not validate_mandatory_middleware():
++                raise MandatoryMiddlewareError("gate_missing")
++        return result
++    except MandatoryMiddlewareError as exc:
++        raise MandatoryMiddlewareError(str(exc)) from None
++    except Exception:
++        raise MandatoryMiddlewareError("callback_failed") from None
++
++
+ async def run_llm_execution_middleware_async(
+     request: Dict[str, Any],
+     next_call: Callable[[Dict[str, Any]], Any],
+diff --git a/model_tools.py b/model_tools.py
+index dbaeff5..6edc1c6 100644
+--- a/model_tools.py
++++ b/model_tools.py
+@@ -27,6 +27,7 @@ import asyncio
+ import logging
+ import threading
+ import time
++from copy import deepcopy
+ from typing import Dict, Any, List, Optional, Tuple
+ from hermes_cli.middleware import (
+     MandatoryMiddlewareError, mandatory_middleware_enabled,
+@@ -1050,6 +1051,8 @@ def handle_function_call(
+         except MandatoryMiddlewareError as _mw_err:
+             raise MandatoryMiddlewareError(str(_mw_err)) from None
+         except Exception as _mw_err:
++            if mandatory_middleware_enabled():
++                raise MandatoryMiddlewareError("tool_failed") from None
+             logger.debug("tool_request middleware error: %s", _mw_err)
+ 
+     try:
+@@ -1083,6 +1086,8 @@ def handle_function_call(
+             except MandatoryMiddlewareError as _hook_err:
+                 raise MandatoryMiddlewareError(str(_hook_err)) from None
+             except Exception as _hook_err:
++                if mandatory_middleware_enabled():
++                    raise MandatoryMiddlewareError("tool_failed") from None
+                 logger.debug("pre_tool_call hook error: %s", _hook_err)
+ 
+             if block_message is not None:
+@@ -1115,6 +1120,8 @@ def handle_function_call(
+         except MandatoryMiddlewareError as _edit_approval_err:
+             raise MandatoryMiddlewareError(str(_edit_approval_err)) from None
+         except Exception as _edit_approval_err:
++            if mandatory_middleware_enabled():
++                raise MandatoryMiddlewareError("tool_failed") from None
+             logger.debug("ACP edit approval guard error: %s", _edit_approval_err)
+             if function_name in {"write_file", "patch"}:
+                 return json.dumps({"error": "Edit approval denied: approval guard failed"}, ensure_ascii=False)
+@@ -1137,6 +1144,20 @@ def handle_function_call(
+         # unaffected by wall-clock adjustments during the call.
+         _dispatch_start = time.monotonic()
+         _approval_tokens = None
++        _executed_args = None
++
++        def _validate_result(value):
++            if not mandatory_middleware_enabled():
++                return value
++            from hermes_cli.middleware import run_tool_result_middleware
++            if _executed_args is None:
++                raise MandatoryMiddlewareError("gate_bypassed")
++            return run_tool_result_middleware(
++                function_name, _executed_args, value,
++                task_id=task_id or "", session_id=session_id or "",
++                tool_call_id=tool_call_id or "", turn_id=turn_id or "",
++                api_request_id=api_request_id or "",
++            )
+         try:
+             from tools.approval import (
+                 reset_current_observability_context,
+@@ -1154,6 +1175,8 @@ def handle_function_call(
+                 # the parent's tool set via the process-global.
+                 sandbox_enabled = enabled_tools if enabled_tools is not None else _last_resolved_tool_names
+                 def _dispatch(next_args: Dict[str, Any]) -> Any:
++                    nonlocal _executed_args
++                    _executed_args = deepcopy(next_args) if mandatory_middleware_enabled() else next_args
+                     return registry.dispatch(
+                         function_name, next_args,
+                         task_id=task_id,
+@@ -1162,6 +1185,8 @@ def handle_function_call(
+                     )
+             else:
+                 def _dispatch(next_args: Dict[str, Any]) -> Any:
++                    nonlocal _executed_args
++                    _executed_args = deepcopy(next_args) if mandatory_middleware_enabled() else next_args
+                     return registry.dispatch(
+                         function_name, next_args,
+                         task_id=task_id,
+@@ -1187,6 +1212,7 @@ def handle_function_call(
+                     reset_current_observability_context(_approval_tokens)
+                 except Exception:
+                     pass
++        result = _validate_result(result)
+         duration_ms = int((time.monotonic() - _dispatch_start) * 1000)
+ 
+         _emit_post_tool_call_hook(
+@@ -1236,13 +1262,17 @@ def handle_function_call(
+         except MandatoryMiddlewareError as _hook_err:
+             raise MandatoryMiddlewareError(str(_hook_err)) from None
+         except Exception as _hook_err:
++            if mandatory_middleware_enabled():
++                raise MandatoryMiddlewareError("tool_failed") from None
+             logger.debug("transform_tool_result hook error: %s", _hook_err)
+ 
+-        return result
++        return _validate_result(result)
+ 
+     except MandatoryMiddlewareError as e:
+         raise MandatoryMiddlewareError(str(e)) from None
+     except Exception as e:
++        if mandatory_middleware_enabled():
++            raise MandatoryMiddlewareError("tool_failed") from None
+         error_msg = f"Error executing {function_name}: {str(e)}"
+         logger.exception(error_msg)
+         return json.dumps({"error": _sanitize_tool_error(error_msg)}, ensure_ascii=False)
+diff --git a/tools/registry.py b/tools/registry.py
+index c6a2189..ade89cf 100644
+--- a/tools/registry.py
++++ b/tools/registry.py
+@@ -18,7 +18,7 @@ import ast
+ import importlib
+ import json
+ import logging
+-from hermes_cli.middleware import MandatoryMiddlewareError
++from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
+ import threading
+ import time
+ from pathlib import Path
+@@ -406,6 +406,8 @@ class ToolRegistry:
+         except MandatoryMiddlewareError as e:
+             raise MandatoryMiddlewareError(str(e)) from None
+         except Exception as e:
++            if mandatory_middleware_enabled():
++                raise MandatoryMiddlewareError("tool_failed") from None
+             logger.exception("Tool %s dispatch error: %s", name, e)
+             # Route through the sanitizer so framing tokens / CDATA / fences
+             # in exception strings don't reach the model as structural noise.
+diff --git a/agent/tool_executor.py b/agent/tool_executor.py
+index e0eb732..dad6a1f 100644
+--- a/agent/tool_executor.py
++++ b/agent/tool_executor.py
+@@ -19,6 +19,7 @@ import os
+ import random
+ import threading
+ import time
++from copy import deepcopy
+ from typing import Any, Optional
+ from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
+ 
+@@ -247,6 +248,8 @@ def _apply_tool_request_middleware_for_agent(
+     except MandatoryMiddlewareError as exc:
+         raise MandatoryMiddlewareError(str(exc)) from None
+     except Exception as exc:
++        if mandatory_middleware_enabled():
++            raise MandatoryMiddlewareError("tool_failed") from None
+         logger.debug("tool_request middleware error: %s", exc)
+         return function_args, []
+ 
+@@ -264,8 +267,9 @@ def _run_agent_tool_execution_middleware(
+ 
+     def _execute(next_args: dict) -> Any:
+         nonlocal observed_args
+-        observed_args = next_args if isinstance(next_args, dict) else function_args
+-        return execute(observed_args)
++        effective = next_args if isinstance(next_args, dict) else function_args
++        observed_args = deepcopy(effective) if mandatory_middleware_enabled() else effective
++        return execute(effective)
+ 
+     from hermes_cli.middleware import run_tool_execution_middleware
+ 
+@@ -280,6 +284,14 @@ def _run_agent_tool_execution_middleware(
+         turn_id=getattr(agent, "_current_turn_id", "") or "",
+         api_request_id=getattr(agent, "_current_api_request_id", "") or "",
+     )
++    if mandatory_middleware_enabled():
++        from hermes_cli.middleware import run_tool_result_middleware
++        result = run_tool_result_middleware(
++            function_name, observed_args, result,
++            task_id=effective_task_id or "", session_id=getattr(agent, "session_id", "") or "",
++            tool_call_id=tool_call_id or "", turn_id=getattr(agent, "_current_turn_id", "") or "",
++            api_request_id=getattr(agent, "_current_api_request_id", "") or "",
++        )
+     return result, observed_args
+ 
+ 
+@@ -580,6 +592,8 @@ def execute_tool_calls_concurrent(agent, assistant_message, messages: list, effe
+             except MandatoryMiddlewareError as tool_error:
+                 raise MandatoryMiddlewareError(str(tool_error)) from None
+             except Exception as tool_error:
++                if mandatory_middleware_enabled():
++                    raise MandatoryMiddlewareError("tool_failed") from None
+                 result = f"Error executing tool '{function_name}': {tool_error}"
+                 logger.error("_invoke_tool raised for %s: %s", function_name, tool_error, exc_info=True)
+             duration = time.time() - start
+@@ -1245,6 +1259,8 @@ def execute_tool_calls_sequential(agent, assistant_message, messages: list, effe
+             except MandatoryMiddlewareError as tool_error:
+                 raise MandatoryMiddlewareError(str(tool_error)) from None
+             except Exception as tool_error:
++                if mandatory_middleware_enabled():
++                    raise MandatoryMiddlewareError("tool_failed") from None
+                 function_result = json.dumps({"error": f"Context engine tool '{function_name}' failed: {tool_error}"})
+                 logger.error("context_engine.handle_tool_call raised for %s: %s", function_name, tool_error, exc_info=True)
+             finally:
+@@ -1280,6 +1296,8 @@ def execute_tool_calls_sequential(agent, assistant_message, messages: list, effe
+             except MandatoryMiddlewareError as tool_error:
+                 raise MandatoryMiddlewareError(str(tool_error)) from None
+             except Exception as tool_error:
++                if mandatory_middleware_enabled():
++                    raise MandatoryMiddlewareError("tool_failed") from None
+                 function_result = json.dumps({"error": f"Memory tool '{function_name}' failed: {tool_error}"})
+                 logger.error("memory_manager.handle_tool_call raised for %s: %s", function_name, tool_error, exc_info=True)
+             finally:
+@@ -1332,6 +1350,8 @@ def execute_tool_calls_sequential(agent, assistant_message, messages: list, effe
+             except MandatoryMiddlewareError as tool_error:
+                 raise MandatoryMiddlewareError(str(tool_error)) from None
+             except Exception as tool_error:
++                if mandatory_middleware_enabled():
++                    raise MandatoryMiddlewareError("tool_failed") from None
+                 function_result = f"Error executing tool '{function_name}': {tool_error}"
+                 logger.error("handle_function_call raised for %s: %s", function_name, tool_error, exc_info=True)
+             finally:
+@@ -1374,6 +1394,8 @@ def execute_tool_calls_sequential(agent, assistant_message, messages: list, effe
+             except MandatoryMiddlewareError as tool_error:
+                 raise MandatoryMiddlewareError(str(tool_error)) from None
+             except Exception as tool_error:
++                if mandatory_middleware_enabled():
++                    raise MandatoryMiddlewareError("tool_failed") from None
+                 function_result = f"Error executing tool '{function_name}': {tool_error}"
+                 logger.error("handle_function_call raised for %s: %s", function_name, tool_error, exc_info=True)
+             tool_duration = time.time() - tool_start_time

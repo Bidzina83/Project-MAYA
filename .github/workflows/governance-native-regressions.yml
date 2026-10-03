@@ -1,0 +1,71 @@
+name: Governance Native Regression Qualification
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Native test scope; neither mode qualifies production
+        type: choice
+        options:
+          - bounded
+          - full
+        default: bounded
+
+permissions:
+  contents: read
+
+jobs:
+  native-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        source: [ordinary, candidate]
+    steps:
+      - name: Checkout Maya tooling and reviewed patches
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout exact Hermes objects
+        uses: actions/checkout@v4
+        with:
+          repository: Bidzina83/hermes-agent
+          ref: b13e2fd6948a59eeb59fe618914147d97a2ee90a
+          path: .codex-build/hermes-objects
+          persist-credentials: false
+      - name: Prepare qualification Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install pinned preparation tool
+        run: python -m pip install uv==0.11.21
+      - name: Reconstruct independent stages and compare manifests
+        env:
+          G0_SOURCE: ${{ matrix.source }}
+        run: |
+          ordinary=()
+          if [ "$G0_SOURCE" = ordinary ]; then ordinary=(--ordinary-baseline); fi
+          python scripts/prepare_governance_baseline.py --source-repo .codex-build/hermes-objects --output .codex-build/g0-ci-a "${ordinary[@]}"
+          python scripts/prepare_governance_baseline.py --source-repo .codex-build/hermes-objects --output .codex-build/g0-ci-b "${ordinary[@]}"
+          cmp .codex-build/g0-ci-a/baseline-manifest.json .codex-build/g0-ci-b/baseline-manifest.json
+      - name: Prepare exact locked native dependencies
+        env:
+          UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/maya-g0-native-env
+          UV_CACHE_DIR: ${{ runner.temp }}/maya-g0-dependency-cache
+        run: uv sync --project .codex-build/g0-ci-a/source --locked --no-install-project --extra dev --extra messaging --extra anthropic --no-build --no-python-downloads --python 3.13
+      - name: Run native controls offline
+        env:
+          G0_MODE: ${{ inputs.mode }}
+          G0_PYTHON: ${{ runner.temp }}/maya-g0-native-env/bin/python
+        run: python scripts/run_governance_native_regressions.py --stage .codex-build/g0-ci-a --python "$G0_PYTHON" --mode "$G0_MODE"
+      - name: Preserve qualification evidence, not source or customer state
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: governance-g0-linux-${{ matrix.source }}-${{ inputs.mode }}
+          path: |
+            .codex-build/g0-ci-a/baseline-manifest.json
+            .codex-build/g0-ci-a/native-dependencies.json
+            .codex-build/g0-ci-a/native-*-result.json
+          if-no-files-found: warn

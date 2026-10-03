@@ -1,0 +1,106 @@
+--- a/hermes_cli/middleware.py
++++ b/hermes_cli/middleware.py
+@@ -60,6 +60,7 @@
+             "background_review_unqualified",
+             "session_write_unqualified",
+             "session_write_failed",
++            "session_lock_busy",
+         }
+         reason = code.removeprefix("mandatory_middleware.") if isinstance(code, str) else "callback_failed"
+         if reason not in allowed:
+--- a/hermes_state.py
++++ b/hermes_state.py
+@@ -1488,6 +1488,13 @@
+         """
+         if not session_id:
+             return False
++        from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++        if mandatory_middleware_enabled() and (
++            not isinstance(holder, str) or not holder
++            or isinstance(ttl_seconds, bool) or not isinstance(ttl_seconds, (int, float))
++            or not ttl_seconds > 0
++        ):
++            raise MandatoryMiddlewareError("session_write_unqualified")
+         now = time.time()
+         expires_at = now + ttl_seconds
+ 
+@@ -1515,7 +1522,11 @@
+             ) == holder
+ 
+         try:
+-            return bool(self._execute_write(_do))
++            return bool(self._execute_write(_do, session_write={
++                "session_id": session_id, "operation": "metadata",
++                "payload": {"compression_lock": "acquire", "holder": holder,
++                    "acquired_at": now, "expires_at": expires_at},
++            }))
+         except sqlite3.Error as exc:
+             logger.warning(
+                 "try_acquire_compression_lock(%s) failed: %s",
+@@ -1535,6 +1546,9 @@
+         """
+         if not session_id:
+             return
++        from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++        if mandatory_middleware_enabled() and (not isinstance(holder, str) or not holder):
++            raise MandatoryMiddlewareError("session_write_unqualified")
+ 
+         def _do(conn):
+             conn.execute(
+@@ -1544,7 +1558,10 @@
+             )
+ 
+         try:
+-            self._execute_write(_do)
++            self._execute_write(_do, session_write={
++                "session_id": session_id, "operation": "metadata",
++                "payload": {"compression_lock": "release", "holder": holder},
++            })
+         except sqlite3.Error as exc:
+             logger.warning(
+                 "release_compression_lock(%s) failed: %s",
+--- a/agent/conversation_compression.py
++++ b/agent/conversation_compression.py
+@@ -387,6 +387,10 @@
+     # and proceed with compression.  Skipping the lock risks a rare
+     # concurrent-compression session fork; an infinite no-progress loop
+     # that never compresses at all is strictly worse.
++    from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++    _mandatory_lock = mandatory_middleware_enabled()
++    if _mandatory_lock and (_lock_db is None or not _lock_sid):
++        raise MandatoryMiddlewareError("session_write_unqualified")
+     if _lock_db is not None and _lock_sid:
+         _lock_holder = _compression_lock_holder(agent)
+         try:
+@@ -394,6 +398,10 @@
+                 _lock_sid, _lock_holder
+             )
+         except Exception as _lock_err:
++            if _mandatory_lock:
++                if isinstance(_lock_err, MandatoryMiddlewareError):
++                    raise
++                raise MandatoryMiddlewareError("session_write_failed") from None
+             # Broken/absent lock subsystem (version skew, etc.).  Log once
+             # per session and proceed WITHOUT the lock rather than letting
+             # the exception spin the outer loop.
+@@ -409,6 +417,9 @@
+                 )
+             _lock_acquired = True  # treat as acquired-but-unlocked; proceed
+         if not _lock_acquired:
++            if _mandatory_lock:
++                # Contention is not authority to continue without the lock.
++                raise MandatoryMiddlewareError("session_lock_busy")
+             try:
+                 existing = _lock_db.get_compression_lock_holder(_lock_sid)
+             except Exception:
+@@ -441,6 +452,10 @@
+             try:
+                 _lock_db.release_compression_lock(_lock_sid, _lock_holder)
+             except Exception as _rel_err:
++                if _mandatory_lock:
++                    if isinstance(_rel_err, MandatoryMiddlewareError):
++                        raise
++                    raise MandatoryMiddlewareError("session_write_failed") from None
+                 logger.debug("compression lock release failed: %s", _rel_err)
+ 
+     # Notify external memory provider before compression discards context

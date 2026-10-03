@@ -1,0 +1,255 @@
+diff --git a/agent/chat_completion_helpers.py b/agent/chat_completion_helpers.py
+index cee392c..b55f276 100644
+--- a/agent/chat_completion_helpers.py
++++ b/agent/chat_completion_helpers.py
+@@ -28,6 +28,10 @@ from typing import Any, Dict, Optional
+ from hermes_cli.timeouts import get_provider_request_timeout, get_provider_stale_timeout
+ from hermes_constants import PARTIAL_STREAM_STUB_ID, FINISH_REASON_LENGTH
+ from agent.error_classifier import FailoverReason
++from hermes_cli.middleware import (
++    MandatoryMiddlewareError, mandatory_middleware_enabled,
++    require_single_attempt_client, run_llm_execution_middleware,
++)
+ from agent.model_metadata import is_local_endpoint
+ from agent.message_sanitization import (
+     _sanitize_surrogates,
+@@ -147,6 +151,8 @@ def interruptible_api_call(agent, api_kwargs: dict):
+     # that is the expected consequence of our own force-close isn't misread as
+     # a network bug and surfaced to the caller. (PR #6600 — cascading interrupt
+     # hang.)
++    if mandatory_middleware_enabled() and agent.api_mode == "bedrock_converse":
++        raise MandatoryMiddlewareError("unsupported_transport")
+     _request_cancelled = {"value": False}
+ 
+     def _set_request_client(client):
+@@ -236,6 +242,7 @@ def interruptible_api_call(agent, api_kwargs: dict):
+                         api_kwargs=api_kwargs,
+                     )
+                 )
++                require_single_attempt_client(request_client)
+                 result["response"] = request_client.chat.completions.create(**api_kwargs)
+         except Exception as e:
+             # If the request was cancelled by the main thread's interrupt
+@@ -1335,6 +1342,22 @@ def try_activate_fallback(agent, reason: "FailoverReason | None" = None) -> bool
+ 
+ 
+ 
++def _summary_call(agent, payload: dict, execute):
++    if not mandatory_middleware_enabled():
++        return execute(payload)
++    return run_llm_execution_middleware(
++        payload, execute, model=payload.get("model"), provider=agent.provider,
++        base_url=agent.base_url, api_mode=agent.api_mode,
++        session_id=agent.session_id or "", purpose="iteration_limit_summary",
++    )
++
++
++def _summary_chat_call(agent, payload: dict, *, reason: str):
++    client = agent._ensure_primary_openai_client(reason=reason)
++    require_single_attempt_client(client)
++    return client.chat.completions.create(**payload)
++
++
+ def handle_max_iterations(agent, messages: list, api_call_count: int) -> str:
+     """Request a summary when max iterations are reached. Returns the final response text."""
+     print(f"⚠️  Reached maximum iterations ({agent.max_iterations}). Requesting summary...")
+@@ -1434,7 +1457,7 @@ def handle_max_iterations(agent, messages: list, api_call_count: int) -> str:
+         if agent.api_mode == "codex_responses":
+             codex_kwargs = agent._build_api_kwargs(api_messages)
+             codex_kwargs.pop("tools", None)
+-            summary_response = agent._run_codex_stream(codex_kwargs)
++            summary_response = _summary_call(agent, codex_kwargs, agent._run_codex_stream)
+             _ct_sum = agent._get_transport()
+             _cnr_sum = _ct_sum.normalize_response(summary_response)
+             final_response = (_cnr_sum.content or "").strip()
+@@ -1496,11 +1519,12 @@ def handle_max_iterations(agent, messages: list, api_call_count: int) -> str:
+                                max_tokens=agent.max_tokens, reasoning_config=agent.reasoning_config,
+                                is_oauth=agent._is_anthropic_oauth,
+                                preserve_dots=agent._anthropic_preserve_dots())
+-                summary_response = agent._anthropic_messages_create(_ant_kw)
++                summary_response = _summary_call(agent, _ant_kw, agent._anthropic_messages_create)
+                 _summary_result = _tsum.normalize_response(summary_response, strip_tool_prefix=agent._is_anthropic_oauth)
+                 final_response = (_summary_result.content or "").strip()
+             else:
+-                summary_response = agent._ensure_primary_openai_client(reason="iteration_limit_summary").chat.completions.create(**summary_kwargs)
++                summary_response = _summary_call(agent, summary_kwargs, lambda payload: _summary_chat_call(
++                    agent, payload, reason="iteration_limit_summary"))
+                 _summary_result = agent._get_transport().normalize_response(summary_response)
+                 final_response = (_summary_result.content or "").strip()
+ 
+@@ -1516,7 +1540,7 @@ def handle_max_iterations(agent, messages: list, api_call_count: int) -> str:
+             if agent.api_mode == "codex_responses":
+                 codex_kwargs = agent._build_api_kwargs(api_messages)
+                 codex_kwargs.pop("tools", None)
+-                retry_response = agent._run_codex_stream(codex_kwargs)
++                retry_response = _summary_call(agent, codex_kwargs, agent._run_codex_stream)
+                 _ct_retry = agent._get_transport()
+                 _cnr_retry = _ct_retry.normalize_response(retry_response)
+                 final_response = (_cnr_retry.content or "").strip()
+@@ -1526,7 +1550,7 @@ def handle_max_iterations(agent, messages: list, api_call_count: int) -> str:
+                                 is_oauth=agent._is_anthropic_oauth,
+                                 max_tokens=agent.max_tokens, reasoning_config=agent.reasoning_config,
+                                 preserve_dots=agent._anthropic_preserve_dots())
+-                retry_response = agent._anthropic_messages_create(_ant_kw2)
++                retry_response = _summary_call(agent, _ant_kw2, agent._anthropic_messages_create)
+                 _retry_result = _tretry.normalize_response(retry_response, strip_tool_prefix=agent._is_anthropic_oauth)
+                 final_response = (_retry_result.content or "").strip()
+             else:
+@@ -1543,7 +1567,8 @@ def handle_max_iterations(agent, messages: list, api_call_count: int) -> str:
+                 if summary_extra_body:
+                     summary_kwargs["extra_body"] = summary_extra_body
+ 
+-                summary_response = agent._ensure_primary_openai_client(reason="iteration_limit_summary_retry").chat.completions.create(**summary_kwargs)
++                summary_response = _summary_call(agent, summary_kwargs, lambda payload: _summary_chat_call(
++                    agent, payload, reason="iteration_limit_summary_retry"))
+                 _retry_result = agent._get_transport().normalize_response(summary_response)
+                 final_response = (_retry_result.content or "").strip()
+ 
+@@ -1557,7 +1582,11 @@ def handle_max_iterations(agent, messages: list, api_call_count: int) -> str:
+             else:
+                 final_response = "I reached the iteration limit and couldn't generate a summary."
+ 
++    except MandatoryMiddlewareError as e:
++        raise MandatoryMiddlewareError(str(e)) from None
+     except Exception as e:
++        if mandatory_middleware_enabled():
++            raise MandatoryMiddlewareError("callback_failed") from None
+         logger.warning(f"Failed to get summary response: {e}")
+         final_response = f"I reached the maximum iterations ({agent.max_iterations}) but couldn't summarize. Error: {str(e)}"
+ 
+@@ -1616,6 +1645,9 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
+     if agent._interrupt_requested:
+         raise InterruptedError("Agent interrupted before streaming API call")
+ 
++    if mandatory_middleware_enabled() and agent.api_mode == "bedrock_converse":
++        raise MandatoryMiddlewareError("unsupported_transport")
++
+     if agent.api_mode == "codex_responses":
+         # Codex streams internally via _run_codex_stream. The main dispatch
+         # in _interruptible_api_call already calls it; we just need to
+@@ -1861,6 +1893,7 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
+         # ``request_client_holder["diag"]`` for closure access.
+         _diag = agent._stream_diag_init()
+         request_client_holder["diag"] = _diag
++        require_single_attempt_client(request_client)
+         stream = request_client.chat.completions.create(**stream_kwargs)
+ 
+         # Capture rate limit headers from the initial HTTP response.
+@@ -2183,6 +2216,7 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
+             api_kwargs, log_prefix=getattr(agent, "log_prefix", "")
+         )
+         # Use the Anthropic SDK's streaming context manager
++        require_single_attempt_client(agent._anthropic_client)
+         with agent._anthropic_client.messages.stream(**api_kwargs) as stream:
+             # The Anthropic SDK exposes the raw httpx response on
+             # ``stream.response``.  Snapshot diagnostic headers
+@@ -2252,7 +2286,8 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
+     def _call():
+         import httpx as _httpx
+ 
+-        _max_stream_retries = env_int("HERMES_STREAM_RETRIES", 2)
++        # Reauthorize via the native outer loop rather than retry below its gate.
++        _max_stream_retries = 0 if mandatory_middleware_enabled() else env_int("HERMES_STREAM_RETRIES", 2)
+ 
+         try:
+             for _stream_attempt in range(_max_stream_retries + 1):
+@@ -2271,6 +2306,9 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
+                     else:
+                         result["response"] = _call_chat_completions()
+                     return  # success
++                except MandatoryMiddlewareError as e:
++                    result["error"] = MandatoryMiddlewareError(str(e))
++                    return
+                 except Exception as e:
+                     # If the main poll loop force-closed this request because
+                     # of an interrupt, the resulting transport error is the
+@@ -2640,6 +2678,8 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
+                 pass
+             raise InterruptedError("Agent interrupted during streaming API call")
+     if result["error"] is not None:
++        if isinstance(result["error"], MandatoryMiddlewareError):
++            raise MandatoryMiddlewareError(str(result["error"])) from None
+         if deltas_were_sent["yes"]:
+             # Streaming failed AFTER some tokens were already delivered to
+             # the platform.  Re-raising would let the outer retry loop make
+diff --git a/agent/codex_runtime.py b/agent/codex_runtime.py
+index e638a19..a1297ba 100644
+--- a/agent/codex_runtime.py
++++ b/agent/codex_runtime.py
+@@ -21,6 +21,7 @@ import os
+ import time
+ from types import SimpleNamespace
+ from typing import Any, Dict, List
++from hermes_cli.middleware import mandatory_middleware_enabled, require_single_attempt_client
+ 
+ logger = logging.getLogger(__name__)
+ 
+@@ -658,7 +659,8 @@ def run_codex_stream(agent, api_kwargs: dict, client: Any = None, on_first_delta
+     import httpx as _httpx
+ 
+     active_client = client or agent._ensure_primary_openai_client(reason="codex_stream_direct")
+-    max_stream_retries = 1
++    require_single_attempt_client(active_client)
++    max_stream_retries = 0 if mandatory_middleware_enabled() else 1
+     # Accumulate streamed text so callers / compat shims can read it.
+     agent._codex_streamed_text_parts: list = []
+ 
+diff --git a/agent/anthropic_adapter.py b/agent/anthropic_adapter.py
+index 4f7595c..7d8b5ad 100644
+--- a/agent/anthropic_adapter.py
++++ b/agent/anthropic_adapter.py
+@@ -2635,6 +2635,10 @@ def create_anthropic_message(
+     match the main turn path, falling back to ``create()`` only for providers
+     that explicitly do not support streaming, such as restricted Bedrock roles.
+     """
++    from hermes_cli.middleware import (
++        MandatoryMiddlewareError, mandatory_middleware_enabled, require_single_attempt_client,
++    )
++    require_single_attempt_client(client)
+     sanitize_anthropic_kwargs(api_kwargs, log_prefix=log_prefix)
+ 
+     messages_api = getattr(client, "messages", None)
+@@ -2646,6 +2650,11 @@ def create_anthropic_message(
+             with stream_fn(**stream_kwargs) as stream:
+                 return stream.get_final_message()
+         except Exception as exc:
++            if isinstance(exc, MandatoryMiddlewareError):
++                raise MandatoryMiddlewareError(str(exc)) from None
++            if mandatory_middleware_enabled():
++                # Do not issue a second request without returning to the gate.
++                raise
+             if not _is_stream_unavailable_error(exc):
+                 raise
+             logger.debug(
+diff --git a/hermes_cli/middleware.py b/hermes_cli/middleware.py
+index 8dc6627..a6e65f1 100644
+--- a/hermes_cli/middleware.py
++++ b/hermes_cli/middleware.py
+@@ -51,6 +51,7 @@ class MandatoryMiddlewareError(RuntimeError):
+             "invalid_binding", "binding_replaced", "gate_missing", "next_call_reused",
+             "callback_failed", "gate_bypassed", "route_ambiguous", "route_missing",
+             "auxiliary_failed", "unsupported_plugin_caller", "tool_failed",
++            "sdk_retries_enabled", "unsupported_transport",
+         }
+         reason = code.removeprefix("mandatory_middleware.") if isinstance(code, str) else "callback_failed"
+         if reason not in allowed:
+@@ -73,6 +74,19 @@ def mandatory_middleware_enabled() -> bool:
+     return _mandatory_enabled
+ 
+ 
++def require_single_attempt_client(client: Any) -> Any:
++    """Reject SDK-managed retries instead of authorizing multiple HTTP attempts.
++
++    The release must supply qualified OpenAI/Anthropic clients with retries
++    disabled. Unknown wrappers are not silently assumed to be single-attempt.
++    """
++    if _mandatory_enabled:
++        retries = getattr(client, "max_retries", None)
++        if type(retries) is not int or retries != 0:
++            raise MandatoryMiddlewareError("sdk_retries_enabled")
++    return client
++
++
+ def require_middleware(kind: str, callback: Callable) -> None:
+     """Bind one host-required callback per execution boundary."""
+     if kind not in _EXECUTION_KINDS or not callable(callback):

@@ -1,0 +1,89 @@
+diff --git a/agent/context_compressor.py b/agent/context_compressor.py
+--- a/agent/context_compressor.py
++++ b/agent/context_compressor.py
+@@ -1698,6 +1698,12 @@
+             self._last_summary_network_failure = False
+             return self._with_summary_prefix(summary)
+         except Exception as e:
++            from hermes_cli.middleware import (
++                MandatoryMiddlewareError, mandatory_middleware_enabled,
++            )
++            if mandatory_middleware_enabled() and isinstance(e, MandatoryMiddlewareError):
++                # A denied attempt is not a recoverable provider failure.
++                raise
+             # ``call_llm`` raises ``RuntimeError`` for two very different cases:
+             #   1. No provider configured ("No LLM provider configured ...") —
+             #      a permanent misconfiguration, long cooldown is correct.
+diff --git a/hermes_cli/plugins.py b/hermes_cli/plugins.py
+--- a/hermes_cli/plugins.py
++++ b/hermes_cli/plugins.py
+@@ -1732,6 +1732,12 @@
+                 if ret is not None:
+                     results.append(ret)
+             except Exception as exc:
++                from hermes_cli.middleware import (
++                    MandatoryMiddlewareError, mandatory_middleware_enabled,
++                )
++                if mandatory_middleware_enabled() and isinstance(exc, MandatoryMiddlewareError):
++                    # Observer dispatch must not downgrade an execution denial.
++                    raise
+                 logger.warning(
+                     "Hook '%s' callback %s raised: %s",
+                     hook_name,
+diff --git a/agent/background_review.py b/agent/background_review.py
+--- a/agent/background_review.py
++++ b/agent/background_review.py
+@@ -579,6 +579,12 @@
+     review prompt, and surfaces a compact action summary back to the user
+     via ``agent._safe_print`` and ``agent.background_review_callback``.
+     """
++    from hermes_cli.middleware import (
++        MandatoryMiddlewareError, mandatory_middleware_enabled,
++    )
++    if mandatory_middleware_enabled():
++        raise MandatoryMiddlewareError("mandatory_middleware.background_review_unqualified")
++
+     # Local import to avoid a hard circular dep at module load.
+     from run_agent import AIAgent
+     from tools.terminal_tool import set_approval_callback as _set_approval_callback
+diff --git a/agent/background_review.py b/agent/background_review.py
+--- a/agent/background_review.py
++++ b/agent/background_review.py
+@@ -848,6 +848,12 @@
+     owns the actual ``threading.Thread`` construction so test-level patches
+     of ``run_agent.threading.Thread`` keep working.
+     """
++    from hermes_cli.middleware import (
++        MandatoryMiddlewareError, mandatory_middleware_enabled,
++    )
++    if mandatory_middleware_enabled():
++        raise MandatoryMiddlewareError("mandatory_middleware.background_review_unqualified")
++
+     # Pick the right prompt based on which triggers fired.  Allow per-agent
+     # override (the prompts moved to module-level constants but old code paths
+     # that set agent._MEMORY_REVIEW_PROMPT etc. directly keep working).
+diff --git a/hermes_cli/middleware.py b/hermes_cli/middleware.py
+--- a/hermes_cli/middleware.py
++++ b/hermes_cli/middleware.py
+@@ -54,6 +54,7 @@
+             "callback_failed", "gate_bypassed", "route_ambiguous", "route_missing",
+             "auxiliary_failed", "unsupported_plugin_caller", "tool_failed",
+             "sdk_retries_enabled", "unsupported_transport",
++            "background_review_unqualified",
+         }
+         reason = code.removeprefix("mandatory_middleware.") if isinstance(code, str) else "callback_failed"
+         if reason not in allowed:
+diff --git a/agent/turn_finalizer.py b/agent/turn_finalizer.py
+--- a/agent/turn_finalizer.py
++++ b/agent/turn_finalizer.py
+@@ -495,7 +495,9 @@
+                 review_memory=_should_review_memory,
+                 review_skills=_should_review_skills,
+             )
+-        except Exception:
++        except Exception as exc:
++            if mandatory_middleware_enabled() and isinstance(exc, MandatoryMiddlewareError):
++                raise
+             pass  # Background review is best-effort
+ 
+     # Note: Memory provider on_session_end() + shutdown_all() are NOT

@@ -1,0 +1,36 @@
+diff --git a/agent/conversation_loop.py b/agent/conversation_loop.py
+index 303752a..e58a412 100644
+--- a/agent/conversation_loop.py
++++ b/agent/conversation_loop.py
+@@ -60,6 +60,7 @@ from agent.trajectory import has_incomplete_scratchpad
+ from agent.usage_pricing import estimate_usage_cost, normalize_usage
+ from hermes_constants import PARTIAL_STREAM_STUB_ID
+ from hermes_logging import set_session_context
++from hermes_cli.middleware import MandatoryMiddlewareError
+ from tools.skill_provenance import set_current_write_origin
+ from utils import base_url_host_matches, env_var_enabled
+ 
+@@ -1976,6 +1977,11 @@ def run_conversation(
+                 final_response = f"{INTERRUPT_WAITING_FOR_MODEL_PREFIX}{api_elapsed:.1f}s elapsed)."
+                 break
+ 
++            except MandatoryMiddlewareError as governance_error:
++                # Never classify a failed authorization as a provider failure:
++                # retry, credential rotation, compression, and fallback must stop.
++                raise MandatoryMiddlewareError(str(governance_error)) from None
++
+             except Exception as api_error:
+                 # Stop spinner silently — retry status is buffered and
+                 # only flushed when every retry+fallback is exhausted.
+@@ -4513,6 +4519,11 @@ def run_conversation(
+                     agent._safe_print(f"🎉 Conversation completed after {api_call_count} OpenAI-compatible API call(s)")
+                 break
+             
++        except MandatoryMiddlewareError as governance_error:
++            # Do not print a traceback, synthesize tool results, continue the
++            # conversation, or run successful-turn finalization after denial.
++            raise MandatoryMiddlewareError(str(governance_error)) from None
++
+         except Exception as e:
+             error_msg = f"Error during OpenAI-compatible API call #{api_call_count}: {str(e)}"
+             try:

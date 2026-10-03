@@ -1,0 +1,311 @@
+--- a/hermes_state.py
++++ b/hermes_state.py
+@@ -925,7 +925,7 @@
+                 self._warn_fts5_unavailable(exc)
+             return False
+ 
+-    def _execute_write(self, fn: Callable[[sqlite3.Connection], T]) -> T:
++    def _execute_write(self, fn: Callable[[sqlite3.Connection], T], *, session_write=None) -> T:
+         """Execute a write transaction with BEGIN IMMEDIATE and jitter retry.
+ 
+         *fn* receives the connection and should perform INSERT/UPDATE/DELETE
+@@ -942,6 +942,18 @@
+         """
+         last_err: Optional[Exception] = None
+         for attempt in range(self._WRITE_MAX_RETRIES):
++            from hermes_cli.middleware import (
++                mandatory_middleware_enabled, MandatoryMiddlewareError,
++                run_session_write_middleware, SESSION_WRITE_CONTRACT,
++            )
++            if mandatory_middleware_enabled():
++                if session_write is None:
++                    raise MandatoryMiddlewareError("session_write_unqualified")
++                run_session_write_middleware(
++                    session_write["payload"], contract=SESSION_WRITE_CONTRACT,
++                    database=str(self.db_path.resolve()), purpose="hermes_conversation",
++                    session_id=session_write["session_id"], operation=session_write["operation"],
++                )
+             try:
+                 with self._lock:
+                     self._conn.execute("BEGIN IMMEDIATE")
+@@ -2487,7 +2499,7 @@
+                 return content
+         return content
+ 
+-    def append_message(
++    def _prepare_append_row(
+         self,
+         session_id: str,
+         role: str,
+@@ -2505,9 +2517,9 @@
+         platform_message_id: str = None,
+         observed: bool = False,
+         timestamp: Any = None,
+-    ) -> int:
+-        """
+-        Append a message to a session. Returns the message row ID.
++    ) -> Tuple[Tuple[Any, ...], int]:
++        """
++        Prepare the native serialized row without modifying SQLite.
+ 
+         Also increments the session's message_count (and tool_call_count
+         if role is 'tool' or tool_calls is present).
+@@ -2544,56 +2556,81 @@
+                 else:
+                     message_timestamp = float(timestamp)
+             except (TypeError, ValueError):
+-                logger.debug("Ignoring invalid explicit message timestamp: %r", timestamp)
++                from hermes_cli.middleware import mandatory_middleware_enabled
++                if not mandatory_middleware_enabled():
++                    logger.debug("Ignoring invalid explicit message timestamp: %r", timestamp)
+ 
+         # Pre-compute tool call count
+         num_tool_calls = 0
+         if tool_calls is not None:
+             num_tool_calls = len(tool_calls) if isinstance(tool_calls, list) else 1
+ 
++        return (
++            session_id, role, stored_content, tool_call_id, tool_calls_json,
++            tool_name, message_timestamp, token_count, finish_reason, reasoning,
++            reasoning_content, reasoning_details_json, codex_items_json,
++            codex_message_items_json, platform_message_id, 1 if observed else 0,
++        ), num_tool_calls
++
++    def append_message(
++        self, session_id: str, role: str, content: str = None,
++        tool_name: str = None, tool_calls: Any = None, tool_call_id: str = None,
++        token_count: int = None, finish_reason: str = None, reasoning: str = None,
++        reasoning_content: str = None, reasoning_details: Any = None,
++        codex_reasoning_items: Any = None, codex_message_items: Any = None,
++        platform_message_id: str = None, observed: bool = False, timestamp: Any = None,
++    ) -> int:
++        """Preserve the single-row public API through the atomic batch writer."""
++        return self.append_messages(session_id, [{
++            "role": role, "content": content, "tool_name": tool_name,
++            "tool_calls": tool_calls, "tool_call_id": tool_call_id,
++            "token_count": token_count, "finish_reason": finish_reason,
++            "reasoning": reasoning, "reasoning_content": reasoning_content,
++            "reasoning_details": reasoning_details,
++            "codex_reasoning_items": codex_reasoning_items,
++            "codex_message_items": codex_message_items,
++            "platform_message_id": platform_message_id, "observed": observed,
++            "timestamp": timestamp,
++        }])[0]
++
++    def append_messages(self, session_id: str, messages: List[Dict[str, Any]]) -> List[int]:
++        """Prepare and authorize all serialized rows before one native transaction."""
++        columns = (
++            "session_id", "role", "content", "tool_call_id", "tool_calls",
++            "tool_name", "timestamp", "token_count", "finish_reason", "reasoning",
++            "reasoning_content", "reasoning_details", "codex_reasoning_items",
++            "codex_message_items", "platform_message_id", "observed",
++        )
++        try:
++            prepared = tuple(self._prepare_append_row(session_id=session_id, **dict(msg)) for msg in messages)
++        except Exception:
++            from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++            if mandatory_middleware_enabled():
++                raise MandatoryMiddlewareError("callback_failed") from None
++            raise
++        if not prepared:
++            return []
++        descriptor = {
++            "session_id": session_id, "operation": "append",
++            "payload": {"rows": [dict(zip(columns, values)) for values, _ in prepared]},
++        }
++
+         def _do(conn):
+-            cursor = conn.execute(
+-                """INSERT INTO messages (session_id, role, content, tool_call_id,
+-                   tool_calls, tool_name, timestamp, token_count, finish_reason,
+-                   reasoning, reasoning_content, reasoning_details, codex_reasoning_items,
+-                   codex_message_items, platform_message_id, observed)
+-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+-                (
+-                    session_id,
+-                    role,
+-                    stored_content,
+-                    tool_call_id,
+-                    tool_calls_json,
+-                    tool_name,
+-                    message_timestamp,
+-                    token_count,
+-                    finish_reason,
+-                    reasoning,
+-                    reasoning_content,
+-                    reasoning_details_json,
+-                    codex_items_json,
+-                    codex_message_items_json,
+-                    platform_message_id,
+-                    1 if observed else 0,
+-                ),
+-            )
+-            msg_id = cursor.lastrowid
+-
+-            # Update counters
+-            if num_tool_calls > 0:
+-                conn.execute(
+-                    """UPDATE sessions SET message_count = message_count + 1,
+-                       tool_call_count = tool_call_count + ? WHERE id = ?""",
+-                    (num_tool_calls, session_id),
++            ids = []
++            for values, _ in prepared:
++                cursor = conn.execute(
++                    "INSERT INTO messages (" + ", ".join(columns) + ") VALUES (" +
++                    ", ".join("?" for _ in columns) + ")", values,
+                 )
+-            else:
+-                conn.execute(
+-                    "UPDATE sessions SET message_count = message_count + 1 WHERE id = ?",
+-                    (session_id,),
+-                )
+-            return msg_id
+-
+-        return self._execute_write(_do)
++                ids.append(cursor.lastrowid)
++            conn.execute(
++                "UPDATE sessions SET message_count = message_count + ?, "
++                "tool_call_count = tool_call_count + ? WHERE id = ?",
++                (len(prepared), sum(count for _, count in prepared), session_id),
++            )
++            return ids
++
++        return self._execute_write(_do, session_write=descriptor)
+ 
+     def _insert_message_rows(self, conn, session_id: str, messages: List[Dict[str, Any]]) -> tuple[int, int]:
+         """Insert *messages* as fresh active rows for *session_id*.
+--- a/hermes_cli/middleware.py
++++ b/hermes_cli/middleware.py
+@@ -22,6 +22,8 @@
+ TOOL_EXECUTION_MIDDLEWARE = "tool_execution"
+ TOOL_RESULT_MIDDLEWARE = "tool_result"
+ MODEL_OUTPUT_MIDDLEWARE = "model_output"
++SESSION_WRITE_MIDDLEWARE = "session_write"
++SESSION_WRITE_CONTRACT = "project-maya.hermes-session-write.v1"
+ LLM_REQUEST_MIDDLEWARE = "llm_request"
+ LLM_EXECUTION_MIDDLEWARE = "llm_execution"
+ 
+@@ -34,6 +36,7 @@
+     TOOL_EXECUTION_MIDDLEWARE,
+     TOOL_RESULT_MIDDLEWARE,
+     MODEL_OUTPUT_MIDDLEWARE,
++    SESSION_WRITE_MIDDLEWARE,
+     LLM_REQUEST_MIDDLEWARE,
+     LLM_EXECUTION_MIDDLEWARE,
+ }
+@@ -42,7 +45,7 @@
+ # worker paths have also been qualified against the built runtime artifact.
+ _mandatory_enabled = False
+ _mandatory_callbacks: Dict[str, Callable] = {}
+-_EXECUTION_KINDS = (LLM_EXECUTION_MIDDLEWARE, TOOL_EXECUTION_MIDDLEWARE, TOOL_RESULT_MIDDLEWARE, MODEL_OUTPUT_MIDDLEWARE)
++_EXECUTION_KINDS = (LLM_EXECUTION_MIDDLEWARE, TOOL_EXECUTION_MIDDLEWARE, TOOL_RESULT_MIDDLEWARE, MODEL_OUTPUT_MIDDLEWARE, SESSION_WRITE_MIDDLEWARE)
+ 
+ 
+ class MandatoryMiddlewareError(RuntimeError):
+@@ -55,6 +58,8 @@
+             "auxiliary_failed", "unsupported_plugin_caller", "tool_failed",
+             "sdk_retries_enabled", "unsupported_transport",
+             "background_review_unqualified",
++            "session_write_unqualified",
++            "session_write_failed",
+         }
+         reason = code.removeprefix("mandatory_middleware.") if isinstance(code, str) else "callback_failed"
+         if reason not in allowed:
+@@ -320,6 +325,27 @@
+             ))
+             if not validate_mandatory_middleware():
+                 raise MandatoryMiddlewareError("gate_missing")
++        return result
++    except MandatoryMiddlewareError as exc:
++        raise MandatoryMiddlewareError(str(exc)) from None
++    except Exception:
++        raise MandatoryMiddlewareError("callback_failed") from None
++
++
++def run_session_write_middleware(result: Any, **context: Any) -> Any:
++    """Validate immutable final rows through the required session-write gate."""
++    if not _mandatory_enabled:
++        return result
++    try:
++        if not validate_mandatory_middleware():
++            raise MandatoryMiddlewareError("gate_missing")
++        required = _mandatory_callbacks[SESSION_WRITE_MIDDLEWARE]
++        callbacks = _get_middleware_callbacks(SESSION_WRITE_MIDDLEWARE)
++        callbacks = [cb for cb in callbacks if cb != required] + [required]
++        for callback in callbacks:
++            checked = callback(**middleware_payload(result=deepcopy(result), **context))
++            if checked != result or not validate_mandatory_middleware():
++                raise MandatoryMiddlewareError("callback_failed")
+         return result
+     except MandatoryMiddlewareError as exc:
+         raise MandatoryMiddlewareError(str(exc)) from None
+--- a/run_agent.py
++++ b/run_agent.py
+@@ -1608,9 +1608,13 @@
+             {"messages": messages, "conversation_history": conversation_history},
+             stage="native_session_db",
+         )
++        from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++        mandatory = mandatory_middleware_enabled()
+         try:
+             # Retry row creation if the earlier attempt failed transiently.
+             if not self._session_db_created:
++                if mandatory:
++                    raise MandatoryMiddlewareError("session_write_unqualified")
+                 self._ensure_db_session()
+             # Positional flushing used to slice at
+             # max(len(conversation_history), _last_flushed_db_idx). That
+@@ -1627,12 +1631,20 @@
+             current_session_id = getattr(self, "session_id", None)
+             flushed_session_id = getattr(self, "_flushed_db_message_session_id", None)
+             if flushed_session_id != current_session_id or self._last_flushed_db_idx == 0:
+-                self._flushed_db_message_ids = set()
+-                self._flushed_db_message_session_id = current_session_id
+-            flushed_ids = getattr(self, "_flushed_db_message_ids", None)
++                flushed_ids = set()
++                if not mandatory:
++                    self._flushed_db_message_ids = flushed_ids
++                    self._flushed_db_message_session_id = current_session_id
++            else:
++                flushed_ids = getattr(self, "_flushed_db_message_ids", None)
+             if not isinstance(flushed_ids, set):
+                 flushed_ids = set()
+-                self._flushed_db_message_ids = flushed_ids
++                if not mandatory:
++                    self._flushed_db_message_ids = flushed_ids
++            if mandatory:
++                flushed_ids = flushed_ids.copy()
++            pending_rows = []
++            pending_ids = []
+             history_ids = {
+                 id(item) for item in (conversation_history or [])
+                 if isinstance(item, dict)
+@@ -1687,13 +1699,23 @@
+                     timestamp=msg.get("timestamp"),
+                 )
+                 self._validate_persistence_payload(row, stage="native_session_db_row")
+-                self._session_db.append_message(**row)
+-                flushed_ids.add(msg_id)
++                if mandatory:
++                    pending_rows.append({key: value for key, value in row.items() if key != "session_id"})
++                    pending_ids.append(msg_id)
++                else:
++                    self._session_db.append_message(**row)
++                    flushed_ids.add(msg_id)
++            if mandatory:
++                self._session_db.append_messages(self.session_id, pending_rows)
++                flushed_ids.update(pending_ids)
++                self._flushed_db_message_ids = flushed_ids
++                self._flushed_db_message_session_id = current_session_id
+             self._last_flushed_db_idx = len(messages)
+         except Exception as e:
+-            from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
+-            if mandatory_middleware_enabled() and isinstance(e, MandatoryMiddlewareError):
+-                raise
++            if mandatory:
++                if isinstance(e, MandatoryMiddlewareError):
++                    raise
++                raise MandatoryMiddlewareError("session_write_failed") from None
+             logger.warning("Session DB append_message failed: %s", e)
+ 
+     def _get_messages_up_to_last_assistant(self, messages: List[Dict]) -> List[Dict]:

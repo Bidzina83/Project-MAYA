@@ -319,6 +319,13 @@ class HermesMemoryProviderBridge:
     def queue_prefetch(self, query: str, *, session_id: str = "") -> None:
         return None
 
+    def on_turn_start(self, turn_number: int, message: str, **kwargs: Any) -> None:
+        # Native lifecycle notification; business memory does not ingest turns.
+        return None
+
+    def on_session_end(self, messages: list[dict[str, Any]]) -> None:
+        return None
+
     def sync_turn(
         self,
         user_content: str,

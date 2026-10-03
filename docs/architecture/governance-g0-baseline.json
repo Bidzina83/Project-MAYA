@@ -1,0 +1,699 @@
+{
+  "schema": "maya.governance-g0.v1",
+  "pin": "b13e2fd6948a59eeb59fe618914147d97a2ee90a",
+  "production_qualified": false,
+  "patch_series_sha256": "483d09e5fc0bd10fa2af752d192a7b29427fa398be4f523262b30c7695739668",
+  "patches": [
+    {
+      "number": 1,
+      "filename": "0001-opt-in-mandatory-middleware.patch",
+      "sha256": "78c44b888313b3ea718a53da2c574f1d483a1c1df332163d78d2eb3ea051059f"
+    },
+    {
+      "number": 2,
+      "filename": "0002-governed-auxiliary-inference.patch",
+      "sha256": "abea361377972f8c002d473977523557ba8bbb36d3ccd8fa3b92a33eae8d1448"
+    },
+    {
+      "number": 3,
+      "filename": "0003-stop-main-loop-on-governance-failure.patch",
+      "sha256": "ccb25a2cccc87bf5b7091d44d10ad0c93ff118d728719e3fe1b617b1d3aa986d"
+    },
+    {
+      "number": 4,
+      "filename": "0004-tool-and-preflight-denial-propagation.patch",
+      "sha256": "f9435b8d2adfb06c36d2c34a91d3d427d5a5d7717e9f732e2af3c80806987e12"
+    },
+    {
+      "number": 5,
+      "filename": "0005-native-tool-dispatch-denial-propagation.patch",
+      "sha256": "1fc4e6647a2cd8a8dacd356d48f5bccc7e9c52e22896e1f57d63f0ed13b785ac"
+    },
+    {
+      "number": 6,
+      "filename": "0006-final-tool-result-validation.patch",
+      "sha256": "dfd6793b53c78ab32aebc4434c0c800dcc5e53eaf01153568960b46af2352493"
+    },
+    {
+      "number": 7,
+      "filename": "0007-provider-diagnostic-boundaries.patch",
+      "sha256": "3029132d56952128e7bfe9d9afccc7161ff11ef30dbb58d112cebd6cf8cb73b9"
+    },
+    {
+      "number": 8,
+      "filename": "0008-summary-and-single-transport-attempts.patch",
+      "sha256": "cf55c132d77763153e7c5f47be3b4f90e3ca206394582feab0a103b15e151acd"
+    },
+    {
+      "number": 9,
+      "filename": "0009-defer-early-response-publication.patch",
+      "sha256": "e087d24c32d9f8b419b998019411b034e37c888145482393b4d3b02eb0da813a"
+    },
+    {
+      "number": 10,
+      "filename": "0010-governed-final-model-disclosure.patch",
+      "sha256": "ba6ee981ec4952358bbfd00163e50bcdcbb8125cb1554cadbca6dd80a11f81bf"
+    },
+    {
+      "number": 11,
+      "filename": "0011-recovery-and-background-denial.patch",
+      "sha256": "341b68c365a1f043ab3077ce9a2b763b6ae6695a5a3412984e501d3abc2f5a3d"
+    },
+    {
+      "number": 12,
+      "filename": "0012-native-persistence-and-raw-observer-boundaries.patch",
+      "sha256": "79ea67bf2fe02526670e9fc5b883c8cdbc0fb249f0f3e3fe5ead68f3eac62bcb"
+    },
+    {
+      "number": 13,
+      "filename": "0013-outer-caller-denial-propagation.patch",
+      "sha256": "56b2a66e586cfdab2e1f6983cd549bc2cf5cffad5b5f35150de974c9738d128b"
+    },
+    {
+      "number": 14,
+      "filename": "0014-effective-session-row-validation.patch",
+      "sha256": "a3421fcd39333b5e833889036007f292cd5f08efd2c1a2ac5743b4a2d487c200"
+    },
+    {
+      "number": 15,
+      "filename": "0015-trusted-session-write-and-atomic-append.patch",
+      "sha256": "7667a33a6ff43a769deb2b25b4f7206f28d953b97caeedc0cf5b38dbd677c858"
+    },
+    {
+      "number": 16,
+      "filename": "0016-native-session-mutation-descriptors.patch",
+      "sha256": "bcd70f5768ee7736f4186af5e295a1f8bff34f208747e5df72c3ef8f17adcd86"
+    },
+    {
+      "number": 17,
+      "filename": "0017-session-writer-caller-denial-propagation.patch",
+      "sha256": "3a26eff3c5107db29f1d1a178a7e4e319b07923c012415e5ca84744fbcff8802"
+    },
+    {
+      "number": 18,
+      "filename": "0018-session-metadata-and-close-reporting.patch",
+      "sha256": "cb8d71fde99387832f9f30e7ea6182e99c90c1b31a5b16620689da47d3446ba6"
+    },
+    {
+      "number": 19,
+      "filename": "0019-compression-lock-authorization.patch",
+      "sha256": "12bd4a528a73c13540291320ece98cc0a96f90ab8d0874d55c1e0dbf9cb6c9d7"
+    },
+    {
+      "number": 20,
+      "filename": "0020-unqualified-gateway-session-routing.patch",
+      "sha256": "c61c41848d444036322fe97bf8e8f87daea8e6c4dc5fefa196dbcbd1b57623ad"
+    },
+    {
+      "number": 21,
+      "filename": "0021-telegram-polling-intake-registration.patch",
+      "sha256": "b1efc218925c8586a0980686937b1df2a7f4fddbe87c7d11c770efedd02d898d"
+    },
+    {
+      "number": 22,
+      "filename": "0022-bounded-request-executor-handoff.patch",
+      "sha256": "882a95edcc8b7db3686c57b10c41e7efd52199b8faa66f9fd4fb5d1bc4631c08"
+    },
+    {
+      "number": 23,
+      "filename": "0023-bound-conversation-request-task.patch",
+      "sha256": "3a14fac82b04b0b0697ceb7427919a5fa9d47e739985b03077c717f5005503e2"
+    }
+  ],
+  "dependency_inputs": {
+    "pyproject.toml": "118d2e654d8ae78815da55b5439ff163007959de6adc64dd936c34b095effefb",
+    "uv.lock": "d6f3ad43c208cff1b9397ac4d6b74f0564d3b0d2b28f8a38386f3558bd4bf18f",
+    "setup.py": "1cd38809832cc1bc16bbf499a153382d7ceb5f714ab979abf69d80a4495cfeb4",
+    "MANIFEST.in": "e54cde15f882fb56326da0df8c81f7c58cf894332e637fe6443dac647d8e606b"
+  },
+  "profile": {
+    "id": "maya-governance-private-text-v1",
+    "qualification": "unqualified",
+    "unknown_roots": "deny_and_block_acceptance",
+    "identity": "one host-approved operator; customer-owned Telegram private polling and authenticated loopback API",
+    "gates": [
+      "model",
+      "tool",
+      "tool_result",
+      "model_output",
+      "session_write"
+    ],
+    "fixture_route": {
+      "provider": "openai_compatible_fixture",
+      "model": "synthetic-model",
+      "api": "chat_completions",
+      "path": "/v1/chat/completions",
+      "network": "forbidden",
+      "sdk_retries": 0
+    },
+    "customer_route": {
+      "status": "selected_documented_not_runtime_qualified",
+      "provider": "openai",
+      "model": "gpt-6-luna",
+      "base_url": "https://api.openai.com/v1",
+      "api": "responses",
+      "path": "/v1/responses",
+      "reasoning_effort": "medium",
+      "store": false,
+      "hosted_tools": false,
+      "sdk_retries": 0,
+      "inherits_fixture_route": false,
+      "source": "https://developers.openai.com/api/docs/models/gpt-6-luna",
+      "review_date": "2026-10-03",
+      "native_auto_route_gap": "AIAgent._model_requires_responses_api only detects gpt-5; no product routing change authorized in G0",
+      "runtime_gate": "G4"
+    },
+    "stores": [
+      "Hermes conversations/MEMORY.md/USER.md",
+      "Maya SMB SQLite/vector",
+      "Metabase application/analytics"
+    ],
+    "ordinary_mode": "isolated regression control only",
+    "responses_fixture": {
+      "model": "gpt-6-luna",
+      "api": "responses",
+      "sdk": "2.24.0",
+      "transport": "httpx.MockTransport",
+      "network": "forbidden",
+      "scope": "SDK payload/response parsing only; not native loop or live provider"
+    }
+  },
+  "coverage": [
+    {
+      "id": "setup",
+      "status": "unresolved",
+      "intended": "supported",
+      "entrypoints": [
+        "hermes_state.SessionDB.__init__",
+        "hermes_state.SessionDB._init_schema"
+      ],
+      "tests": [],
+      "sink": "SQLite schema/repair",
+      "evidence": "native SQLite probe: unbound constructor writes",
+      "next_gate": "G3",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": []
+    },
+    {
+      "id": "startup",
+      "status": "unresolved",
+      "intended": "supported",
+      "entrypoints": [
+        "project_maya.bootstrap._build_hermes_runtime",
+        "hermes_cli.plugins.discover_plugins",
+        "gateway.run.GatewayRunner.start"
+      ],
+      "tests": [
+        "tests.test_hermes_governance_plugin"
+      ],
+      "sink": "construction, plugin registry, worker startup",
+      "evidence": "scoped registration only; production guard remains",
+      "next_gate": "G1/G3/G5",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": [
+        1
+      ]
+    },
+    {
+      "id": "local-api",
+      "status": "unresolved",
+      "intended": "supported",
+      "entrypoints": [
+        "project_maya.local_api.LocalAPI.handle",
+        "project_maya.runtime.GovernedAgentRuntime.run"
+      ],
+      "tests": [
+        "tests.test_hermes_authenticated_session_requests"
+      ],
+      "sink": "agent invocation and SQLite",
+      "evidence": "candidate binding tests; normal bootstrap not integrated",
+      "next_gate": "G2",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": [
+        15,
+        20
+      ]
+    },
+    {
+      "id": "telegram",
+      "status": "unresolved",
+      "intended": "supported",
+      "entrypoints": [
+        "plugins.platforms.telegram.adapter.TelegramAdapter.connect",
+        "gateway.run.GatewayRunner._handle_message"
+      ],
+      "tests": [
+        "tests.test_hermes_telegram_registration",
+        "tests.test_hermes_telegram_intake"
+      ],
+      "sink": "SDK dispatcher and conversation dispatch",
+      "evidence": "synthetic SDK intake; full connection/caller path missing",
+      "next_gate": "G2",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": [
+        21
+      ]
+    },
+    {
+      "id": "session-routing",
+      "status": "unresolved",
+      "intended": "supported",
+      "entrypoints": [
+        "gateway.session.SessionStore.get_or_create_session",
+        "gateway.session.SessionStore.reset_session",
+        "gateway.session.SessionStore.switch_session",
+        "gateway.run.GatewayRunner._run_agent_inner post-compression _save"
+      ],
+      "tests": [
+        "tests.test_hermes_authenticated_session_requests"
+      ],
+      "sink": "SQLite and session index JSON",
+      "evidence": "Patch 20 blocks three methods; direct index writer open",
+      "next_gate": "G2",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": [
+        20
+      ]
+    },
+    {
+      "id": "caller-task-executor",
+      "status": "unresolved",
+      "intended": "supported",
+      "entrypoints": [
+        "gateway.run.GatewayRunner._run_agent",
+        "gateway.run.GatewayRunner._run_agent_inner",
+        "gateway.run.GatewayRunner._run_in_executor_with_context"
+      ],
+      "tests": [
+        "tests.test_hermes_session_handoff"
+      ],
+      "sink": "native thread/task and protected effects",
+      "evidence": "helper/task seam tests, no complete caller cancellation qualification",
+      "next_gate": "G1",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": [
+        22,
+        23
+      ]
+    },
+    {
+      "id": "remote-runtime-proxy",
+      "status": "unresolved",
+      "intended": "excluded",
+      "entrypoints": [
+        "gateway.run.GatewayRunner._get_proxy_url",
+        "gateway.run.GatewayRunner._run_agent_via_proxy"
+      ],
+      "tests": [],
+      "sink": "remote runtime dispatch",
+      "evidence": "23-patch complete-method inert probe reproduced bypass",
+      "next_gate": "G1",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": []
+    },
+    {
+      "id": "profile-route-cache",
+      "status": "unresolved",
+      "intended": "excluded",
+      "entrypoints": [
+        "gateway.run.GatewayRunner._resolve_session_agent_runtime"
+      ],
+      "tests": [],
+      "sink": "cached agent/provider/ambient credentials",
+      "evidence": "source inventory; no exclusion or effective-route qualification",
+      "next_gate": "G1/G4",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": []
+    },
+    {
+      "id": "context-memory",
+      "status": "unresolved",
+      "intended": "supported",
+      "entrypoints": [
+        "agent.turn_context.prepare_turn",
+        "agent.memory_manager.MemoryManager.prefetch_all",
+        "project_maya.memory.hermes_plugin.MayaHermesMemoryPlugin.initialize"
+      ],
+      "tests": [
+        "tests.test_hermes_governance_plugin"
+      ],
+      "sink": "SMB reads and final prompt",
+      "evidence": "fixed local-user/internal identity differs from frontend binding",
+      "next_gate": "G3",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": [
+        4
+      ]
+    },
+    {
+      "id": "model-main",
+      "status": "unresolved",
+      "intended": "supported",
+      "entrypoints": [
+        "agent.conversation_loop",
+        "agent.chat_completion_helpers"
+      ],
+      "tests": [
+        "tests.test_hermes_conversation_governance_patch",
+        "tests.test_hermes_summary_attempts_patch"
+      ],
+      "sink": "SDK transport",
+      "evidence": "scoped native functions, historical gov12 installed fixtures",
+      "next_gate": "G4",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": [
+        1,
+        3,
+        8
+      ]
+    },
+    {
+      "id": "model-auxiliary",
+      "status": "unresolved",
+      "intended": "supported",
+      "entrypoints": [
+        "agent.auxiliary_client.call_llm",
+        "agent.auxiliary_client.async_call_llm",
+        "agent.plugin_llm"
+      ],
+      "tests": [
+        "tests.test_hermes_auxiliary_governance_patch",
+        "tests.test_hermes_recovery_background_patch"
+      ],
+      "sink": "auxiliary SDK calls",
+      "evidence": "central gate tests; direct clients/full consumers open",
+      "next_gate": "G4",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": [
+        2,
+        8,
+        11
+      ]
+    },
+    {
+      "id": "tools-results",
+      "status": "unresolved",
+      "intended": "supported",
+      "entrypoints": [
+        "agent.tool_executor",
+        "model_tools",
+        "tools.registry"
+      ],
+      "tests": [
+        "tests.test_hermes_native_dispatch_governance_patch",
+        "tests.test_hermes_final_result_governance_patch"
+      ],
+      "sink": "handler dispatch and result disclosure",
+      "evidence": "bounded read evidence; unknown tools denied; useful workloads incomplete",
+      "next_gate": "G5",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": [
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "id": "output-delivery",
+      "status": "unresolved",
+      "intended": "supported",
+      "entrypoints": [
+        "agent.turn_finalizer.finalize_turn",
+        "gateway.run.GatewayRunner._run_agent_inner",
+        "gateway.platforms.base.BasePlatformAdapter.handle_message"
+      ],
+      "tests": [
+        "tests.test_hermes_model_output_patch",
+        "tests.test_hermes_output_deferral_patch",
+        "tests.test_hermes_provider_diagnostics_patch"
+      ],
+      "sink": "platform/API/log/storage sinks",
+      "evidence": "early text muted; formatting, raw gateway errors and late sends open",
+      "next_gate": "G4",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": [
+        7,
+        9,
+        10,
+        12
+      ]
+    },
+    {
+      "id": "session-storage",
+      "status": "unresolved",
+      "intended": "supported",
+      "entrypoints": [
+        "hermes_state.SessionDB",
+        "agent.turn_finalizer",
+        "gateway.mirror"
+      ],
+      "tests": [
+        "tests.test_hermes_session_write_patch",
+        "tests.test_hermes_session_mutation_patch",
+        "tests.test_hermes_session_writer_callers_patch",
+        "tests.test_hermes_session_metadata_patch"
+      ],
+      "sink": "serialized SQLite rows/transcript/trajectory",
+      "evidence": "atomic scope tests; full caller provisioning/outcomes incomplete",
+      "next_gate": "G3",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18
+      ]
+    },
+    {
+      "id": "compression-recovery",
+      "status": "unresolved",
+      "intended": "supported",
+      "entrypoints": [
+        "agent.context_compressor",
+        "agent.conversation_compression"
+      ],
+      "tests": [
+        "tests.test_hermes_compression_lock_patch",
+        "tests.test_hermes_caller_denial_patch"
+      ],
+      "sink": "compression locks, rotation, summary, index",
+      "evidence": "source candidate scoped lock/denial tests",
+      "next_gate": "G2/G3/G4",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": [
+        8,
+        11,
+        13,
+        16,
+        19
+      ]
+    },
+    {
+      "id": "builtin-memory-skills",
+      "status": "unresolved",
+      "intended": "supported",
+      "entrypoints": [
+        "agent.memory_manager.MemoryManager._submit_background",
+        "tools.memory_tool",
+        "tools.session_search_tool",
+        "tools.skill_manager_tool"
+      ],
+      "tests": [],
+      "sink": "Hermes MEMORY.md/USER.md/skills/session reads",
+      "evidence": "preserve separate stores; supported writes/search not qualified",
+      "next_gate": "G3/G5",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": []
+    },
+    {
+      "id": "background-review",
+      "status": "blocked",
+      "intended": "excluded",
+      "entrypoints": [
+        "agent.background_review",
+        "agent.turn_finalizer background factory"
+      ],
+      "tests": [
+        "tests.test_hermes_recovery_background_patch"
+      ],
+      "sink": "thread/agent construction",
+      "evidence": "scoped native review blocked, not general worker exclusion",
+      "next_gate": "G5",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": [
+        11
+      ]
+    },
+    {
+      "id": "workers-continuations",
+      "status": "unresolved",
+      "intended": "excluded",
+      "entrypoints": [
+        "gateway.run.GatewayRunner.start",
+        "gateway.run background_task",
+        "tools.delegate_tool",
+        "cron",
+        "gateway queued/steered/resume/handoff"
+      ],
+      "tests": [],
+      "sink": "threads, job dispatch, external/SQLite effects",
+      "evidence": "source inventory; real roots not all blocked",
+      "next_gate": "G5",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": []
+    },
+    {
+      "id": "alternate-ingress",
+      "status": "unresolved",
+      "intended": "excluded",
+      "entrypoints": [
+        "cli",
+        "hermes_cli",
+        "api_server",
+        "acp_adapter",
+        "mcp_serve",
+        "batch_runner",
+        "gateway slash/plugin commands"
+      ],
+      "tests": [],
+      "sink": "agent/tool/direct storage and network",
+      "evidence": "no fallback permitted; entrypoint exclusions still need enforcement",
+      "next_gate": "G2/G5",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": []
+    },
+    {
+      "id": "other-plugins-transports",
+      "status": "unresolved",
+      "intended": "excluded",
+      "entrypoints": [
+        "hermes_cli.plugins",
+        "tools.mcp_tool",
+        "agent.anthropic_adapter",
+        "agent.codex_runtime",
+        "providers"
+      ],
+      "tests": [],
+      "sink": "dynamic Python/SDK/hooks/network",
+      "evidence": "unknown roots block profile acceptance; no generic authority",
+      "next_gate": "G4/G5",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": []
+    },
+    {
+      "id": "shutdown-audit-release",
+      "status": "unresolved",
+      "intended": "supported",
+      "entrypoints": [
+        "run_agent.AIAgent.close",
+        "gateway.run.GatewayRunner.stop",
+        "project_maya audit and Phase6 lifecycle"
+      ],
+      "tests": [
+        "tests.test_hermes_session_metadata_patch",
+        "tests.test_phase6_release",
+        "tests.test_phase6_closure"
+      ],
+      "sink": "cleanup, audit outcomes, backup/update/rollback",
+      "evidence": "authorization audit != commit receipt; installed full lifecycle missing",
+      "next_gate": "G3/G7",
+      "artifact_level": "source_candidate_unqualified",
+      "patches": [
+        18
+      ]
+    }
+  ],
+  "ordinary_regressions": [
+    {
+      "subsystem": "dispatch",
+      "path": "tests/hermes_cli/test_plugins.py"
+    },
+    {
+      "subsystem": "storage",
+      "path": "tests/test_hermes_state.py"
+    },
+    {
+      "subsystem": "locks",
+      "path": "tests/test_hermes_state_compression_locks.py"
+    },
+    {
+      "subsystem": "compression",
+      "path": "tests/agent/test_context_compressor.py"
+    },
+    {
+      "subsystem": "context",
+      "path": "tests/agent/test_turn_context.py"
+    },
+    {
+      "subsystem": "finalizer",
+      "path": "tests/agent/test_turn_finalizer_cleanup_guard.py"
+    },
+    {
+      "subsystem": "memory",
+      "path": "tests/agent/test_memory_provider.py"
+    },
+    {
+      "subsystem": "auxiliary",
+      "path": "tests/agent/test_plugin_llm.py"
+    },
+    {
+      "subsystem": "tools",
+      "path": "tests/tools/test_registry.py"
+    },
+    {
+      "subsystem": "telegram",
+      "path": "tests/gateway/test_telegram_callback_auth_fail_closed.py"
+    },
+    {
+      "subsystem": "gateway",
+      "path": "tests/gateway/test_session.py"
+    },
+    {
+      "subsystem": "cli",
+      "path": "tests/cli/test_cli_new_session.py"
+    },
+    {
+      "subsystem": "anthropic",
+      "path": "tests/agent/test_anthropic_adapter.py"
+    },
+    {
+      "subsystem": "auxiliary-client",
+      "path": "tests/agent/test_auxiliary_client.py"
+    },
+    {
+      "subsystem": "executor",
+      "path": "tests/run_agent/test_tool_executor_contextvar_propagation.py"
+    },
+    {
+      "subsystem": "transport",
+      "path": "tests/agent/transports/test_chat_completions.py"
+    }
+  ],
+  "full_fork": {
+    "command": [
+      "scripts/run_governance_native_regressions.py",
+      "--mode",
+      "full",
+      "--stage",
+      "<clean-stage>",
+      "--python",
+      "<prepared-python>"
+    ],
+    "dependencies": "prepared offline environment matching pinned uv.lock core, dev and messaging; optional dependencies needed by collection must also match the lock",
+    "skips": "fail_gate",
+    "live_tests": "separate explicit consent; not covered",
+    "qualification": "not_run",
+    "process_isolation": "per_native_test_file"
+  },
+  "historical_installer": {
+    "patches": 12,
+    "wheel_version": "0.17.0+maya.gov12.candidate.20261002",
+    "wheel_sha256": "af979f8445e56e0379c7ad5252a228be5e7cf924c86f37c3c76a85ade867a323",
+    "gate_count": 4,
+    "qualification": "test_only_unqualified",
+    "not_evidence_for": "patches 13-23, full caller, live provider or clean Windows lifecycle"
+  }
+}

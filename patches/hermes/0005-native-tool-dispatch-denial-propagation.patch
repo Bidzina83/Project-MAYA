@@ -1,0 +1,100 @@
+diff --git a/model_tools.py b/model_tools.py
+index de23bd6..dbaeff5 100644
+--- a/model_tools.py
++++ b/model_tools.py
+@@ -28,6 +28,10 @@ import logging
+ import threading
+ import time
+ from typing import Dict, Any, List, Optional, Tuple
++from hermes_cli.middleware import (
++    MandatoryMiddlewareError, mandatory_middleware_enabled,
++    validate_mandatory_middleware,
++)
+ 
+ from tools.registry import discover_builtin_tools, registry
+ from toolsets import resolve_toolset, validate_toolset
+@@ -938,6 +942,9 @@ def handle_function_call(
+     Returns:
+         Function result as a JSON string.
+     """
++    if mandatory_middleware_enabled() and not validate_mandatory_middleware():
++        raise MandatoryMiddlewareError("mandatory_middleware.gate_missing")
++
+     # Coerce string arguments to their schema-declared types (e.g. "42"→42)
+     function_args = coerce_tool_args(function_name, function_args)
+     if not isinstance(function_args, dict):
+@@ -956,6 +963,10 @@ def handle_function_call(
+         _ts_mod = None
+ 
+     if _ts_mod is not None and _ts_mod.is_bridge_tool(function_name):
++        # Catalog bridge returns precede the execution gate. Do not authorize
++        # them implicitly until their effective operations are governed.
++        if mandatory_middleware_enabled():
++            raise MandatoryMiddlewareError("mandatory_middleware.gate_bypassed")
+         try:
+             # Use skip_tool_search_assembly=True so we see the real catalog,
+             # not the already-collapsed bridge-only list (the bridge would
+@@ -1036,6 +1047,8 @@ def handle_function_call(
+             function_args = _tool_request_mw.payload
+             _tool_original_args = _tool_request_mw.original_payload
+             _tool_middleware_trace = _tool_request_mw.trace
++        except MandatoryMiddlewareError as _mw_err:
++            raise MandatoryMiddlewareError(str(_mw_err)) from None
+         except Exception as _mw_err:
+             logger.debug("tool_request middleware error: %s", _mw_err)
+ 
+@@ -1067,6 +1080,8 @@ def handle_function_call(
+                     api_request_id=api_request_id or "",
+                     middleware_trace=list(_tool_middleware_trace),
+                 )
++            except MandatoryMiddlewareError as _hook_err:
++                raise MandatoryMiddlewareError(str(_hook_err)) from None
+             except Exception as _hook_err:
+                 logger.debug("pre_tool_call hook error: %s", _hook_err)
+ 
+@@ -1097,6 +1112,8 @@ def handle_function_call(
+             edit_block_message = maybe_require_edit_approval(function_name, function_args)
+             if edit_block_message is not None:
+                 return edit_block_message
++        except MandatoryMiddlewareError as _edit_approval_err:
++            raise MandatoryMiddlewareError(str(_edit_approval_err)) from None
+         except Exception as _edit_approval_err:
+             logger.debug("ACP edit approval guard error: %s", _edit_approval_err)
+             if function_name in {"write_file", "patch"}:
+@@ -1216,11 +1233,15 @@ def handle_function_call(
+                     if isinstance(hook_result, str):
+                         result = hook_result
+                         break
++        except MandatoryMiddlewareError as _hook_err:
++            raise MandatoryMiddlewareError(str(_hook_err)) from None
+         except Exception as _hook_err:
+             logger.debug("transform_tool_result hook error: %s", _hook_err)
+ 
+         return result
+ 
++    except MandatoryMiddlewareError as e:
++        raise MandatoryMiddlewareError(str(e)) from None
+     except Exception as e:
+         error_msg = f"Error executing {function_name}: {str(e)}"
+         logger.exception(error_msg)
+diff --git a/tools/registry.py b/tools/registry.py
+index 7bb92e8..c6a2189 100644
+--- a/tools/registry.py
++++ b/tools/registry.py
+@@ -18,6 +18,7 @@ import ast
+ import importlib
+ import json
+ import logging
++from hermes_cli.middleware import MandatoryMiddlewareError
+ import threading
+ import time
+ from pathlib import Path
+@@ -402,6 +403,8 @@ class ToolRegistry:
+                 from model_tools import _run_async
+                 return _run_async(entry.handler(args, **kwargs))
+             return entry.handler(args, **kwargs)
++        except MandatoryMiddlewareError as e:
++            raise MandatoryMiddlewareError(str(e)) from None
+         except Exception as e:
+             logger.exception("Tool %s dispatch error: %s", name, e)
+             # Route through the sanitizer so framing tokens / CDATA / fences

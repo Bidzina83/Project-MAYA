@@ -1,0 +1,149 @@
+diff --git a/agent/conversation_loop.py b/agent/conversation_loop.py
+index e58a412..e7e395a 100644
+--- a/agent/conversation_loop.py
++++ b/agent/conversation_loop.py
+@@ -60,10 +60,32 @@ from agent.trajectory import has_incomplete_scratchpad
+ from agent.usage_pricing import estimate_usage_cost, normalize_usage
+ from hermes_constants import PARTIAL_STREAM_STUB_ID
+ from hermes_logging import set_session_context
+-from hermes_cli.middleware import MandatoryMiddlewareError
++from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
+ from tools.skill_provenance import set_current_write_origin
+ from utils import base_url_host_matches, env_var_enabled
+ 
++
++def _provider_error_summary(agent, error):
++    if mandatory_middleware_enabled():
++        return "model.provider_error"
++    return agent._summarize_api_error(error)
++
++
++def _report_provider_error(agent, **fields):
++    if mandatory_middleware_enabled():
++        fields.update(api_kwargs={}, error_type="ProviderError",
++                      error_message="model.provider_error")
++        status = fields.get("status_code")
++        fields["status_code"] = status if type(status) is int and 100 <= status <= 599 else None
++    agent._invoke_api_request_error_hook(**fields)
++
++
++def _dump_provider_error(agent, api_kwargs, *, reason, error):
++    # Request dumps contain prompts and potentially credentials, not diagnostics.
++    if not mandatory_middleware_enabled():
++        agent._dump_api_request_debug(api_kwargs, reason=reason, error=error)
++
++
+ logger = logging.getLogger(__name__)
+ 
+ # Stable prefix of the local interrupt status string emitted when a turn is
+@@ -2259,7 +2281,7 @@ def run_conversation(
+                     classified.retryable, classified.should_compress,
+                     classified.should_rotate_credential, classified.should_fallback,
+                 )
+-                agent._invoke_api_request_error_hook(
++                _report_provider_error(agent,
+                     task_id=effective_task_id,
+                     turn_id=turn_id,
+                     api_request_id=api_request_id,
+@@ -2617,27 +2639,29 @@ def run_conversation(
+                     f"API error recovery (attempt {retry_count}/{max_retries})"
+                 )
+                 
+-                error_type = type(api_error).__name__
++                error_type = "ProviderError" if mandatory_middleware_enabled() else type(api_error).__name__
+                 error_msg = str(api_error).lower()
+-                _error_summary = agent._summarize_api_error(api_error)
++                _error_summary = _provider_error_summary(agent, api_error)
+                 logger.warning(
+                     "API call failed (attempt %s/%s) error_type=%s %s summary=%s",
+                     retry_count,
+                     max_retries,
+                     error_type,
+-                    agent._client_log_context(),
++                    "model.route_redacted" if mandatory_middleware_enabled() else agent._client_log_context(),
+                     _error_summary,
+                 )
+ 
+                 _provider = getattr(agent, "provider", "unknown")
+                 _base = getattr(agent, "base_url", "unknown")
+                 _model = getattr(agent, "model", "unknown")
++                if mandatory_middleware_enabled():
++                    _provider = _base = _model = "redacted"
+                 _status_code_str = f" [HTTP {status_code}]" if status_code else ""
+                 agent._buffer_vprint(f"⚠️  API call failed (attempt {retry_count}/{max_retries}): {error_type}{_status_code_str}")
+                 agent._buffer_vprint(f"   🔌 Provider: {_provider}  Model: {_model}")
+                 agent._buffer_vprint(f"   🌐 Endpoint: {_base}")
+                 agent._buffer_vprint(f"   📝 Error: {_error_summary}")
+-                if status_code and status_code < 500:
++                if not mandatory_middleware_enabled() and status_code and status_code < 500:
+                     _err_body = getattr(api_error, "body", None)
+                     _err_body_str = str(_err_body)[:300] if _err_body else None
+                     if _err_body_str:
+@@ -2672,7 +2696,7 @@ def run_conversation(
+                     agent._persist_session(messages, conversation_history)
+                     agent.clear_interrupt()
+                     return {
+-                        "final_response": f"Operation interrupted: handling API error ({error_type}: {agent._clean_error_message(str(api_error))}).",
++                        "final_response": f"Operation interrupted: handling API error ({error_type}: {_error_summary if mandatory_middleware_enabled() else agent._clean_error_message(str(api_error))}).",
+                         "messages": messages,
+                         "api_calls": api_call_count,
+                         "completed": False,
+@@ -3289,7 +3313,7 @@ def run_conversation(
+                         _retry.primary_recovery_attempted = False
+                         continue
+                     if api_kwargs is not None:
+-                        agent._dump_api_request_debug(
++                        _dump_provider_error(agent,
+                             api_kwargs, reason="non_retryable_client_error", error=api_error,
+                         )
+                     # Terminal — flush buffered context so the user sees
+@@ -3301,7 +3325,7 @@ def run_conversation(
+                     # returned ``error`` field and downstream consumers deliver
+                     # it verbatim (e.g. a cron failure notification dumped a
+                     # ~60KB Cloudflare challenge page as 31 Discord messages).
+-                    _nonretryable_summary = agent._summarize_api_error(api_error)
++                    _nonretryable_summary = _provider_error_summary(agent, api_error)
+                     if classified.reason == FailoverReason.content_policy_blocked:
+                         agent._emit_status(
+                             f"❌ Provider safety filter blocked this request: "
+@@ -3380,7 +3404,10 @@ def run_conversation(
+                             f"{agent.log_prefix}        hermes fallback add   (interactive picker — same as `hermes model`)",
+                             force=True,
+                         )
+-                    logger.error(f"{agent.log_prefix}Non-retryable client error: {api_error}")
++                    if mandatory_middleware_enabled():
++                        logger.error("Non-retryable client error: model.provider_error")
++                    else:
++                        logger.error(f"{agent.log_prefix}Non-retryable client error: {api_error}")
+                     # Skip session persistence when the error is likely
+                     # context-overflow related (status 400 + large session).
+                     # Persisting the failed user message would make the
+@@ -3439,7 +3466,7 @@ def run_conversation(
+                         continue
+                     # Terminal — flush buffered retry/fallback trace.
+                     agent._flush_status_buffer()
+-                    _final_summary = agent._summarize_api_error(api_error)
++                    _final_summary = _provider_error_summary(agent, api_error)
+                     _billing_guidance = ""
+                     if classified.reason == FailoverReason.billing:
+                         agent._emit_status(f"❌ Billing or credits exhausted — {_final_summary}")
+@@ -3497,7 +3524,7 @@ def run_conversation(
+                         _provider, _model, len(api_messages), f"{approx_tokens:,}",
+                     )
+                     if api_kwargs is not None:
+-                        agent._dump_api_request_debug(
++                        _dump_provider_error(agent,
+                             api_kwargs, reason="max_retries_exhausted", error=api_error,
+                         )
+                     agent._persist_session(messages, conversation_history)
+@@ -4525,6 +4552,10 @@ def run_conversation(
+             raise MandatoryMiddlewareError(str(governance_error)) from None
+ 
+         except Exception as e:
++            if mandatory_middleware_enabled():
++                # Unexpected recovery/loop failures must not publish tracebacks
++                # or inject exception text into subsequent model context.
++                raise MandatoryMiddlewareError("callback_failed") from None
+             error_msg = f"Error during OpenAI-compatible API call #{api_call_count}: {str(e)}"
+             try:
+                 print(f"❌ {error_msg}")

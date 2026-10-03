@@ -88,9 +88,21 @@ def build_local_product(
     config.validate()
     require_valid_model_config(config)
     secret_store = build_platform_secret_store(config.deployment.data_dir)
+    hermes = _build_hermes_runtime(config, secret_store)
+    return _assemble_local_product(config, secret_store, hermes, gateway=gateway, actor_id=actor_id)
+
+
+def _assemble_local_product(
+    config: MayaConfig,
+    secret_store: SecretStore,
+    hermes: HermesRuntimeAdapter,
+    *,
+    gateway: ActionAuthorizationGateway | None = None,
+    actor_id: str,
+) -> LocalMayaProduct:
+    """Shared assembly; production and isolated qualification select their adapter."""
     retriever = _build_retriever(config)
     base_memory = MemoryRetriever(retriever)
-    hermes = _build_hermes_runtime(config, secret_store)
     audit_sink = _build_audit_sink(config)
     authorization_gateway = gateway or _build_gateway(config)
     memory = GovernedMemoryRetriever(
@@ -115,7 +127,7 @@ def build_local_product(
     local_api = LocalAPI(
         agent=agent,
         runtime=governed,
-        authenticator=BearerTokenAuthenticator(secret_store),
+        authenticator=BearerTokenAuthenticator(secret_store, actor_id=actor_id),
     )
     return LocalMayaProduct(
         agent=agent,

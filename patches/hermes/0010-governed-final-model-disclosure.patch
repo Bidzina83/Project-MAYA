@@ -1,0 +1,165 @@
+diff --git a/hermes_cli/middleware.py b/hermes_cli/middleware.py
+index a6e65f1..cceb8f7 100644
+--- a/hermes_cli/middleware.py
++++ b/hermes_cli/middleware.py
+@@ -21,6 +21,7 @@ MIDDLEWARE_SCHEMA_VERSION = "hermes.middleware.v1"
+ TOOL_REQUEST_MIDDLEWARE = "tool_request"
+ TOOL_EXECUTION_MIDDLEWARE = "tool_execution"
+ TOOL_RESULT_MIDDLEWARE = "tool_result"
++MODEL_OUTPUT_MIDDLEWARE = "model_output"
+ LLM_REQUEST_MIDDLEWARE = "llm_request"
+ LLM_EXECUTION_MIDDLEWARE = "llm_execution"
+ 
+@@ -32,6 +33,7 @@ VALID_MIDDLEWARE: set[str] = {
+     TOOL_REQUEST_MIDDLEWARE,
+     TOOL_EXECUTION_MIDDLEWARE,
+     TOOL_RESULT_MIDDLEWARE,
++    MODEL_OUTPUT_MIDDLEWARE,
+     LLM_REQUEST_MIDDLEWARE,
+     LLM_EXECUTION_MIDDLEWARE,
+ }
+@@ -40,7 +42,7 @@ VALID_MIDDLEWARE: set[str] = {
+ # worker paths have also been qualified against the built runtime artifact.
+ _mandatory_enabled = False
+ _mandatory_callbacks: Dict[str, Callable] = {}
+-_EXECUTION_KINDS = (LLM_EXECUTION_MIDDLEWARE, TOOL_EXECUTION_MIDDLEWARE, TOOL_RESULT_MIDDLEWARE)
++_EXECUTION_KINDS = (LLM_EXECUTION_MIDDLEWARE, TOOL_EXECUTION_MIDDLEWARE, TOOL_RESULT_MIDDLEWARE, MODEL_OUTPUT_MIDDLEWARE)
+ 
+ 
+ class MandatoryMiddlewareError(RuntimeError):
+@@ -324,6 +326,33 @@ def run_tool_result_middleware(tool_name: str, args: Dict[str, Any], result: Any
+         raise MandatoryMiddlewareError("callback_failed") from None
+ 
+ 
++def run_model_output_middleware(result: Any, **context: Any) -> Any:
++    """Validate a model disclosure without permitting middleware replacement.
++
++    The caller owns the effective assembled payload. The required callback runs
++    last and cannot turn a denied disclosure into a transformed success.
++    """
++    if not _mandatory_enabled:
++        return result
++    try:
++        if not validate_mandatory_middleware():
++            raise MandatoryMiddlewareError("gate_missing")
++        required = _mandatory_callbacks[MODEL_OUTPUT_MIDDLEWARE]
++        callbacks = _get_middleware_callbacks(MODEL_OUTPUT_MIDDLEWARE)
++        callbacks = [callback for callback in callbacks if callback != required] + [required]
++        for callback in callbacks:
++            checked = callback(**middleware_payload(result=deepcopy(result), **context))
++            if not validate_mandatory_middleware():
++                raise MandatoryMiddlewareError("gate_missing")
++            if checked != result:
++                raise MandatoryMiddlewareError("callback_failed")
++        return result
++    except MandatoryMiddlewareError as exc:
++        raise MandatoryMiddlewareError(str(exc)) from None
++    except Exception:
++        raise MandatoryMiddlewareError("callback_failed") from None
++
++
+ async def run_llm_execution_middleware_async(
+     request: Dict[str, Any],
+     next_call: Callable[[Dict[str, Any]], Any],
+diff --git a/agent/turn_finalizer.py b/agent/turn_finalizer.py
+index 60d6a88..c8df6df 100644
+--- a/agent/turn_finalizer.py
++++ b/agent/turn_finalizer.py
+@@ -49,6 +49,10 @@ def finalize_turn(
+     loop). See module docstring.
+     """
+     from agent.conversation_loop import logger
++    from hermes_cli.middleware import (
++        MandatoryMiddlewareError, mandatory_middleware_enabled,
++        run_model_output_middleware,
++    )
+ 
+     if final_response is None and (
+         api_call_count >= agent.max_iterations
+@@ -145,10 +149,19 @@ def finalize_turn(
+     # killing the turn.
+     _cleanup_errors = []
+ 
++    if mandatory_middleware_enabled():
++        run_model_output_middleware(
++            {"final_response": final_response, "messages": messages,
++             "conversation_history": conversation_history}, stage="before_persistence",
++            provider=agent.provider, model=agent.model, base_url=agent.base_url,
++        )
++
+     # Save trajectory if enabled.  ``user_message`` may be a multimodal
+     # list of parts; the trajectory format wants a plain string.
+     try:
+         agent._save_trajectory(messages, _summarize_user_message_for_log(user_message), completed)
++    except MandatoryMiddlewareError:
++        raise
+     except Exception as _save_err:
+         _cleanup_errors.append(f"save_trajectory: {_save_err}")
+         logger.error("finalize_turn: _save_trajectory failed: %s", _save_err, exc_info=True)
+@@ -156,6 +169,8 @@ def finalize_turn(
+     # Clean up VM and browser for this task after conversation completes
+     try:
+         agent._cleanup_task_resources(effective_task_id)
++    except MandatoryMiddlewareError:
++        raise
+     except Exception as _cleanup_err:
+         _cleanup_errors.append(f"cleanup_task_resources: {_cleanup_err}")
+         logger.error("finalize_turn: _cleanup_task_resources failed: %s", _cleanup_err, exc_info=True)
+@@ -189,7 +204,16 @@ def finalize_turn(
+                 }
+             )
+ 
++        if mandatory_middleware_enabled():
++            run_model_output_middleware(
++                {"final_response": final_response, "messages": messages,
++                 "conversation_history": conversation_history},
++                stage="before_session_persistence", provider=agent.provider,
++                model=agent.model, base_url=agent.base_url,
++            )
+         agent._persist_session(messages, conversation_history)
++    except MandatoryMiddlewareError:
++        raise
+     except Exception as _persist_err:
+         _cleanup_errors.append(f"persist_session: {_persist_err}")
+         logger.error("finalize_turn: _persist_session failed: %s", _persist_err, exc_info=True)
+@@ -333,9 +357,18 @@ def finalize_turn(
+                     final_response = _hook_result
+                     _response_transformed = True
+                     break  # First non-empty string wins
++        except MandatoryMiddlewareError:
++            raise
+         except Exception as exc:
+             logger.warning("transform_llm_output hook failed: %s", exc)
+ 
++    if mandatory_middleware_enabled():
++        run_model_output_middleware(
++            {"final_response": final_response, "messages": messages,
++             "original_user_message": original_user_message}, stage="after_transform",
++            provider=agent.provider, model=agent.model, base_url=agent.base_url,
++        )
++
+     # Plugin hook: post_llm_call
+     # Fired once per turn after the tool-calling loop completes.
+     # Plugins can use this to persist conversation data (e.g. sync
+@@ -354,6 +387,8 @@ def finalize_turn(
+                 model=agent.model,
+                 platform=getattr(agent, "platform", None) or "",
+             )
++        except MandatoryMiddlewareError:
++            raise
+         except Exception as exc:
+             logger.warning("post_llm_call hook failed: %s", exc)
+ 
+@@ -423,6 +458,12 @@ def finalize_turn(
+     if interrupted and agent._interrupt_message:
+         result["interrupt_message"] = agent._interrupt_message
+ 
++    if mandatory_middleware_enabled():
++        run_model_output_middleware(
++            result, stage="before_return", provider=agent.provider,
++            model=agent.model, base_url=agent.base_url,
++        )
++
+     # Clear interrupt state after handling
+     agent.clear_interrupt()
+ 

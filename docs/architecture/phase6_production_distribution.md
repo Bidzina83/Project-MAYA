@@ -131,6 +131,86 @@ Windows machine with the required managed runtime artifacts.
 
 ## Boundaries
 
+### Separate Governance-Test Installer
+
+`scripts/build_governance_test_installer.py` builds a dedicated Inno product,
+not the Standard production installer. It consumes the hashed twelve-patch Hermes
+candidate, builds the current Maya wheel and materializes prepared Python
+dependency wheels beside managed Python. No source-tree execution, provider
+credentials or system software installation is used. Metabase, documents,
+browser, broker and connectors are disabled in this core qualification profile;
+normal Standard still requires its included Metabase capability.
+
+Install root: `%LOCALAPPDATA%\Programs\Maya Governance Test`.
+Test state/reports: `%LOCALAPPDATA%\Maya Governance Test\run-<id>`.
+It has its own AppId and selectable Start Menu/desktop shortcuts. The
+`Qualify Maya Governance Test` shortcut uses managed Python to run
+`project_maya.hermes_plugins.candidate_qualification` from installed artifacts.
+Each run initializes new isolated state, actual SQLite memory and local policy,
+starts/stops actual Maya/Hermes, verifies four native bindings before SDK
+construction and audits a denied model request with zero provider calls.
+The shortcut also starts two fresh processes for allowed model/output and a
+denied native file-tool proposal. These use real SDK parsing and the native loop
+with zero SDK retries, but synthetic HTTP/SSE fixtures rather than sockets or a
+live LLM. The file tool comes from the native catalogue; its handler must not
+execute on denial, and there must be no second inference. No customer credential
+or data is used. This does not test live provider authorization, actual model
+reasoning, allowed tool effects, complete recovery/background behavior or the
+full Standard lifecycle.
+
+The fourth `tool-allow` scenario reads exactly one synthetic document through
+the native file tool, validates its result before the follow-up model request,
+and verifies two separately authorized model requests and validated final
+output. On Windows this native path depends on customer-managed Git Bash;
+it is not bundled here and clean-install qualification remains blocked until
+the shell dependency is curated/packaged or an approved alternative is qualified.
+
+`scripts/verify_governance_test_installer.py` checks every payload file and the
+six-scenario launcher. `compression-denial` exercises the installed complete
+native summary consumer at its governed auxiliary-call seam: typed denial,
+one attempt, zero transport/fallback and unchanged summary/cooldown state.
+It does not qualify auxiliary provider selection or all compression callers.
+`background-denial` triggers the native loop's finalizer review branch after
+validated synthetic output and checks the readiness denial propagates, with no
+background thread or additional agent. Earlier validated saves are not undone.
+Other worker/recovery/persistence paths and clean installation remain open.
+
+The verifier checks the
+compiled installer against hashes. `--run-payload` runs offline qualification
+using managed Python. Its result is release-payload smoke, not evidence of a
+clean Inno installation. Unsigned installers require the builder's explicit
+`--allow-unsigned-installers` and verifier's `--allow-unsigned-local-smoke`;
+production qualification remains false even if Authenticode signing is supplied.
+
+The current governance-test build is `0.1.0+govtest.20261002.013`, using Hermes
+`0.17.0+maya.gov12.candidate.20261002` with patches 1-12. Its ignored artifact
+directory is `.codex-build/maya-governance-test-20261002-013/`. All six offline
+packaged scenarios pass, each also checking native persistence denial, preserved
+session assignment, zero denied store calls and raw API observer suppression.
+The probe opens Hermes's native session database in isolated test state; it does
+not qualify allowed database writes or bypassing gateway writers. It registers
+observers through the native PluginContext API. Builds 011 and 012 failed probe
+development and are not delivery candidates. Build 013 is unsigned local-smoke
+only, not Standard or Windows production qualification. The real-provider,
+managed-shell and full lifecycle/recovery/worker gates remain open.
+
+Governance-test build `0.1.0+govtest.20261002.010` used the eleven-patch wheel
+and passed all six release-payload scenarios on the build machine. The generated
+installer and evidence are under the ignored
+`.codex-build/maya-governance-test-20261002-010/` directory. Build 009 is superseded
+and must not be used for qualification. The test initializer observer preserves
+the real AIAgent class and native routing; synthetic HTTP remains the transport.
+This result is not evidence of a clean Inno installation, a live provider, a
+managed shell, full recovery/worker coverage or Windows production support.
+
+The candidate uninstaller removes only its own managed runtime tree, including
+untracked caches; test data and all other Maya/Hermes homes are preserved. The
+existing Standard uninstaller relies on Inno's owned-file log and has no explicit
+runtime cleanup, so generated files or locked files can leave directories behind.
+Do not delete customer state to remedy this. Hermes itself defaults to
+`%LOCALAPPDATA%\hermes` when `HERMES_HOME` is absent and seeds a generic SOUL.md;
+the candidate explicitly supplies its isolated home before importing Hermes.
+
 Phase 6 does not add automatic background updates, silent installer execution,
 system dependency installation, customer tenant resource creation, or platform
 support claims beyond the qualified Windows desktop artifact.

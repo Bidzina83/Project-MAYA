@@ -1,0 +1,32 @@
+--- a/gateway/session.py
++++ b/gateway/session.py
+@@ -1005,6 +1005,9 @@
+         Evaluates reset policy to determine if the existing session is stale.
+         Creates a session record in SQLite when a new session starts.
+         """
++        from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++        if mandatory_middleware_enabled():
++            raise MandatoryMiddlewareError("session_write_unqualified")
+         session_key = self._generate_session_key(source)
+         now = _now()
+ 
+@@ -1270,6 +1273,9 @@
+ 
+     def reset_session(self, session_key: str, display_name: Optional[str] = None) -> Optional[SessionEntry]:
+         """Force reset a session, creating a new session ID."""
++        from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++        if mandatory_middleware_enabled():
++            raise MandatoryMiddlewareError("session_write_unqualified")
+         db_end_session_id = None
+         db_create_kwargs = None
+         new_entry = None
+@@ -1329,6 +1335,9 @@
+         old transcript is loaded on the next message. If the target session was
+         previously ended, re-open it so gateway resume semantics match the CLI.
+         """
++        from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++        if mandatory_middleware_enabled():
++            raise MandatoryMiddlewareError("session_write_unqualified")
+         db_end_session_id = None
+         new_entry = None
+ 

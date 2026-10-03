@@ -1,0 +1,90 @@
+diff --git a/run_agent.py b/run_agent.py
+--- a/run_agent.py
++++ b/run_agent.py
+@@ -1512,3 +1512,14 @@
++    def _validate_persistence_payload(self, payload, *, stage):
++        """Check content before native stores; never replace Hermes persistence."""
++        from hermes_cli.middleware import (
++            mandatory_middleware_enabled, run_model_output_middleware,
++        )
++        if mandatory_middleware_enabled():
++            run_model_output_middleware(
++                payload, stage=stage, provider=self.provider,
++                model=self.model, base_url=self.base_url,
++            )
++
+     def _persist_session(self, messages: List[Dict], conversation_history: List[Dict] = None):
+         """Save session state to both JSON log and SQLite on any exit path.
+ 
+@@ -1518,6 +1529,10 @@
+         self._drop_trailing_empty_response_scaffolding(messages)
+         self._apply_persist_user_message_override(messages)
++        self._validate_persistence_payload(
++            {"messages": messages, "conversation_history": conversation_history},
++            stage="incremental_session",
++        )
+         self._session_messages = messages
+         self._save_session_log(messages)
+         self._flush_messages_to_session_db(messages, conversation_history)
+ 
+@@ -1591,6 +1606,10 @@
+         if not self._session_db:
+             return
+         self._apply_persist_user_message_override(messages)
++        self._validate_persistence_payload(
++            {"messages": messages, "conversation_history": conversation_history},
++            stage="native_session_db",
++        )
+         try:
+             # Retry row creation if the earlier attempt failed transiently.
+             if not self._session_db_created:
+@@ -1730,7 +1749,11 @@
+         if not self.save_trajectories:
+             return
+         
++        self._validate_persistence_payload(
++            {"messages": messages, "user_query": user_query}, stage="trajectory_source",
++        )
+         trajectory = self._convert_to_trajectory_format(messages, user_query, completed)
++        self._validate_persistence_payload(trajectory, stage="native_trajectory")
+         _save_trajectory_to_file(trajectory, self.model, completed)
+ 
+     @staticmethod
+@@ -2364,6 +2388,7 @@
+                 "messages": cleaned,
+             }
+ 
++            self._validate_persistence_payload(entry, stage="native_session_json")
+             atomic_json_write(
+                 log_file,
+                 entry,
+@@ -2372,6 +2397,11 @@
+             )
+ 
+         except Exception as e:
++            from hermes_cli.middleware import (
++                MandatoryMiddlewareError, mandatory_middleware_enabled,
++            )
++            if mandatory_middleware_enabled() and isinstance(e, MandatoryMiddlewareError):
++                raise
+             if self.verbose_logging:
+                 logging.warning(f"Failed to save session log: {e}")
+ 
+diff --git a/hermes_cli/plugins.py b/hermes_cli/plugins.py
+--- a/hermes_cli/plugins.py
++++ b/hermes_cli/plugins.py
+@@ -1721,6 +1721,14 @@
+         persisted to session DB.
+         """
++        from hermes_cli.middleware import mandatory_middleware_enabled
++        if mandatory_middleware_enabled() and hook_name in {
++            "pre_api_request", "post_api_request", "api_request_error",
++        }:
++            # Raw telemetry is not a qualified disclosure channel. Execution
++            # authorization remains in mandatory middleware, not observers.
++            return []
++
+         kwargs.setdefault("telemetry_schema_version", OBSERVER_SCHEMA_VERSION)
+         callbacks = self._hooks.get(hook_name, [])
+         results: List[Any] = []
+         for cb in callbacks:

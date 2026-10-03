@@ -1,0 +1,137 @@
+diff --git a/run_agent.py b/run_agent.py
+index 6305098..47ca94b 100644
+--- a/run_agent.py
++++ b/run_agent.py
+@@ -4150,6 +4150,13 @@ class AIAgent:
+ 
+     def _reset_stream_delivery_tracking(self) -> None:
+         """Reset tracking for text delivered during the current model response."""
++        from hermes_cli.middleware import mandatory_middleware_enabled
++        if mandatory_middleware_enabled():
++            # Never flush an unvalidated tail into a display or TTS callback.
++            self._stream_think_scrubber = None
++            self._stream_context_scrubber = None
++            self._current_streamed_assistant_text = ""
++            return
+         # Flush any benign partial-tag tail held by the think scrubber
+         # first (#17924): an innocent '<' at the end of the stream that
+         # turned out not to be a tag prefix should reach the UI.  Then
+@@ -4215,6 +4222,9 @@ class AIAgent:
+ 
+     def _emit_interim_assistant_message(self, assistant_msg: Dict[str, Any]) -> None:
+         """Surface a real mid-turn assistant commentary message to the UI layer."""
++        from hermes_cli.middleware import mandatory_middleware_enabled
++        if mandatory_middleware_enabled():
++            return
+         cb = getattr(self, "interim_assistant_callback", None)
+         if cb is None or not isinstance(assistant_msg, dict):
+             return
+@@ -4230,6 +4240,10 @@ class AIAgent:
+ 
+     def _fire_stream_delta(self, text: str) -> None:
+         """Fire all registered stream delta callbacks (display + TTS)."""
++        from hermes_cli.middleware import mandatory_middleware_enabled
++        if mandatory_middleware_enabled():
++            # Native transports still assemble the response; do not duplicate it.
++            return
+         # If a tool iteration set the break flag, prepend a single paragraph
+         # break before the first real text delta.  This prevents the original
+         # problem (text concatenation across tool boundaries) without stacking
+@@ -4283,6 +4297,9 @@ class AIAgent:
+ 
+     def _fire_reasoning_delta(self, text: str) -> None:
+         """Fire reasoning callback if registered."""
++        from hermes_cli.middleware import mandatory_middleware_enabled
++        if mandatory_middleware_enabled():
++            return
+         cb = self.reasoning_callback
+         if cb is not None:
+             try:
+@@ -4298,6 +4315,9 @@ class AIAgent:
+         or status line so the user isn't staring at a frozen screen while a
+         large tool payload (e.g. a 45 KB write_file) is being generated.
+         """
++        from hermes_cli.middleware import mandatory_middleware_enabled
++        if mandatory_middleware_enabled():
++            return
+         cb = self.tool_gen_callback
+         if cb is not None:
+             try:
+diff --git a/agent/conversation_loop.py b/agent/conversation_loop.py
+index e7e395a..f8b2c3a 100644
+--- a/agent/conversation_loop.py
++++ b/agent/conversation_loop.py
+@@ -3721,7 +3721,8 @@ def run_conversation(
+                 pass
+ 
+             # Handle assistant response
+-            if assistant_message.content and not agent.quiet_mode:
++            if (assistant_message.content and not agent.quiet_mode
++                    and not mandatory_middleware_enabled()):
+                 if agent.verbose_logging:
+                     agent._vprint(f"{agent.log_prefix}🤖 Assistant: {assistant_message.content}")
+                 else:
+@@ -3729,7 +3730,8 @@ def run_conversation(
+ 
+             # Notify progress callback of model's thinking (used by subagent
+             # delegation to relay the child's reasoning to the parent display).
+-            if (assistant_message.content and agent.tool_progress_callback):
++            if (assistant_message.content and agent.tool_progress_callback
++                    and not mandatory_middleware_enabled()):
+                 _think_text = assistant_message.content.strip()
+                 # Strip reasoning XML tags that shouldn't leak to parent display
+                 _think_text = re.sub(
+@@ -4050,7 +4052,8 @@ def run_conversation(
+                     agent._last_content_tools_all_housekeeping = _all_housekeeping
+                     if _all_housekeeping and agent._has_stream_consumers():
+                         agent._mute_post_response = True
+-                    elif agent._should_emit_quiet_tool_messages():
++                    elif (not mandatory_middleware_enabled()
++                          and agent._should_emit_quiet_tool_messages()):
+                         clean = agent._strip_think_blocks(turn_content).strip()
+                         if clean:
+                             agent._vprint(f"  ┊ 💬 {clean}")
+@@ -4103,7 +4106,7 @@ def run_conversation(
+                 # flushing here prevents it from wrapping tool feed lines.
+                 # Only signal the display callback — TTS (_stream_callback)
+                 # should NOT receive None (it uses None as end-of-stream).
+-                if agent.stream_delta_callback:
++                if agent.stream_delta_callback and not mandatory_middleware_enabled():
+                     try:
+                         agent.stream_delta_callback(None)
+                     except Exception:
+@@ -4124,7 +4127,7 @@ def run_conversation(
+                     # was flushed (callback(None)) before tool execution,
+                     # but the callback is still alive — fire the text
+                     # through it so SSE/TUI clients see the explanation.
+-                    if final_response:
++                    if final_response and not mandatory_middleware_enabled():
+                         agent._safe_print(f"\n{final_response}\n")
+                         if agent.stream_delta_callback:
+                             try:
+diff --git a/agent/chat_completion_helpers.py b/agent/chat_completion_helpers.py
+index b55f276..2adcca0 100644
+--- a/agent/chat_completion_helpers.py
++++ b/agent/chat_completion_helpers.py
+@@ -839,10 +839,10 @@ def build_assistant_message(agent, assistant_message, finish_reason: str) -> dic
+             combined = "\n\n".join(b.strip() for b in think_blocks if b.strip())
+             reasoning_text = combined or None
+ 
+-    if reasoning_text and agent.verbose_logging:
++    if reasoning_text and agent.verbose_logging and not mandatory_middleware_enabled():
+         logging.debug(f"Captured reasoning ({len(reasoning_text)} chars): {reasoning_text}")
+ 
+-    if reasoning_text and agent.reasoning_callback:
++    if reasoning_text and agent.reasoning_callback and not mandatory_middleware_enabled():
+         # Skip callback when streaming is active — reasoning was already
+         # displayed during the stream via one of two paths:
+         #   (a) _fire_reasoning_delta (structured reasoning_content deltas)
+@@ -1985,7 +1985,7 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
+                 # reasoning display.  Non-reasoning text is harmlessly
+                 # suppressed by the CLI's _stream_delta when the stream
+                 # box is already closed (tool boundary flush).
+-                elif agent.stream_delta_callback:
++                elif agent.stream_delta_callback and not mandatory_middleware_enabled():
+                     try:
+                         agent.stream_delta_callback(delta.content)
+                         agent._record_streamed_assistant_text(delta.content)

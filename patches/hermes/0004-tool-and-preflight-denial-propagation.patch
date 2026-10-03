@@ -1,0 +1,184 @@
+diff --git a/agent/tool_executor.py b/agent/tool_executor.py
+index 42d3c75..e0eb732 100644
+--- a/agent/tool_executor.py
++++ b/agent/tool_executor.py
+@@ -20,6 +20,7 @@ import random
+ import threading
+ import time
+ from typing import Any, Optional
++from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
+ 
+ from agent.display import (
+     KawaiiSpinner,
+@@ -243,6 +244,8 @@ def _apply_tool_request_middleware_for_agent(
+         )
+         payload = result.payload if isinstance(result.payload, dict) else function_args
+         return payload, list(result.trace)
++    except MandatoryMiddlewareError as exc:
++        raise MandatoryMiddlewareError(str(exc)) from None
+     except Exception as exc:
+         logger.debug("tool_request middleware error: %s", exc)
+         return function_args, []
+@@ -286,6 +289,12 @@ def execute_tool_calls_concurrent(agent, assistant_message, messages: list, effe
+     Results are collected in the original tool-call order and appended to
+     messages so the API sees them in the expected sequence.
+     """
++    # Worker failure collection and trusted-context propagation are not yet
++    # qualified. Reuse the native serial path before any batch side effects.
++    if mandatory_middleware_enabled():
++        return execute_tool_calls_sequential(
++            agent, assistant_message, messages, effective_task_id, api_call_count,
++        )
+     tool_calls = assistant_message.tool_calls
+     num_tools = len(tool_calls)
+ 
+@@ -568,6 +577,8 @@ def execute_tool_calls_concurrent(agent, assistant_message, messages: list, effe
+                 logger.info("tool %s cancelled (%.2fs)", function_name, duration)
+                 results[index] = (function_name, function_args, result, duration, True, False, middleware_trace)
+                 return
++            except MandatoryMiddlewareError as tool_error:
++                raise MandatoryMiddlewareError(str(tool_error)) from None
+             except Exception as tool_error:
+                 result = f"Error executing tool '{function_name}': {tool_error}"
+                 logger.error("_invoke_tool raised for %s: %s", function_name, tool_error, exc_info=True)
+@@ -1231,6 +1242,8 @@ def execute_tool_calls_sequential(agent, assistant_message, messages: list, effe
+                     execute=_execute,
+                 )
+                 _ce_result = function_result
++            except MandatoryMiddlewareError as tool_error:
++                raise MandatoryMiddlewareError(str(tool_error)) from None
+             except Exception as tool_error:
+                 function_result = json.dumps({"error": f"Context engine tool '{function_name}' failed: {tool_error}"})
+                 logger.error("context_engine.handle_tool_call raised for %s: %s", function_name, tool_error, exc_info=True)
+@@ -1264,6 +1277,8 @@ def execute_tool_calls_sequential(agent, assistant_message, messages: list, effe
+                     execute=_execute,
+                 )
+                 _mem_result = function_result
++            except MandatoryMiddlewareError as tool_error:
++                raise MandatoryMiddlewareError(str(tool_error)) from None
+             except Exception as tool_error:
+                 function_result = json.dumps({"error": f"Memory tool '{function_name}' failed: {tool_error}"})
+                 logger.error("memory_manager.handle_tool_call raised for %s: %s", function_name, tool_error, exc_info=True)
+@@ -1314,6 +1329,8 @@ def execute_tool_calls_sequential(agent, assistant_message, messages: list, effe
+                 except Exception:
+                     pass
+                 raise
++            except MandatoryMiddlewareError as tool_error:
++                raise MandatoryMiddlewareError(str(tool_error)) from None
+             except Exception as tool_error:
+                 function_result = f"Error executing tool '{function_name}': {tool_error}"
+                 logger.error("handle_function_call raised for %s: %s", function_name, tool_error, exc_info=True)
+@@ -1354,6 +1371,8 @@ def execute_tool_calls_sequential(agent, assistant_message, messages: list, effe
+                 except Exception:
+                     pass
+                 raise
++            except MandatoryMiddlewareError as tool_error:
++                raise MandatoryMiddlewareError(str(tool_error)) from None
+             except Exception as tool_error:
+                 function_result = f"Error executing tool '{function_name}': {tool_error}"
+                 logger.error("handle_function_call raised for %s: %s", function_name, tool_error, exc_info=True)
+diff --git a/agent/turn_context.py b/agent/turn_context.py
+index 368b8f3..2f05d37 100644
+--- a/agent/turn_context.py
++++ b/agent/turn_context.py
+@@ -27,6 +27,7 @@ import threading
+ import uuid
+ from dataclasses import dataclass
+ from typing import Any, Dict, List, Optional
++from hermes_cli.middleware import MandatoryMiddlewareError
+ 
+ from agent.iteration_budget import IterationBudget
+ from agent.model_metadata import estimate_request_tokens_rough
+@@ -123,6 +124,8 @@ def build_turn_context(
+             api_key=getattr(agent, "api_key", "") or "",
+             api_mode=getattr(agent, "api_mode", "") or "",
+         )
++    except MandatoryMiddlewareError as exc:
++        raise MandatoryMiddlewareError(str(exc)) from None
+     except Exception:
+         pass
+ 
+@@ -150,6 +153,8 @@ def build_turn_context(
+             from tools.mcp_tool import has_registered_mcp_tools, refresh_agent_mcp_tools
+             if has_registered_mcp_tools():
+                 refresh_agent_mcp_tools(agent, quiet_mode=True)
++    except MandatoryMiddlewareError as exc:
++        raise MandatoryMiddlewareError(str(exc)) from None
+     except Exception:
+         logger.debug("between-turns MCP tool refresh skipped", exc_info=True)
+ 
+@@ -196,6 +201,8 @@ def build_turn_context(
+                     "issue — cleaned up automatically. Proceeding with fresh "
+                     "connection."
+                 )
++        except MandatoryMiddlewareError as exc:
++            raise MandatoryMiddlewareError(str(exc)) from None
+         except Exception:
+             pass
+     # Replay compression warning through status_callback for gateway platforms.
+@@ -281,6 +288,8 @@ def build_turn_context(
+     # Crash-resilience: persist the inbound user turn as soon as the session row exists.
+     try:
+         agent._persist_session(messages, conversation_history)
++    except MandatoryMiddlewareError as exc:
++        raise MandatoryMiddlewareError(str(exc)) from None
+     except Exception:
+         logger.warning(
+             "Early turn-start session persistence failed for session=%s",
+@@ -387,6 +396,8 @@ def build_turn_context(
+                 _ctx_parts.append(r)
+         if _ctx_parts:
+             plugin_user_context = "\n\n".join(_ctx_parts)
++    except MandatoryMiddlewareError as exc:
++        raise MandatoryMiddlewareError(str(exc)) from None
+     except Exception as exc:
+         logger.warning("pre_llm_call hook failed: %s", exc)
+ 
+@@ -411,6 +422,8 @@ def build_turn_context(
+         try:
+             _turn_msg = original_user_message if isinstance(original_user_message, str) else ""
+             agent._memory_manager.on_turn_start(agent._user_turn_count, _turn_msg)
++        except MandatoryMiddlewareError as exc:
++            raise MandatoryMiddlewareError(str(exc)) from None
+         except Exception:
+             pass
+ 
+@@ -420,6 +433,8 @@ def build_turn_context(
+         try:
+             _query = original_user_message if isinstance(original_user_message, str) else ""
+             ext_prefetch_cache = agent._memory_manager.prefetch_all(_query) or ""
++        except MandatoryMiddlewareError as exc:
++            raise MandatoryMiddlewareError(str(exc)) from None
+         except Exception:
+             pass
+ 
+diff --git a/agent/memory_manager.py b/agent/memory_manager.py
+index b24c76b..05d7ad4 100644
+--- a/agent/memory_manager.py
++++ b/agent/memory_manager.py
+@@ -32,6 +32,7 @@ import inspect
+ import threading
+ from concurrent.futures import ThreadPoolExecutor
+ from typing import Any, Callable, Dict, List, Optional
++from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
+ 
+ from agent.memory_provider import MemoryProvider
+ from agent.skill_commands import extract_user_instruction_from_skill_message
+@@ -466,6 +467,8 @@ class MemoryManager:
+                 if result and result.strip():
+                     parts.append(result)
+             except Exception as e:
++                if mandatory_middleware_enabled():
++                    raise MandatoryMiddlewareError("mandatory_middleware.callback_failed") from None
+                 logger.debug(
+                     "Memory provider '%s' prefetch failed (non-fatal): %s",
+                     provider.name, e,
+@@ -711,6 +714,8 @@ class MemoryManager:
+             try:
+                 provider.on_turn_start(turn_number, message, **kwargs)
+             except Exception as e:
++                if mandatory_middleware_enabled():
++                    raise MandatoryMiddlewareError("mandatory_middleware.callback_failed") from None
+                 logger.debug(
+                     "Memory provider '%s' on_turn_start failed: %s",
+                     provider.name, e,

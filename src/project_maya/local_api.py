@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hmac
+import hashlib
 import json
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -11,6 +12,8 @@ from typing import Mapping, Protocol, runtime_checkable
 from .agent import Agent, AgentError
 from .agent.contracts import AgentRuntime
 from .governance import ActionDeniedError
+from .hermes_plugins.governance import RequestIdentity, bind_request_identity
+from .hermes_plugins.session_requests import CandidateSessionRequestBinding, REQUEST_BINDING_CONTRACT
 from .secrets import SecretRef, SecretStore, SecretStoreError
 
 
@@ -51,22 +54,32 @@ class BearerTokenAuthenticator:
         self,
         secret_store: SecretStore,
         token_ref: SecretRef | None = None,
+        *,
+        actor_id: str = "local-user",
+        data_classification: str = "confidential",
     ) -> None:
+        with bind_request_identity(actor_id, data_classification):
+            pass
+        self._identity = RequestIdentity(actor_id, data_classification)
         self._secret_store = secret_store
         self._token_ref = token_ref or SecretRef.parse("secret://local-api/token")
 
     def authenticate(self, headers: Mapping[str, str]) -> bool:
+        return self.authenticate_identity(headers) is not None
+
+    def authenticate_identity(self, headers: Mapping[str, str]) -> RequestIdentity | None:
+        """Map this token to its host-configured identity, never a request field."""
         authorization = _header(headers, "authorization")
         if not authorization.startswith("Bearer "):
-            return False
+            return None
         supplied = authorization.removeprefix("Bearer ").strip()
         if not supplied:
-            return False
+            return None
         try:
             expected = self._secret_store.read(self._token_ref)
         except SecretStoreError:
-            return False
-        return hmac.compare_digest(supplied, expected)
+            return None
+        return self._identity if hmac.compare_digest(supplied, expected) else None
 
 
 class LocalAPI:
@@ -83,6 +96,7 @@ class LocalAPI:
         runtime: AgentRuntime,
         authenticator: LocalAPIAuthenticator,
         max_body_bytes: int = 65536,
+        candidate_session_binding: CandidateSessionRequestBinding | None = None,
     ) -> None:
         if max_body_bytes < 1:
             raise ValueError("max_body_bytes must be positive")
@@ -90,18 +104,46 @@ class LocalAPI:
         self._runtime = runtime
         self._authenticator = authenticator
         self._max_body_bytes = max_body_bytes
+        if candidate_session_binding is not None and not isinstance(candidate_session_binding, CandidateSessionRequestBinding):
+            raise TypeError("candidate_session_binding must be a candidate session binding")
+        self._candidate_session_binding = candidate_session_binding
 
     def handle(self, request: LocalAPIRequest) -> LocalAPIResponse:
         if not request.path.startswith("/v1/"):
             return _json_response(404, "not_found", "route not found")
-        if not self._authenticator.authenticate(request.headers):
+        identity = None
+        if self._candidate_session_binding is not None:
+            authenticate_identity = getattr(self._authenticator, "authenticate_identity", None)
+            if callable(authenticate_identity):
+                try:
+                    identity = authenticate_identity(request.headers)
+                except Exception:
+                    identity = None
+            authenticated = isinstance(identity, RequestIdentity)
+        else:
+            authenticated = self._authenticator.authenticate(request.headers)
+        if not authenticated:
             return _json_response(401, "unauthorized", "authentication required")
+        required_binding = _header(request.headers, "x-maya-session-binding")
+        if required_binding and (self._candidate_session_binding is None or required_binding != REQUEST_BINDING_CONTRACT):
+            return _json_response(403, "action_denied", "action denied")
         if len(request.body) > self._max_body_bytes:
             return _json_response(413, "request_too_large", "request body too large")
         if request.path == "/v1/health":
             return self._health(request)
         if request.path == "/v1/run":
-            return self._run(request)
+            return self._run(request, identity)
+        if request.path == "/v1/session-binding":
+            if request.method.upper() != "GET":
+                return _json_response(405, "method_not_allowed", "method not allowed")
+            if self._candidate_session_binding is None or identity is None:
+                return _json_response(403, "action_denied", "action denied")
+            try:
+                with self._candidate_session_binding.authenticated_request(identity):
+                    return LocalAPIResponse(200, {"session_binding_contract": REQUEST_BINDING_CONTRACT,
+                                                  "qualification": "source_candidate_only"})
+            except ActionDeniedError:
+                return _json_response(403, "action_denied", "action denied")
         return _json_response(404, "not_found", "route not found")
 
     def _health(self, request: LocalAPIRequest) -> LocalAPIResponse:
@@ -116,7 +158,7 @@ class LocalAPI:
             },
         )
 
-    def _run(self, request: LocalAPIRequest) -> LocalAPIResponse:
+    def _run(self, request: LocalAPIRequest, identity: RequestIdentity | None = None) -> LocalAPIResponse:
         if request.method.upper() != "POST":
             return _json_response(405, "method_not_allowed", "method not allowed")
         try:
@@ -125,6 +167,8 @@ class LocalAPI:
             return _json_response(400, "invalid_json", "request body must be JSON")
         if not isinstance(payload, Mapping):
             return _json_response(400, "invalid_request", "request body must be an object")
+        if self._candidate_session_binding is not None and set(payload) - {"input", "idempotency_key", "data_classification"}:
+            return _json_response(400, "invalid_request", "unsupported request fields")
         message = payload.get("input")
         if not isinstance(message, str) or not message.strip():
             return _json_response(400, "invalid_request", "input is required")
@@ -142,18 +186,30 @@ class LocalAPI:
                 "data_classification must be a string",
             )
         try:
-            result = self._agent.run(
-                message,
-                idempotency_key=idempotency_key,
-                data_classification=data_classification,
-            )
+            if self._candidate_session_binding is not None:
+                if identity is None or ("data_classification" in payload and data_classification != identity.data_classification):
+                    return _json_response(403, "action_denied", "action denied")
+                with self._candidate_session_binding.authenticated_request(identity):
+                    safe_idempotency_key = ("sha256:" + hashlib.sha256(idempotency_key.encode()).hexdigest()
+                                            if idempotency_key is not None else None)
+                    result = self._agent.run(message, idempotency_key=safe_idempotency_key,
+                                             data_classification=identity.data_classification)
+            else:
+                result = self._agent.run(
+                    message,
+                    idempotency_key=idempotency_key,
+                    data_classification=data_classification,
+                )
         except ActionDeniedError:
             return _json_response(403, "action_denied", "action denied")
         except AgentError:
             return _json_response(409, "agent_unavailable", "agent unavailable")
         except Exception:
             return _json_response(500, "request_failed", "request failed")
-        return LocalAPIResponse(status_code=200, body={"result": result})
+        body = {"result": result}
+        if self._candidate_session_binding is not None:
+            body.update(session_binding_contract=REQUEST_BINDING_CONTRACT, qualification="source_candidate_only")
+        return LocalAPIResponse(status_code=200, body=body)
 
 
 def build_local_api_http_server(

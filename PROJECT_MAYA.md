@@ -189,6 +189,158 @@ qualification remain blocked until the fail-closed execution contract is
 qualified. Unknown and unbounded tools remain denied. The staged contract and
 remaining acceptance work are in `docs/architecture/hermes_native_governance.md`.
 
+Stage 2a/2b adds test-only candidate patches for opt-in mandatory dispatch and
+central synchronous/asynchronous auxiliary inference, with legacy behavior
+preserved outside mandatory mode. Stage 2c adds explicit main-loop mandatory-error
+stop handlers plus tool/preflight denial propagation, including native dispatcher
+and registry typed-denial propagation. The candidate native final-result validator
+checks final content; scoped generic tool errors use fixed
+codes. This fork extension is not upstream-qualified.
+Scoped provider diagnostic summaries/hooks are redacted and request debug dumps
+are suppressed in mandatory mode; streaming/recovery diagnostics remain open.
+The initial streaming/recovery/background review records additional activation
+blockers in `docs/architecture/hermes_streaming_recovery_background_review.md`.
+That source review is not full-loop qualification or authorization to activate.
+Patch 8 gates each iteration-limit summary attempt and disables native inner
+transport retries in mandatory mode. SDK retries must be zero; unqualified
+transports remain blocked. This scoped closure does not qualify the full runtime.
+Patch 9 suppresses native early text/reasoning/tail/interim delivery and scoped
+conversation display sinks in mandatory mode. It does not validate final output,
+observers or persistence; those boundaries and activation remain blocked.
+Patch 10 adds a candidate native model-output validator using Maya's gateway.
+The finalizer checks content before its saves, after transforms and before
+return, but loop-level incremental writes and observers are not qualified.
+Activation remains blocked; model-output authorization is separate from egress.
+Patch 11 preserves typed mandatory denials through the native compression-summary
+consumer and observer dispatcher, and blocks unqualified background review before
+thread/agent construction, with denial propagation through its finalizer caller.
+Its separately versioned eleven-patch wheel passes scoped extracted-artifact
+denial/consumer probes, not installed-product qualification. The dedicated test
+host originally bound that eleven-patch wheel; older installers remain unchanged.
+Installed qualification adds scoped compression and finalizer-background denials.
+Other recovery, persistence and worker
+paths remain open. No production gate, runtime pin or capability marker changes.
+Patch 12 adds scoped content checks before native session/SQLite, JSON and
+trajectory writes, and suppresses raw API observers in mandatory mode. Hermes
+keeps its own session stores; Maya SMB memory remains separate. These checks
+reuse model.output authorization, not a complete session-write policy. The
+patch is now bundled in a separately versioned twelve-patch test wheel. Direct gateway
+writers, outer catches, diagnostics and workers remain unqualified; production
+activation stays blocked.
+Patch 13 adds scoped outer-caller denial propagation for incremental tool
+persistence, compression rotation/boundary callbacks and CLI session operations.
+Reviewed hook callers stop on typed mandatory failures; ordinary-mode recovery
+is retained. Compression releases its native lock on the touched denial paths,
+but earlier mutations are not rolled back. This source-only candidate is not
+in build 013; direct writers, full-loop callers and workers remain unqualified.
+Patch 14 validates effective SQLite append arguments after native content and
+attribute-based tool-call mapping, and propagates typed denials at that sink.
+Tests use the native Hermes SQLite backend; Hermes conversation storage stays
+separate from Maya SMB memory. This source-only candidate is not in build 013.
+Direct SessionDB callers still require a trusted session-write contract; partial
+batch writes, frontend callers and workers remain unqualified. Activation stays
+blocked.
+Patch 15 introduces a test-only trusted session-write contract through native
+middleware and Maya's existing gateway. Atomic append batches validate serialized
+rows before one transaction; incremental flush tracking advances only after commit.
+Request-scoped authority binds identity, session, database, operation and execution
+context. Unmapped native writes are blocked, not implicitly permitted. Direct
+frontend bindings, create/rewrite/compaction descriptors, schema initialization
+and audit reconciliation remain unqualified. Build 013 and production activation
+are unchanged; no installer rebuild is qualified by these source tests.
+Patches 16-17 add native descriptors for session creation, prompt metadata,
+transcript rewrite/compaction and explicit message clearing, plus scoped denial
+propagation through native initialization, transcript and mirror callers.
+Replacement rows are prepared before destructive statements; SQLite rollback
+preserves transcript, counters and FTS state. These source-only candidates do not
+bind connector identities or qualify gateway session-index lifecycle, other
+metadata/lock writers, schema provisioning or audit reconciliation. Build 013
+and production activation remain unchanged; do not rebuild as a ready product.
+Patch 18 adds scoped end/reopen, cwd, model/config and token-accounting metadata
+descriptors. Mandatory accounting requires an existing authorized session; it
+does not implicitly create one. Close reports finalization denial after resource
+cleanup, not lifecycle rollback. This source-only candidate does not qualify
+frontend identity bindings, session-index ordering, other callers/locks, schema
+provisioning or audit reconciliation. The wheel, build 013 and production gate
+remain unchanged.
+Patch 19 adds scoped compression-lock metadata descriptors and stops mandatory
+compression on denied, missing, broken or busy lock storage. Release denials
+propagate rather than becoming debug-only diagnostics. Native ordinary-mode
+fallback remains. These source tests do not qualify full compression, frontend
+bindings, lock cleanup recovery, provisioning or audit reconciliation; the wheel,
+installer 013 and production gate remain unchanged.
+Stage 2 Step 1 now has an explicit source-candidate Local API session binding.
+Bearer credentials map to a host-configured actor; session, database, operations
+and classification cannot come from request fields. Per-write policy gates remain.
+Patch 20 blocks unqualified gateway create/reset/switch before index mutation.
+Authenticated gateway/CLI and setup/maintenance bindings remain incomplete.
+Do not advance to remaining Steps 2-4 or rebuild until Step 1 acceptance is met;
+the installed host, wheel and production activation gate are unchanged.
+Step 1 also has an explicit source-candidate CLI client over that bound Local API.
+It reads the local API token from stdin, verifies binding readiness, requires the
+binding contract on execution, and refuses redirects/proxies/unbound fallback.
+The server still chooses actor/session authority; no CLI administrative identity
+is fabricated. Normal CLI, gateway mapping and setup/maintenance authentication
+remain incomplete. Continue Step 1; do not infer production or installer readiness.
+The approved Stage 2 Step 1 sub-sequence starts with customer-owned Telegram
+private-text polling intake, then scoped native task/executor handoff, authorized
+session-index transitions, and normal CLI/setup/maintenance identities. A source
+intake callback now maps exact host-approved bot/user/chat identities and audits
+binding, but native registration/transport provenance remain unqualified. It grants
+no session-write or worker authority; no production activation or installer change.
+Consult `docs/architecture/hermes_session_write_contract.md` before proceeding.
+Patch 21 adds source-only native Telegram polling registration before application
+start. The pinned SDK dispatcher passes scoped allow/deny tests using synthetic
+transport; no live Telegram authentication or full connection lifecycle is qualified.
+Ordinary handlers are inaccessible in this candidate, not an authorized fallback.
+The next approved dependency is bounded request-task/executor handoff; session
+writes, queued delivery, wheel/installer integration and production remain blocked.
+Patch 22 adds a source-only, single-use native executor handoff for one
+host-selected callable under an authenticated session lease. Receiver authority
+expires on request exit/cancellation and still requires per-write governance.
+Patch 22 alone does not bind the request-task hop or native conversation closure;
+stay in the second approved sub-item before session-index transition work. This
+does not qualify general workers, full-loop execution, wheel or installer changes.
+Patch 23 adds a source-only main-conversation scheduling seam and bounded native
+async Task hop before Patch 22's executor. One host-selected closure inherits the
+same authenticated session limits; cancellation revokes its lease before delivery.
+Background/unrelated jobs and nested delegation remain blocked. Scoped scheduling
+and SQLite tests are not the complete conversation loop or Telegram-to-agent
+qualification. Stay in the second Step 1 sub-item for full native caller/lifecycle
+evidence; session-index transitions, wheel, installer and production stay unchanged.
+The user approved `docs/architecture/maya_governance_integration_plan.md` on
+2026-10-03. Its G0-G7 sequence supersedes the earlier implementation sequence;
+G0 is the current milestone. Consult its work packages and acceptance gate before
+editing. See `docs/architecture/governance_g0_baseline.md` and the machine-readable
+coverage register for progress and unresolved roots. G1 may not begin before G0
+acceptance. Production activation, runtime pin, wheel and installer are unchanged.
+Mandatory tool batches use native serial dispatch until parallel workers are qualified. Full-loop
+qualification, provider-error redaction, automatic-route
+attribution, direct SDK paths, and worker coverage remain open. The patches are
+not a qualified runtime replacement and activation stays blocked.
+
+An explicit test-only candidate host may bind the four native governance gates
+before Hermes construction using the exact hashed twelve-patch wheel. It requires
+acknowledgement, isolated newly initialized test state, a loopback-only local
+model, disabled broker/connectors and an unqualified health label. This does not
+activate production governance, add a capability marker or change the runtime
+pin. See `project_maya.hermes_plugins.candidate` and the native-governance ADR.
+
+The dedicated governance-test installer uses a separate AppId, installation
+root, shortcuts and test-data root. Its offline qualification uses installed
+artifacts and inert external transports; it is core-only, not normal Standard
+or Windows production qualification. Unsigned executables still require an
+explicit local-smoke override. Preserve existing Maya and default Hermes homes.
+
+Candidate installed qualification also exercises allowed model output and denied
+native file-tool dispatch using the real SDK with zero retries and synthetic
+HTTP fixtures. A bounded allowed read of one synthetic document also validates
+the native result before a separately authorized follow-up model request. This
+is not live-provider, socket, general-tool, recovery or full lifecycle
+qualification; production activation remains blocked.
+The native file-read fixture requires an explicitly reported customer-managed
+shell; it does not establish readiness without a curated managed shell runtime.
+
 The local action authorization gateway evaluates:
 
 - actor and tenant identity;
@@ -488,6 +640,11 @@ Production releases require:
 Unsigned updates must never execute automatically.
 
 ## Implementation Sequence
+
+Before each implementation step, consult the applicable agreed plan and identify
+its current step and acceptance criteria. If inspection requires a different
+sequence, recommend the specific revised order and wait for user approval before
+deviating. Do not infer approval to reorder from a general request to proceed.
 
 1. Approve runtime, governance, connector, model, secrets, and threat-model
    contracts.

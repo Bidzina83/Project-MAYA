@@ -1,0 +1,157 @@
+diff --git a/hermes_cli/middleware.py b/hermes_cli/middleware.py
+index 8795952..b1672ab 100644
+--- a/hermes_cli/middleware.py
++++ b/hermes_cli/middleware.py
+@@ -33,6 +33,59 @@ VALID_MIDDLEWARE: set[str] = {
+     LLM_EXECUTION_MIDDLEWARE,
+ }
+ 
++# Opt-in only. Do not publish a Maya compatibility marker until auxiliary and
++# worker paths have also been qualified against the built runtime artifact.
++_mandatory_enabled = False
++_mandatory_callbacks: Dict[str, Callable] = {}
++_EXECUTION_KINDS = (LLM_EXECUTION_MIDDLEWARE, TOOL_EXECUTION_MIDDLEWARE)
++
++
++class MandatoryMiddlewareError(RuntimeError):
++    """Fixed, secret-safe failure; callers must not retry or fall back."""
++
++
++def enable_mandatory_middleware() -> None:
++    """Require both execution gates for the lifetime of this process.
++
++    The host must opt in before plugin discovery or agent construction. There
++    is deliberately no runtime disable/reset API: unloading plugins must deny.
++    """
++    global _mandatory_enabled
++    _mandatory_enabled = True
++
++
++def require_middleware(kind: str, callback: Callable) -> None:
++    """Bind one host-required callback per execution boundary."""
++    if kind not in _EXECUTION_KINDS or not callable(callback):
++        raise MandatoryMiddlewareError("mandatory_middleware.invalid_binding")
++    enable_mandatory_middleware()
++    previous = _mandatory_callbacks.get(kind)
++    if previous is not None and previous != callback:
++        raise MandatoryMiddlewareError("mandatory_middleware.binding_replaced")
++    _mandatory_callbacks[kind] = callback
++
++
++def validate_mandatory_middleware() -> bool:
++    """Validate live registration, not just an earlier discovery snapshot."""
++    if not _mandatory_enabled:
++        return False
++    for kind in _EXECUTION_KINDS:
++        required = _mandatory_callbacks.get(kind)
++        if required is None or _get_middleware_callbacks(kind).count(required) != 1:
++            return False
++    return True
++
++
++def _execution_callbacks(kind: str) -> List[Callable]:
++    callbacks = _get_middleware_callbacks(kind)
++    if _mandatory_enabled:
++        if not validate_mandatory_middleware():
++            raise MandatoryMiddlewareError("mandatory_middleware.gate_missing")
++        required = _mandatory_callbacks[kind]
++        # Request transformations precede authorization of the effective payload.
++        callbacks = [cb for cb in callbacks if cb != required] + [required]
++    return callbacks
++
+ 
+ @dataclass
+ class RequestMiddlewareResult:
+@@ -176,7 +229,7 @@ def run_llm_execution_middleware(
+     **context: Any,
+ ) -> Any:
+     """Run provider execution through registered LLM execution middleware."""
+-    callbacks = _get_middleware_callbacks(LLM_EXECUTION_MIDDLEWARE)
++    callbacks = _execution_callbacks(LLM_EXECUTION_MIDDLEWARE)
+     if not callbacks:
+         return next_call(request)
+     return _run_execution_chain(
+@@ -196,7 +249,7 @@ def run_tool_execution_middleware(
+     **context: Any,
+ ) -> Any:
+     """Run tool execution through registered tool execution middleware."""
+-    callbacks = _get_middleware_callbacks(TOOL_EXECUTION_MIDDLEWARE)
++    callbacks = _execution_callbacks(TOOL_EXECUTION_MIDDLEWARE)
+     if not callbacks:
+         return next_call(args)
+     return _run_execution_chain(
+@@ -244,6 +297,17 @@ def _run_execution_chain(
+     **kwargs: Any,
+ ) -> Any:
+     payload_key = "request" if "request" in kwargs else "args"
++    mandatory = _mandatory_enabled
++    required = _mandatory_callbacks.get(kind) if mandatory else None
++    required_active = False
++    required_seen = False
++    terminal_seen = False
++    failed = False
++
++    def block(code: str) -> None:
++        nonlocal failed
++        failed = True
++        raise MandatoryMiddlewareError("mandatory_middleware." + code) from None
+ 
+     class _DownstreamExecutionError(Exception):
+         def __init__(self, original: BaseException) -> None:
+@@ -251,7 +315,12 @@ def _run_execution_chain(
+             self.original = original
+ 
+     def call_at(index: int, payload: Any) -> Any:
++        nonlocal required_active, required_seen, terminal_seen
+         if index >= len(callbacks):
++            if mandatory:
++                if failed or not required_active or not validate_mandatory_middleware():
++                    block("gate_missing")
++            terminal_seen = True
+             return terminal_call(payload)
+ 
+         callback = callbacks[index]
+@@ -266,6 +335,8 @@ def _run_execution_chain(
+             # invocation is a contract violation rather than a retry. Surface it
+             # instead of silently executing the terminal call twice.
+             if next_called:
++                if mandatory:
++                    block("next_call_reused")
+                 raise RuntimeError(
+                     f"Middleware '{kind}' callback "
+                     f"{getattr(callback, '__name__', repr(callback))} called "
+@@ -282,11 +353,17 @@ def _run_execution_chain(
+         call_kwargs = middleware_payload(**kwargs)
+         call_kwargs[payload_key] = payload
+         call_kwargs["next_call"] = next_call
++        is_required = mandatory and callback == required
++        if is_required:
++            required_active = True
++            required_seen = True
+         try:
+             return callback(**call_kwargs)
+         except _DownstreamExecutionError as exc:
+             raise exc.original
+         except Exception as exc:
++            if mandatory:
++                block("callback_failed")
+             logger.warning(
+                 "Middleware '%s' callback %s raised: %s",
+                 kind,
+@@ -298,8 +375,14 @@ def _run_execution_chain(
+             if next_called:
+                 raise
+             return call_at(index + 1, payload)
+-
+-    return call_at(0, kwargs[payload_key])
++        finally:
++            if is_required:
++                required_active = False
++
++    result = call_at(0, kwargs[payload_key])
++    if mandatory and (failed or not required_seen or not terminal_seen):
++        block("gate_bypassed")
++    return result
+ 
+ 
+ def _trace_entry(result: Dict[str, Any]) -> Dict[str, Any]:

@@ -1,0 +1,231 @@
+--- a/agent/tool_executor.py
++++ b/agent/tool_executor.py
+@@ -87,6 +87,9 @@
+     try:
+         agent._flush_messages_to_session_db(messages)
+     except Exception as exc:
++        from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++        if mandatory_middleware_enabled() and isinstance(exc, MandatoryMiddlewareError):
++            raise
+         logger.warning("Incremental tool-call persistence failed after %s: %s", stage, exc)
+ 
+ 
+--- a/agent/conversation_compression.py
++++ b/agent/conversation_compression.py
+@@ -447,7 +447,11 @@
+     if agent._memory_manager:
+         try:
+             agent._memory_manager.on_pre_compress(messages)
+-        except Exception:
++        except Exception as _governance_error:
++            from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++            if mandatory_middleware_enabled() and isinstance(_governance_error, MandatoryMiddlewareError):
++                _release_lock()
++                raise
+             pass
+ 
+     try:
+@@ -561,7 +565,10 @@
+                 # parent transcript (#47202). (In-place skips this — see above.)
+                 try:
+                     agent._flush_messages_to_session_db(messages)
+-                except Exception:
++                except Exception as _governance_error:
++                    from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++                    if mandatory_middleware_enabled() and isinstance(_governance_error, MandatoryMiddlewareError):
++                        raise
+                     pass  # best-effort — don't block compression on a flush error
+                 # Propagate title to the new session with auto-numbering
+                 old_title = agent._session_db.get_session_title(agent.session_id)
+@@ -663,6 +670,10 @@
+             agent._session_db.update_system_prompt(agent.session_id, new_system_prompt)
+             agent._last_flushed_db_idx = 0
+         except Exception as e:
++            from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++            if mandatory_middleware_enabled() and isinstance(e, MandatoryMiddlewareError):
++                _release_lock()
++                raise
+             # If the rotation rolled back to the parent (orphan-avoidance
+             # above), agent.session_id is the still-indexed parent and
+             # old_session_id was cleared — so this is recovery, not an
+@@ -700,6 +711,10 @@
+                 conversation_id=getattr(agent, "_gateway_session_key", None),
+             )
+     except Exception as _ce_err:
++        from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++        if mandatory_middleware_enabled() and isinstance(_ce_err, MandatoryMiddlewareError):
++            _release_lock()
++            raise
+         logger.debug("context engine on_session_start (compression): %s", _ce_err)
+ 
+     # Notify memory providers of the compaction boundary so provider-cached
+@@ -717,6 +732,10 @@
+                 reason="compression",
+             )
+     except Exception as _me_err:
++        from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++        if mandatory_middleware_enabled() and isinstance(_me_err, MandatoryMiddlewareError):
++            _release_lock()
++            raise
+         logger.debug("memory manager on_session_switch (compression): %s", _me_err)
+ 
+     # Warn on repeated compressions (quality degrades with each pass).
+@@ -748,6 +767,10 @@
+                 "compression_count": agent.context_compressor.compression_count,
+             })
+         except Exception as e:
++            from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++            if mandatory_middleware_enabled() and isinstance(e, MandatoryMiddlewareError):
++                _release_lock()
++                raise
+             logger.debug("event_callback error on session:compress: %s", e)
+ 
+     # Surface the compaction mode to the caller (run_conversation / gateway)
+--- a/agent/conversation_loop.py
++++ b/agent/conversation_loop.py
+@@ -367,6 +367,9 @@
+             platform=getattr(agent, "platform", None) or "",
+         )
+     except Exception as exc:
++        from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++        if mandatory_middleware_enabled() and isinstance(exc, MandatoryMiddlewareError):
++            raise
+         logger.warning("on_session_start hook failed: %s", exc)
+ 
+     # Cold-start credits seed (L3) — fallback for the first-turn path. The TUI/
+@@ -1109,7 +1112,10 @@
+                             middleware_trace=list(_llm_middleware_trace),
+                             request=_request_payload,
+                         )
+-                except Exception:
++                except Exception as _governance_error:
++                    from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++                    if mandatory_middleware_enabled() and isinstance(_governance_error, MandatoryMiddlewareError):
++                        raise
+                     pass
+ 
+                 if env_var_enabled("HERMES_DUMP_REQUESTS"):
+@@ -3717,7 +3723,10 @@
+                         assistant_content_chars=len(_assistant_text),
+                         assistant_tool_call_count=len(_assistant_tool_calls),
+                     )
+-            except Exception:
++            except Exception as _governance_error:
++                from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++                if mandatory_middleware_enabled() and isinstance(_governance_error, MandatoryMiddlewareError):
++                    raise
+                 pass
+ 
+             # Handle assistant response
+@@ -4093,6 +4102,9 @@
+                     # exact tool-call block that already executed.
+                     agent._flush_messages_to_session_db(messages, conversation_history)
+                 except Exception as exc:
++                    from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++                    if mandatory_middleware_enabled() and isinstance(exc, MandatoryMiddlewareError):
++                        raise
+                     logger.warning(
+                         "Incremental tool-call persistence failed before execution "
+                         "(session=%s): %s",
+--- a/cli.py
++++ b/cli.py
+@@ -6559,7 +6559,10 @@
+                 platform=getattr(self, "platform", None) or "cli",
+                 reason="new_session" if event_type == "on_session_reset" else "session_boundary",
+             )
+-        except Exception:
++        except Exception as _governance_error:
++            from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++            if mandatory_middleware_enabled() and isinstance(_governance_error, MandatoryMiddlewareError):
++                raise
+             pass
+ 
+     def _discard_session_if_empty(self, session_id: Optional[str]) -> bool:
+@@ -6613,11 +6616,17 @@
+                     self.agent._flush_messages_to_session_db(
+                         self.conversation_history
+                     )
+-                except Exception:
++                except Exception as _governance_error:
++                    from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++                    if mandatory_middleware_enabled() and isinstance(_governance_error, MandatoryMiddlewareError):
++                        raise
+                     pass  # best-effort
+             try:
+                 self._session_db.end_session(old_session_id, "new_session")
+-            except Exception:
++            except Exception as _governance_error:
++                from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++                if mandatory_middleware_enabled() and isinstance(_governance_error, MandatoryMiddlewareError):
++                    raise
+                 pass
+             # Don't let immediately-rotated empty sessions pile up in
+             # /resume and `hermes sessions list` (gemini-cli#27770 port).
+@@ -6642,7 +6651,10 @@
+                 try:
+                     from tools.todo_tool import TodoStore
+                     self.agent._todo_store = TodoStore()
+-                except Exception:
++                except Exception as _governance_error:
++                    from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++                    if mandatory_middleware_enabled() and isinstance(_governance_error, MandatoryMiddlewareError):
++                        raise
+                     pass
+             if hasattr(self.agent, "_invalidate_system_prompt"):
+                 self.agent._invalidate_system_prompt()
+@@ -6660,7 +6672,10 @@
+                         },
+                     )
+                     self.agent._session_db_created = True
+-                except Exception:
++                except Exception as _governance_error:
++                    from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++                    if mandatory_middleware_enabled() and isinstance(_governance_error, MandatoryMiddlewareError):
++                        raise
+                     pass
+                 if title and self._session_db:
+                     from hermes_state import SessionDB
+@@ -6678,7 +6693,10 @@
+                         except ValueError as e:
+                             _cprint(f"  {e} — session started untitled.")
+                             title = None
+-                        except Exception:
++                        except Exception as _governance_error:
++                            from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++                            if mandatory_middleware_enabled() and isinstance(_governance_error, MandatoryMiddlewareError):
++                                raise
+                             title = None
+                     elif title is not None:
+                         # sanitize_title returned empty (whitespace-only / unprintable)
+@@ -6698,7 +6716,10 @@
+                         reset=True,
+                         reason="new_session",
+                     )
+-            except Exception:
++            except Exception as _governance_error:
++                from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++                if mandatory_middleware_enabled() and isinstance(_governance_error, MandatoryMiddlewareError):
++                    raise
+                 pass
+             self._notify_session_boundary("on_session_reset")
+ 
+@@ -9029,6 +9050,9 @@
+                     print(f"     {summary['note']}")
+ 
+             except Exception as e:
++                from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++                if mandatory_middleware_enabled() and isinstance(e, MandatoryMiddlewareError):
++                    raise
+                 print(f"  ❌ Compression failed: {e}")
+ 
+ 
+@@ -12104,6 +12128,9 @@
+             if getattr(agent, "session_id", None):
+                 self.session_id = agent.session_id
+         except (Exception, KeyboardInterrupt) as e:
++            from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++            if mandatory_middleware_enabled() and isinstance(e, MandatoryMiddlewareError):
++                raise
+             logger.debug("Could not persist active CLI session before close: %s", e)
+ 
+     def _print_exit_summary(self):

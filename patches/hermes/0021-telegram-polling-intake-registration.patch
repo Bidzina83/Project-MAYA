@@ -1,0 +1,24 @@
+diff --git a/plugins/platforms/telegram/adapter.py b/plugins/platforms/telegram/adapter.py
+--- a/plugins/platforms/telegram/adapter.py
++++ b/plugins/platforms/telegram/adapter.py
+@@ -2337,5 +2337,20 @@
+                     else:
+                         raise
++            # Source-candidate intake must own dispatch before the app/poller runs.
++            from hermes_cli.middleware import (
++                MandatoryMiddlewareError, mandatory_middleware_enabled,
++            )
++            if mandatory_middleware_enabled():
++                factory = getattr(self, "_maya_polling_intake_factory", None)
++                expected = "project-maya.telegram-polling-registration.v1"
++                if (not callable(factory) or getattr(factory, "contract", None) != expected
++                        or os.getenv("TELEGRAM_WEBHOOK_URL", "").strip()):
++                    raise MandatoryMiddlewareError("session_write_unqualified")
++                try:
++                    if factory(self) != expected:
++                        raise ValueError
++                except Exception:
++                    raise MandatoryMiddlewareError("session_write_unqualified") from None
+             await self._app.start()
+ 
+             # Decide between webhook and polling mode

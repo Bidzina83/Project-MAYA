@@ -1,0 +1,34 @@
+diff --git a/gateway/run.py b/gateway/run.py
+--- a/gateway/run.py
++++ b/gateway/run.py
+@@ -12852,1 +12852,22 @@
++    def _schedule_maya_conversation_executor(self, func):
++        from hermes_cli.middleware import (
++            MandatoryMiddlewareError, mandatory_middleware_enabled,
++        )
++        if mandatory_middleware_enabled():
++            factory = getattr(self, "_maya_conversation_executor_factory", None)
++            if getattr(factory, "contract", None) != "project-maya.conversation-executor-schedule.v1":
++                raise MandatoryMiddlewareError("session_write_unqualified")
++            try:
++                task = factory.schedule(self, func)
++                if not isinstance(task, asyncio.Task):
++                    raise MandatoryMiddlewareError("session_write_unqualified")
++                return task
++            except MandatoryMiddlewareError:
++                raise
++            except Exception:
++                raise MandatoryMiddlewareError("session_write_failed") from None
++        return asyncio.ensure_future(
++            self._run_in_executor_with_context(func)
++        )
++
+     async def _run_in_executor_with_context(self, func, *args):
+@@ -16601,6 +16622,4 @@
+             _warning_fired = False
+-            _executor_task = asyncio.ensure_future(
+-                self._run_in_executor_with_context(run_sync)
+-            )
++            _executor_task = self._schedule_maya_conversation_executor(run_sync)
+ 
+             _inactivity_timeout = False

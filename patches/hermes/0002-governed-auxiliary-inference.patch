@@ -1,0 +1,651 @@
+diff --git a/hermes_cli/middleware.py b/hermes_cli/middleware.py
+index b1672ab..5eee9f5 100644
+--- a/hermes_cli/middleware.py
++++ b/hermes_cli/middleware.py
+@@ -8,6 +8,7 @@ contract helpers here so agent-loop call sites and plugins share one vocabulary.
+ from __future__ import annotations
+ 
+ import logging
++import inspect
+ from copy import deepcopy
+ from dataclasses import dataclass, field
+ from typing import Any, Callable, Dict, List, Optional
+@@ -43,6 +44,17 @@ _EXECUTION_KINDS = (LLM_EXECUTION_MIDDLEWARE, TOOL_EXECUTION_MIDDLEWARE)
+ class MandatoryMiddlewareError(RuntimeError):
+     """Fixed, secret-safe failure; callers must not retry or fall back."""
+ 
++    def __init__(self, code: str = "mandatory_middleware.callback_failed") -> None:
++        allowed = {
++            "invalid_binding", "binding_replaced", "gate_missing", "next_call_reused",
++            "callback_failed", "gate_bypassed", "route_ambiguous", "route_missing",
++            "auxiliary_failed", "unsupported_plugin_caller",
++        }
++        reason = code.removeprefix("mandatory_middleware.") if isinstance(code, str) else "callback_failed"
++        if reason not in allowed:
++            reason = "callback_failed"
++        super().__init__("mandatory_middleware." + reason)
++
+ 
+ def enable_mandatory_middleware() -> None:
+     """Require both execution gates for the lifetime of this process.
+@@ -54,6 +66,11 @@ def enable_mandatory_middleware() -> None:
+     _mandatory_enabled = True
+ 
+ 
++def mandatory_middleware_enabled() -> bool:
++    """Expose the host's opt-in state without providing a disable operation."""
++    return _mandatory_enabled
++
++
+ def require_middleware(kind: str, callback: Callable) -> None:
+     """Bind one host-required callback per execution boundary."""
+     if kind not in _EXECUTION_KINDS or not callable(callback):
+@@ -263,6 +280,99 @@ def run_tool_execution_middleware(
+     )
+ 
+ 
++async def run_llm_execution_middleware_async(
++    request: Dict[str, Any],
++    next_call: Callable[[Dict[str, Any]], Any],
++    **context: Any,
++) -> Any:
++    """Await model execution without losing the required callback's scope.
++
++    Async callbacks can await next_call; synchronous authorization callbacks can
++    return its awaitable. Synchronous response post-processing is not supported.
++    """
++    callbacks = _execution_callbacks(LLM_EXECUTION_MIDDLEWARE)
++    mandatory = _mandatory_enabled
++    required = _mandatory_callbacks.get(LLM_EXECUTION_MIDDLEWARE) if mandatory else None
++    required_active = False
++    required_seen = False
++    terminal_seen = False
++    failed = False
++
++    def block(code: str) -> None:
++        nonlocal failed
++        failed = True
++        raise MandatoryMiddlewareError("mandatory_middleware." + code) from None
++
++    class _DownstreamExecutionError(Exception):
++        def __init__(self, original: Exception) -> None:
++            self.original = original
++
++    async def call_at(index: int, payload: Any) -> Any:
++        nonlocal required_active, required_seen, terminal_seen, failed
++        if index >= len(callbacks):
++            if mandatory and (failed or not required_active or not validate_mandatory_middleware()):
++                block("gate_missing")
++            terminal_seen = True
++            return await next_call(payload)
++
++        callback = callbacks[index]
++        next_called = False
++        next_succeeded = False
++        next_result = None
++
++        def continue_call(next_payload: Any = None) -> Any:
++            nonlocal next_called
++            if next_called:
++                if mandatory:
++                    block("next_call_reused")
++                raise RuntimeError("Async middleware next_call is single-use")
++            next_called = True
++
++            async def execute():
++                nonlocal next_succeeded, next_result
++                try:
++                    next_result = await call_at(index + 1, payload if next_payload is None else next_payload)
++                    next_succeeded = True
++                    return next_result
++                except Exception as exc:
++                    raise _DownstreamExecutionError(exc) from exc
++
++            return execute()
++
++        call_kwargs = middleware_payload(**context)
++        call_kwargs.update(request=payload, original_request=context.get("original_request", request), next_call=continue_call)
++        if mandatory and isinstance(payload, dict):
++            call_kwargs["model"] = payload.get("model")
++        is_required = mandatory and callback == required
++        if is_required:
++            required_active = True
++            required_seen = True
++        try:
++            result = callback(**call_kwargs)
++            return await result if inspect.isawaitable(result) else result
++        except _DownstreamExecutionError as exc:
++            if isinstance(exc.original, MandatoryMiddlewareError):
++                failed = True
++            raise exc.original
++        except Exception as exc:
++            if mandatory:
++                block("callback_failed")
++            logger.warning("Async LLM middleware callback raised: %s", exc)
++            if next_succeeded:
++                return next_result
++            if next_called:
++                raise
++            return await call_at(index + 1, payload)
++        finally:
++            if is_required:
++                required_active = False
++
++    result = await call_at(0, request)
++    if mandatory and (failed or not required_seen or not terminal_seen):
++        block("gate_bypassed")
++    return result
++
++
+ def run_api_execution_middleware(
+     request: Dict[str, Any],
+     next_call: Callable[[Dict[str, Any]], Any],
+@@ -315,7 +425,7 @@ def _run_execution_chain(
+             self.original = original
+ 
+     def call_at(index: int, payload: Any) -> Any:
+-        nonlocal required_active, required_seen, terminal_seen
++        nonlocal required_active, required_seen, terminal_seen, failed
+         if index >= len(callbacks):
+             if mandatory:
+                 if failed or not required_active or not validate_mandatory_middleware():
+@@ -353,6 +463,8 @@ def _run_execution_chain(
+         call_kwargs = middleware_payload(**kwargs)
+         call_kwargs[payload_key] = payload
+         call_kwargs["next_call"] = next_call
++        if mandatory and kind == LLM_EXECUTION_MIDDLEWARE and isinstance(payload, dict):
++            call_kwargs["model"] = payload.get("model")
+         is_required = mandatory and callback == required
+         if is_required:
+             required_active = True
+@@ -360,6 +472,8 @@ def _run_execution_chain(
+         try:
+             return callback(**call_kwargs)
+         except _DownstreamExecutionError as exc:
++            if isinstance(exc.original, MandatoryMiddlewareError):
++                failed = True
+             raise exc.original
+         except Exception as exc:
+             if mandatory:
+diff --git a/agent/auxiliary_client.py b/agent/auxiliary_client.py
+index 0afb0ad..f1c8e54 100644
+--- a/agent/auxiliary_client.py
++++ b/agent/auxiliary_client.py
+@@ -41,6 +41,8 @@ Payment / credit exhaustion fallback:
+ """
+ 
+ import contextlib
++import functools
++import inspect
+ import json
+ import logging
+ import os
+@@ -104,10 +106,96 @@ from agent.credential_pool import load_pool
+ from hermes_cli.config import get_hermes_home
+ from hermes_constants import OPENROUTER_BASE_URL
+ from utils import base_url_host_matches, base_url_hostname, env_float, model_forces_max_completion_tokens, normalize_proxy_env_vars
++from hermes_cli.middleware import (
++    MandatoryMiddlewareError, mandatory_middleware_enabled,
++    run_llm_execution_middleware, run_llm_execution_middleware_async,
++    validate_mandatory_middleware,
++)
+ 
+ logger = logging.getLogger(__name__)
+ 
+ 
++def _require_auxiliary_gates() -> None:
++    if mandatory_middleware_enabled() and not validate_mandatory_middleware():
++        raise MandatoryMiddlewareError("mandatory_middleware.gate_missing")
++
++
++def _raise_if_mandatory_failure(error: Exception) -> None:
++    # Governance failure is never evidence of provider capacity/auth failure.
++    if isinstance(error, MandatoryMiddlewareError):
++        raise error from None
++
++
++def _mandatory_auxiliary_boundary(callback):
++    """Keep legacy errors unchanged; redact exhausted failures in mandatory mode."""
++    if inspect.iscoroutinefunction(callback):
++        @functools.wraps(callback)
++        async def async_boundary(*args, **kwargs):
++            if not mandatory_middleware_enabled():
++                return await callback(*args, **kwargs)
++            _require_auxiliary_gates()
++            try:
++                return await callback(*args, **kwargs)
++            except MandatoryMiddlewareError:
++                raise
++            except Exception:
++                raise MandatoryMiddlewareError("mandatory_middleware.auxiliary_failed") from None
++        return async_boundary
++
++    @functools.wraps(callback)
++    def sync_boundary(*args, **kwargs):
++        if not mandatory_middleware_enabled():
++            return callback(*args, **kwargs)
++        _require_auxiliary_gates()
++        try:
++            return callback(*args, **kwargs)
++        except MandatoryMiddlewareError:
++            raise
++        except Exception:
++            raise MandatoryMiddlewareError("mandatory_middleware.auxiliary_failed") from None
++    return sync_boundary
++
++
++def _auxiliary_execution_context(client, request, provider, api_mode, task, declared_provider=None):
++    _require_auxiliary_gates()
++    effective_provider = _normalize_aux_provider(provider)
++    declared = _normalize_aux_provider(declared_provider)
++    if effective_provider == "custom" and declared in _AUX_DIRECT_API_BASE_URLS:
++        effective_provider = declared
++    # Auto discovery discards the selected provider id in the current contract.
++    # Do not infer authority from a hostname or an inherited main-provider guess.
++    if effective_provider in {"auto", ""}:
++        raise MandatoryMiddlewareError("mandatory_middleware.route_ambiguous")
++    endpoint = str(getattr(client, "base_url", "") or "")
++    if not endpoint or not request.get("model"):
++        raise MandatoryMiddlewareError("mandatory_middleware.route_missing")
++    mode = api_mode or "chat_completions"
++    if _safe_isinstance(client, (CodexAuxiliaryClient, AsyncCodexAuxiliaryClient)):
++        mode = "codex_responses"
++    elif _safe_isinstance(client, (AnthropicAuxiliaryClient, AsyncAnthropicAuxiliaryClient)):
++        mode = "anthropic_messages"
++    return dict(provider=effective_provider, base_url=endpoint, model=request["model"],
++                api_mode=mode, auxiliary_task=task, execution_path="auxiliary")
++
++
++def _auxiliary_model_call(client, request, provider, api_mode, task, declared_provider=None):
++    if not mandatory_middleware_enabled():
++        return client.chat.completions.create(**request)
++    context = _auxiliary_execution_context(client, request, provider, api_mode, task, declared_provider)
++    return run_llm_execution_middleware(
++        request, lambda effective: client.chat.completions.create(**effective), **context,
++    )
++
++
++async def _auxiliary_model_call_async(client, request, provider, api_mode, task, declared_provider=None):
++    if not mandatory_middleware_enabled():
++        return await client.chat.completions.create(**request)
++    context = _auxiliary_execution_context(client, request, provider, api_mode, task, declared_provider)
++    return await run_llm_execution_middleware_async(
++        request, lambda effective: client.chat.completions.create(**effective), **context,
++    )
++
++
+ # ── Interrupt protection for atomic auxiliary tasks ──────────────────────
+ # Some auxiliary tasks must NOT be aborted mid-flight by a gateway interrupt
+ # (e.g. an incoming user message while the agent is busy). Context
+@@ -2890,6 +2978,7 @@ def _retry_same_provider_sync(
+     tools: Optional[list],
+     effective_timeout: float,
+     effective_extra_body: dict,
++    declared_provider: Optional[str] = None,
+ ) -> Any:
+     if task == "vision":
+         _, retry_client, retry_model = resolve_vision_provider_client(
+@@ -2928,7 +3017,7 @@ def _retry_same_provider_sync(
+     if _is_anthropic_compat_endpoint(resolved_provider, retry_base):
+         retry_kwargs["messages"] = _convert_openai_images_to_anthropic(retry_kwargs["messages"])
+     return _validate_llm_response(
+-        retry_client.chat.completions.create(**retry_kwargs), task,
++        _auxiliary_model_call(retry_client, retry_kwargs, resolved_provider, resolved_api_mode, task, declared_provider), task,
+     )
+ 
+ 
+@@ -2947,6 +3036,7 @@ async def _retry_same_provider_async(
+     tools: Optional[list],
+     effective_timeout: float,
+     effective_extra_body: dict,
++    declared_provider: Optional[str] = None,
+ ) -> Any:
+     if task == "vision":
+         _, retry_client, retry_model = resolve_vision_provider_client(
+@@ -2985,7 +3075,7 @@ async def _retry_same_provider_async(
+     if _is_anthropic_compat_endpoint(resolved_provider, retry_base):
+         retry_kwargs["messages"] = _convert_openai_images_to_anthropic(retry_kwargs["messages"])
+     return _validate_llm_response(
+-        await retry_client.chat.completions.create(**retry_kwargs), task,
++        await _auxiliary_model_call_async(retry_client, retry_kwargs, resolved_provider, resolved_api_mode, task, declared_provider), task,
+     )
+ 
+ 
+@@ -4898,6 +4988,7 @@ def _resolve_task_provider_model(
+     model: str = None,
+     base_url: str = None,
+     api_key: str = None,
++    route_context: Optional[Dict[str, Any]] = None,
+ ) -> Tuple[str, Optional[str], Optional[str], Optional[str], Optional[str]]:
+     """Determine provider + model for a call.
+ 
+@@ -4927,6 +5018,8 @@ def _resolve_task_provider_model(
+ 
+     resolved_model = model or cfg_model
+     resolved_api_mode = cfg_api_mode
++    if route_context is not None:
++        route_context["declared_provider"] = provider or cfg_provider
+ 
+     # Convenience aliases for direct API-key endpoints that aren't first-class
+     # providers (e.g. ``provider: openai`` → custom + api.openai.com/v1).
+@@ -5265,6 +5358,7 @@ def _validate_llm_response(response: Any, task: str = None) -> Any:
+     return response
+ 
+ 
++@_mandatory_auxiliary_boundary
+ def call_llm(
+     task: str = None,
+     *,
+@@ -5304,8 +5398,9 @@ def call_llm(
+     Raises:
+         RuntimeError: If no provider is configured.
+     """
++    route_context = {}
+     resolved_provider, resolved_model, resolved_base_url, resolved_api_key, resolved_api_mode = _resolve_task_provider_model(
+-        task, provider, model, base_url, api_key)
++        task, provider, model, base_url, api_key, route_context=route_context)
+     effective_extra_body = _get_task_extra_body(task)
+     effective_extra_body.update(extra_body or {})
+ 
+@@ -5371,7 +5466,7 @@ def call_llm(
+ 
+     # Log what we're about to do — makes auxiliary operations visible
+     _base_info = str(getattr(client, "base_url", resolved_base_url) or "")
+-    if task:
++    if task and not mandatory_middleware_enabled():
+         logger.info("Auxiliary %s: using %s (%s)%s",
+                      task, resolved_provider or "auto", final_model or "default",
+                      f" at {_base_info}" if _base_info and "openrouter" not in _base_info else "")
+@@ -5404,18 +5499,20 @@ def call_llm(
+         # session-search, vision) shares. (PR #16587)
+         try:
+             return _validate_llm_response(
+-                client.chat.completions.create(**kwargs), task)
++                _auxiliary_model_call(client, kwargs, resolved_provider, resolved_api_mode, task, route_context.get("declared_provider")), task)
+         except Exception as transient_err:
++            _raise_if_mandatory_failure(transient_err)
+             if not _is_transient_transport_error(transient_err):
+                 raise
+             logger.info(
+                 "Auxiliary %s: transient transport error; retrying once on "
+                 "the same provider before fallback: %s",
+-                task or "call", transient_err,
++                task or "call", "provider_failure" if mandatory_middleware_enabled() else transient_err,
+             )
+             return _validate_llm_response(
+-                client.chat.completions.create(**kwargs), task)
++                _auxiliary_model_call(client, kwargs, resolved_provider, resolved_api_mode, task, route_context.get("declared_provider")), task)
+     except Exception as first_err:
++        _raise_if_mandatory_failure(first_err)
+         if "temperature" in kwargs and _is_unsupported_temperature_error(first_err):
+             retry_kwargs = dict(kwargs)
+             retry_kwargs.pop("temperature", None)
+@@ -5425,8 +5522,9 @@ def call_llm(
+             )
+             try:
+                 return _validate_llm_response(
+-                    client.chat.completions.create(**retry_kwargs), task)
++                    _auxiliary_model_call(client, retry_kwargs, resolved_provider, resolved_api_mode, task, route_context.get("declared_provider")), task)
+             except Exception as retry_err:
++                _raise_if_mandatory_failure(retry_err)
+                 retry_err_str = str(retry_err)
+                 # If retry still fails, fall through to the max_tokens /
+                 # payment / auth chains below using the temperature-stripped
+@@ -5463,8 +5561,9 @@ def call_llm(
+             kwargs.pop("max_completion_tokens", None)
+             try:
+                 return _validate_llm_response(
+-                    client.chat.completions.create(**kwargs), task)
++                    _auxiliary_model_call(client, kwargs, resolved_provider, resolved_api_mode, task, route_context.get("declared_provider")), task)
+             except Exception as retry_err:
++                _raise_if_mandatory_failure(retry_err)
+                 # If the max_tokens retry also hits a payment or connection
+                 # error, fall through to the fallback chain below.
+                 if not (_is_payment_error(retry_err) or _is_connection_error(retry_err) or _is_rate_limit_error(retry_err)):
+@@ -5493,8 +5592,9 @@ def call_llm(
+                 kwargs["model"] = healed_model
+                 try:
+                     return _validate_llm_response(
+-                        client.chat.completions.create(**kwargs), task)
++                        _auxiliary_model_call(client, kwargs, resolved_provider, resolved_api_mode, task, route_context.get("declared_provider")), task)
+                 except Exception as retry_err:
++                    _raise_if_mandatory_failure(retry_err)
+                     first_err = retry_err
+ 
+         # ── Nous auth refresh parity with main agent ──────────────────
+@@ -5526,8 +5626,9 @@ def call_llm(
+                     kwargs["model"] = refreshed_model
+                 try:
+                     return _validate_llm_response(
+-                        refreshed_client.chat.completions.create(**kwargs), task)
++                        _auxiliary_model_call(refreshed_client, kwargs, resolved_provider, resolved_api_mode, task, route_context.get("declared_provider")), task)
+                 except Exception as retry_err:
++                    _raise_if_mandatory_failure(retry_err)
+                     if not (
+                         _is_auth_error(retry_err)
+                         or _is_payment_error(retry_err)
+@@ -5554,7 +5655,7 @@ def call_llm(
+                 if refreshed_model and refreshed_model != kwargs.get("model"):
+                     kwargs["model"] = refreshed_model
+                 return _validate_llm_response(
+-                    refreshed_client.chat.completions.create(**kwargs), task)
++                    _auxiliary_model_call(refreshed_client, kwargs, resolved_provider, resolved_api_mode, task, route_context.get("declared_provider")), task)
+ 
+         # ── Auth refresh retry ───────────────────────────────────────
+         if (_is_auth_error(first_err)
+@@ -5580,6 +5681,7 @@ def call_llm(
+                     tools=tools,
+                     effective_timeout=effective_timeout,
+                     effective_extra_body=effective_extra_body,
++                    declared_provider=route_context.get("declared_provider"),
+                 )
+ 
+         # ── Same-provider credential-pool recovery ─────────────────────
+@@ -5596,8 +5698,9 @@ def call_llm(
+             if _is_rate_limit_error(first_err) and not _is_payment_error(first_err):
+                 try:
+                     return _validate_llm_response(
+-                        client.chat.completions.create(**kwargs), task)
++                        _auxiliary_model_call(client, kwargs, resolved_provider, resolved_api_mode, task, route_context.get("declared_provider")), task)
+                 except Exception as retry_err:
++                    _raise_if_mandatory_failure(retry_err)
+                     if not (_is_auth_error(retry_err) or _is_payment_error(retry_err) or _is_rate_limit_error(retry_err)):
+                         raise
+                     recovery_err = retry_err
+@@ -5622,8 +5725,10 @@ def call_llm(
+                         tools=tools,
+                         effective_timeout=effective_timeout,
+                         effective_extra_body=effective_extra_body,
++                        declared_provider=route_context.get("declared_provider"),
+                     )
+                 except Exception as retry2_err:
++                    _raise_if_mandatory_failure(retry2_err)
+                     # The rotated key also hit a quota/auth wall.  Mark it
+                     # immediately so concurrent processes don't make a
+                     # redundant API call to discover it's exhausted too.
+@@ -5683,7 +5788,7 @@ def call_llm(
+             else:
+                 reason = "connection error"
+             logger.info("Auxiliary %s: %s on %s (%s), trying fallback",
+-                        task or "call", reason, resolved_provider, first_err)
++                        task or "call", reason, resolved_provider, "provider_failure" if mandatory_middleware_enabled() else first_err)
+ 
+             # Fallback order (#26882, #26803):
+             #   1. User-configured fallback_chain (per-task) if set
+@@ -5715,7 +5820,7 @@ def call_llm(
+                     extra_body=effective_extra_body,
+                     base_url=str(getattr(fb_client, "base_url", "") or ""))
+                 return _validate_llm_response(
+-                    fb_client.chat.completions.create(**fb_kwargs), task)
++                    _auxiliary_model_call(fb_client, fb_kwargs, fb_label, None, task), task)
+             # All fallback layers exhausted — emit a single user-visible
+             # warning so the operator knows aux task is about to fail.
+             # (#26882) The error itself is re-raised below.
+@@ -5794,6 +5899,7 @@ def extract_content_or_reasoning(response) -> str:
+     return ""
+ 
+ 
++@_mandatory_auxiliary_boundary
+ async def async_call_llm(
+     task: str = None,
+     *,
+@@ -5813,8 +5919,9 @@ async def async_call_llm(
+ 
+     Same as call_llm() but async. See call_llm() for full documentation.
+     """
++    route_context = {}
+     resolved_provider, resolved_model, resolved_base_url, resolved_api_key, resolved_api_mode = _resolve_task_provider_model(
+-        task, provider, model, base_url, api_key)
++        task, provider, model, base_url, api_key, route_context=route_context)
+     effective_extra_body = _get_task_extra_body(task)
+     effective_extra_body.update(extra_body or {})
+ 
+@@ -5890,18 +5997,20 @@ async def async_call_llm(
+         # for the rationale. (PR #16587)
+         try:
+             return _validate_llm_response(
+-                await client.chat.completions.create(**kwargs), task)
++                await _auxiliary_model_call_async(client, kwargs, resolved_provider, resolved_api_mode, task, route_context.get("declared_provider")), task)
+         except Exception as transient_err:
++            _raise_if_mandatory_failure(transient_err)
+             if not _is_transient_transport_error(transient_err):
+                 raise
+             logger.info(
+                 "Auxiliary %s (async): transient transport error; retrying "
+                 "once on the same provider before fallback: %s",
+-                task or "call", transient_err,
++                task or "call", "provider_failure" if mandatory_middleware_enabled() else transient_err,
+             )
+             return _validate_llm_response(
+-                await client.chat.completions.create(**kwargs), task)
++                await _auxiliary_model_call_async(client, kwargs, resolved_provider, resolved_api_mode, task, route_context.get("declared_provider")), task)
+     except Exception as first_err:
++        _raise_if_mandatory_failure(first_err)
+         if "temperature" in kwargs and _is_unsupported_temperature_error(first_err):
+             retry_kwargs = dict(kwargs)
+             retry_kwargs.pop("temperature", None)
+@@ -5911,8 +6020,9 @@ async def async_call_llm(
+             )
+             try:
+                 return _validate_llm_response(
+-                    await client.chat.completions.create(**retry_kwargs), task)
++                    await _auxiliary_model_call_async(client, retry_kwargs, resolved_provider, resolved_api_mode, task, route_context.get("declared_provider")), task)
+             except Exception as retry_err:
++                _raise_if_mandatory_failure(retry_err)
+                 retry_err_str = str(retry_err)
+                 if not (
+                     _is_payment_error(retry_err)
+@@ -5945,8 +6055,9 @@ async def async_call_llm(
+             kwargs.pop("max_completion_tokens", None)
+             try:
+                 return _validate_llm_response(
+-                    await client.chat.completions.create(**kwargs), task)
++                    await _auxiliary_model_call_async(client, kwargs, resolved_provider, resolved_api_mode, task, route_context.get("declared_provider")), task)
+             except Exception as retry_err:
++                _raise_if_mandatory_failure(retry_err)
+                 # If the max_tokens retry also hits a payment or connection
+                 # error, fall through to the fallback chain below.
+                 if not (_is_payment_error(retry_err) or _is_connection_error(retry_err) or _is_rate_limit_error(retry_err)):
+@@ -5974,8 +6085,9 @@ async def async_call_llm(
+                 kwargs["model"] = healed_model
+                 try:
+                     return _validate_llm_response(
+-                        await client.chat.completions.create(**kwargs), task)
++                        await _auxiliary_model_call_async(client, kwargs, resolved_provider, resolved_api_mode, task, route_context.get("declared_provider")), task)
+                 except Exception as retry_err:
++                    _raise_if_mandatory_failure(retry_err)
+                     first_err = retry_err
+ 
+         # ── Nous auth refresh parity with main agent ──────────────────
+@@ -6006,8 +6118,9 @@ async def async_call_llm(
+                     kwargs["model"] = refreshed_model
+                 try:
+                     return _validate_llm_response(
+-                        await refreshed_client.chat.completions.create(**kwargs), task)
++                        await _auxiliary_model_call_async(refreshed_client, kwargs, resolved_provider, resolved_api_mode, task, route_context.get("declared_provider")), task)
+                 except Exception as retry_err:
++                    _raise_if_mandatory_failure(retry_err)
+                     if not (
+                         _is_auth_error(retry_err)
+                         or _is_payment_error(retry_err)
+@@ -6033,7 +6146,7 @@ async def async_call_llm(
+                 if refreshed_model and refreshed_model != kwargs.get("model"):
+                     kwargs["model"] = refreshed_model
+                 return _validate_llm_response(
+-                    await refreshed_client.chat.completions.create(**kwargs), task)
++                    await _auxiliary_model_call_async(refreshed_client, kwargs, resolved_provider, resolved_api_mode, task, route_context.get("declared_provider")), task)
+ 
+         # ── Auth refresh retry (mirrors sync call_llm) ───────────────
+         if (_is_auth_error(first_err)
+@@ -6058,6 +6171,7 @@ async def async_call_llm(
+                     tools=tools,
+                     effective_timeout=effective_timeout,
+                     effective_extra_body=effective_extra_body,
++                    declared_provider=route_context.get("declared_provider"),
+                 )
+ 
+         # ── Same-provider credential-pool recovery (mirrors sync) ─────
+@@ -6070,8 +6184,9 @@ async def async_call_llm(
+             if _is_rate_limit_error(first_err) and not _is_payment_error(first_err):
+                 try:
+                     return _validate_llm_response(
+-                        await client.chat.completions.create(**kwargs), task)
++                        await _auxiliary_model_call_async(client, kwargs, resolved_provider, resolved_api_mode, task, route_context.get("declared_provider")), task)
+                 except Exception as retry_err:
++                    _raise_if_mandatory_failure(retry_err)
+                     if not (_is_auth_error(retry_err) or _is_payment_error(retry_err) or _is_rate_limit_error(retry_err)):
+                         raise
+                     recovery_err = retry_err
+@@ -6095,8 +6210,10 @@ async def async_call_llm(
+                         tools=tools,
+                         effective_timeout=effective_timeout,
+                         effective_extra_body=effective_extra_body,
++                        declared_provider=route_context.get("declared_provider"),
+                     )
+                 except Exception as retry2_err:
++                    _raise_if_mandatory_failure(retry2_err)
+                     if (_is_payment_error(retry2_err) or _is_auth_error(retry2_err)
+                             or _is_rate_limit_error(retry2_err)):
+                         _recover_provider_pool(pool_provider, retry2_err)
+@@ -6126,7 +6243,7 @@ async def async_call_llm(
+             else:
+                 reason = "connection error"
+             logger.info("Auxiliary %s (async): %s on %s (%s), trying fallback",
+-                        task or "call", reason, resolved_provider, first_err)
++                        task or "call", reason, resolved_provider, "provider_failure" if mandatory_middleware_enabled() else first_err)
+ 
+             # Fallback order (#26882, #26803):
+             #   1. User-configured fallback_chain (per-task) if set
+@@ -6164,7 +6281,7 @@ async def async_call_llm(
+                 if async_fb_model and async_fb_model != fb_kwargs.get("model"):
+                     fb_kwargs["model"] = async_fb_model
+                 return _validate_llm_response(
+-                    await async_fb.chat.completions.create(**fb_kwargs), task)
++                    await _auxiliary_model_call_async(async_fb, fb_kwargs, fb_label, None, task), task)
+             # All fallback layers exhausted — warn before re-raising. (#26882)
+             logger.warning(
+                 "Auxiliary %s (async): %s on %s and all fallbacks exhausted "
+diff --git a/agent/plugin_llm.py b/agent/plugin_llm.py
+index e9c2a86..b5540ec 100644
+--- a/agent/plugin_llm.py
++++ b/agent/plugin_llm.py
+@@ -932,6 +932,9 @@ class PluginLlm:
+         ``agent.auxiliary_client`` to avoid circular deps at plugin
+         discovery time."""
+         if self._sync_caller is not None:
++            from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++            if mandatory_middleware_enabled():
++                raise MandatoryMiddlewareError("mandatory_middleware.unsupported_plugin_caller")
+             return self._sync_caller(
+                 messages=messages,
+                 provider_override=provider_override,
+@@ -976,6 +979,9 @@ class PluginLlm:
+         extra_body: Optional[Dict[str, Any]] = None,
+     ) -> tuple[str, str, Any]:
+         if self._async_caller is not None:
++            from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++            if mandatory_middleware_enabled():
++                raise MandatoryMiddlewareError("mandatory_middleware.unsupported_plugin_caller")
+             return await self._async_caller(
+                 messages=messages,
+                 provider_override=provider_override,
