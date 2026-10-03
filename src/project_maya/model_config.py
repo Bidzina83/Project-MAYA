@@ -181,7 +181,7 @@ def _first_invalid_reason(config: MayaConfig) -> str | None:
         except SecretReferenceError:
             return "llm.credential_ref must be a secret:// reference"
     if llm.endpoint is not None and not _valid_endpoint(llm.endpoint):
-        return "llm.endpoint must be an http or https URL"
+        return "llm.endpoint must be an http or https URL without credentials, query, or fragment"
     if llm.mode == "customer_owned" and llm.credential_ref is None:
         return "customer_owned model mode requires llm.credential_ref"
     if llm.mode == "local" and llm.endpoint is None:
@@ -200,6 +200,8 @@ def _first_invalid_reason(config: MayaConfig) -> str | None:
 def _endpoint_state(llm: ModelConfig) -> str:
     if llm.endpoint is None:
         return "provider_default"
+    if not _valid_endpoint(llm.endpoint):
+        return "invalid"
     parsed = urlparse(llm.endpoint)
     host = parsed.hostname or ""
     if host == "localhost" or host == "::1" or host.startswith("127."):
@@ -210,6 +212,8 @@ def _endpoint_state(llm: ModelConfig) -> str:
 def _endpoint_family(endpoint: str | None) -> str:
     if endpoint is None:
         return "not_configured"
+    if not _valid_endpoint(endpoint):
+        return "invalid"
     parsed = urlparse(endpoint)
     host = parsed.hostname or ""
     port = parsed.port
@@ -235,5 +239,19 @@ def _credential_ref_state(llm: ModelConfig) -> str:
 
 
 def _valid_endpoint(value: str) -> bool:
-    parsed = urlparse(value)
-    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+    # Base URLs are not a credential channel. Reject, do not silently sanitize
+    # the transport URL into a different request target.
+    if any(char.isspace() or ord(char) < 32 or ord(char) == 127 for char in value) or "\\" in value:
+        return False
+    try:
+        parsed = urlparse(value)
+        parsed.port  # Validate port syntax/range before readiness reporting.
+        return (
+            parsed.scheme in {"http", "https"}
+            and bool(parsed.hostname)
+            and parsed.username is None and parsed.password is None
+            and not parsed.query and not parsed.fragment
+            and "%" not in parsed.netloc
+        )
+    except ValueError:
+        return False

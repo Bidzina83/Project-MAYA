@@ -2,11 +2,12 @@
 
 ## Current Gate
 
-The user approved the revised G0-G7 integration plan on 2026-10-03. This is G0,
-not another governance patch or a new installer. G0 acceptance is not yet complete:
-native ordinary-mode regressions must satisfy the acceptance gate, including the
-upstream POSIX-only control. The model/API target is now selected and documented;
-runtime routing and live operation remain later qualification, not G0 evidence.
+The user approved the revised G0-G7 integration plan on 2026-10-03. G0 bounded
+baseline acceptance passed on that date after review of both Linux receipts,
+including the upstream POSIX-only control. G1 is next, awaiting implementation
+authorization. This is not a governance activation or new installer. Native
+governed paths, full-fork tests, runtime routing and live operation remain later
+qualification, not G0 evidence.
 
 ## Change Set Retention Review
 
@@ -34,7 +35,7 @@ code is retained as evidence, not upgraded to the five-boundary source candidate
 Future replacement does not authorize deleting its regression controls now.
 
 No native patch bytes, runtime pin, production gate, wheel or installer were
-changed by this review. G0 acceptance remains open as recorded below.
+changed by this review. G0 acceptance was still open at that review checkpoint.
 
 Review verification: the 31 changed test modules ran 453 tests, with 441 passing
 and 12 explicitly skipped in the development environment. Nine skipped Telegram
@@ -188,14 +189,43 @@ governed full-loop, installed-product or Windows lifecycle qualification.
 | Maintained coverage and historical artifact separation | Machine-readable register and validation tests | Implemented; runtime roots remain unqualified |
 | Explicit offline route | Six transport tests pass, no installed-payload skip included | Passed for fixture only |
 | Customer model/API selection | Official model documentation and two pinned-SDK Responses fixtures | Selected; native/live route remains unqualified |
-| Native ordinary-mode control and candidate parity | 1,271 passed and one POSIX-only skip on each tree; all 16 files covered through full and explicit subset runs | Gate open; no skip waived |
+| Native ordinary-mode control and candidate parity | Linux: 1,272 passed on each tree across all 16 registered files; zero failures, skips or omitted files | Passed for bounded G0 baseline |
 | Product activation/wheel/installer | Not authorized by G0 | Unchanged |
 
-G1 must not start merely because the tooling exists. Record remaining G0 evidence
-and blockers here before changing the current milestone. If a discovered dependency
-requires reordering or modifying the plan, recommend it and obtain approval.
+G1 must not start merely because the tooling exists. G0 evidence is accepted below;
+G1 implementation requires the next user authorization checkpoint. If a discovered
+dependency requires reordering or modifying the plan, recommend it and obtain approval.
 
-## Remaining Acceptance Dependency
+## Accepted Linux Receipt
+
+The [bounded Linux qualification run](https://github.com/Bidzina83/Project-MAYA/actions/runs/37131842169)
+passed against Maya commit `99733930086b863f99bda943873fa64d47a490b9`.
+Both jobs reconstructed two independent matching manifests and ran all 16
+registered native test files: 1,272 passes each, zero failures/skips, and no
+unexecuted files. The previously skipped POSIX permission control executed.
+
+Downloaded JSON receipts were checked against the committed tooling and coverage
+register hashes, exact native pin and all 23 ordered patch records. Both jobs
+share the same 5,463 baseline files and 225-package dependency inputs. Candidate
+effective bytes differ only in the expected 24 files. Each prepared environment
+contains 96 package records, with no blocked dependencies. Both results retain
+`production_qualified=false`; the candidate runs ordinary-mode controls, not an
+activated governed full loop.
+
+| Receipt SHA256 | Ordinary | Candidate |
+| --- | --- | --- |
+| Baseline manifest | `f465749f570cf57097fd740fb1893e26cfa3ad17689a19f889278e2f8fb4a32f` | `8e79475c0d02e0d18fb53fc3e514d38fb9ca40606cb19692d65732e8ecca9122` |
+| Native result | `a21afaa02dbbc2901e566c15785b3b94edd77f0e3e03cabaceda6e7e62531df7` | `a21afaa02dbbc2901e566c15785b3b94edd77f0e3e03cabaceda6e7e62531df7` |
+| Dependency inventory | `e803149898c84318788114cd984bb1112427c8018c73c23ad4206c575dfff0f6` | `e803149898c84318788114cd984bb1112427c8018c73c23ad4206c575dfff0f6` |
+
+Raw receipts remain in ignored build storage and GitHub run artifacts. The frozen
+machine-readable input register is unchanged so receipt contract hashes remain
+verifiable. G0 work packages and bounded acceptance are complete; the full-fork
+job is defined but has not run. Unknown/unresolved runtime roots remain blockers
+for profile/product acceptance, not implicitly supported features. G1-G7,
+live-provider tests and clean installed Windows qualification remain open.
+
+## Historical Acceptance Blockers
 
 ### First Committed Linux Run
 
@@ -225,8 +255,9 @@ tooling tests passed, including nested-repository isolation, venv-path selection
 and rejection of ambient loader paths. All three new regression tests also passed
 on Ubuntu. The 47 required product tests, context guard and script compilation
 passed. These corrections still require a new
-committed/pushed bounded Linux run and review of both result artifacts. G0 stays
-open; G1 is not authorized by these diagnostics.
+committed/pushed bounded Linux run and review of both result artifacts at that
+checkpoint. The accepted receipt above supersedes that preparation blocker;
+the diagnostics alone did not authorize G1.
 
 Both Windows control runs hit the same native
 `TestWriteClaudeCodeCredentials.test_credentials_file_created_with_0o600` skip
@@ -242,8 +273,8 @@ fork's non-integration files. Runtime testing is offline, no customer credential
 are used, and required skips fail the jobs. No installer or capability marker is
 created. The first committed dispatch and preparation blockers are recorded above.
 
-After the tooling corrections are committed/pushed, rerun the bounded Linux job and review
-both artifacts before accepting G0. A full-fork job is defined, not yet executed.
+The corrected bounded Linux job and both artifacts have now been reviewed as
+recorded above. A full-fork job is defined, not yet executed.
 If Linux reveals new environmental or native failures, retain them as blockers;
 do not weaken pins, delete tests, waive skips or reorder milestones automatically.
 

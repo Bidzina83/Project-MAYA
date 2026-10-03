@@ -197,11 +197,20 @@ qualification. Stay in the second Step 1 sub-item for full native caller/lifecyc
 evidence; session-index transitions, wheel, installer and production stay unchanged.
 The user approved `docs/architecture/maya_governance_integration_plan.md` on
 2026-10-03. Its G0-G7 sequence supersedes the earlier implementation sequence;
-G0 is the current milestone. Consult its work packages and acceptance gate before
+G0 bounded baseline acceptance passed on 2026-10-03; G1 is next, awaiting explicit
+implementation authorization. Consult its work packages and acceptance gate before
 editing. See `docs/architecture/governance_g0_baseline.md` and the machine-readable
-coverage register for progress and unresolved roots. G1 may not begin before G0
-acceptance. Production activation, runtime pin, wheel and installer are unchanged.
+coverage register for evidence and unresolved roots. Full-fork and governed-path
+qualification remain open. Production activation, runtime pin, wheel and installer
+are unchanged.
 Mandatory tool batches use native serial dispatch until parallel workers are qualified.
+On 2026-10-03 the user approved a security checkpoint before G1: verify the 28
+CodeQL review items against the effective runtime, fix or explicitly exclude
+reachable risks, document the 29 metadata false positives, then resume G1 only
+after checkpoint acceptance. Patch 24 is a separate source-only security overlay;
+it does not rewrite the accepted 23-patch G0 baseline or installed artifacts.
+Consult `docs/architecture/governance_security_checkpoint.md`. G1 remains held;
+no production activation, runtime pin, wheel or installer changes are authorized.
 Full-loop qualification, provider-error redaction,
 automatic-route attribution, direct SDK paths, and worker coverage remain open;
 do not activate the plugin or change the production gate on these patches alone.

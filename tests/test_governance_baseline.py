@@ -203,7 +203,8 @@ class TestGovernanceBaseline(unittest.TestCase):
     def test_native_cli_preserves_selected_virtual_environment_path(self):
         import types
         selected = Path("selected-venv") / "bin" / "python"
-        args = types.SimpleNamespace(stage=ROOT, python=selected, mode="bounded", test_file=None)
+        args = types.SimpleNamespace(stage=ROOT, python=selected, mode="bounded", test_file=None,
+                                     security_checkpoint=False)
         with patch.object(native.argparse.ArgumentParser, "parse_args", return_value=args), \
                 patch.object(native, "run", return_value={"status": "passed"}) as run, \
                 patch("builtins.print"):

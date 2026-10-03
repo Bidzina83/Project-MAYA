@@ -39,6 +39,32 @@ def enterprise_broker_disabled_mapping():
 
 
 class TestPhase2ModelConfig(unittest.TestCase):
+    def test_endpoint_rejects_secret_channels_and_parser_ambiguity_redacted(self):
+        for endpoint in (
+            "https://synthetic-private@example.test/v1",
+            "https://example.test/v1?token=synthetic-private",
+            "https://example.test/v1#synthetic-private",
+            "https://example.test:bad/v1", "https://[broken",
+            "https://example.test\\@other.test/v1",
+            "https://example.test/%20\n", "https://ex%61mple.test/v1",
+        ):
+            with self.subTest(endpoint=endpoint):
+                data = enterprise_broker_disabled_mapping()
+                data["llm"]["endpoint"] = endpoint
+                validation = validate_model_config(config_from_mapping(data))
+                self.assertFalse(validation.valid)
+                self.assertEqual(validation.endpoint_state, "invalid")
+                self.assertNotIn("synthetic-private", validation.redacted_summary())
+
+    def test_endpoint_accepts_customer_paths_and_ipv6_without_rewriting(self):
+        for endpoint in ("https://example.test/customer/v1", "http://[::1]:8000/v1",
+                         "https://resource.openai.azure.com/openai/v1"):
+            data = enterprise_broker_disabled_mapping()
+            data["llm"]["endpoint"] = endpoint
+            config = config_from_mapping(data)
+            self.assertTrue(validate_model_config(config).valid)
+            self.assertEqual(config.llm.endpoint, endpoint)
+
     def test_setup_placeholder_is_not_a_ready_model(self):
         data = valid_config_mapping()
         data["llm"]["model"] = "configured-during-setup"

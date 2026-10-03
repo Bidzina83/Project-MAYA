@@ -4,8 +4,14 @@
 
 Approved by the user on 2026-10-03 after the user-authorized
 [integration assessment](maya_governance_integration_assessment_20261003.md).
-The G0-G7 sequence is now the approved strategy. The current authorization is G0;
-it does not authorize plugin activation or rebuilding a ready installer.
+The G0-G7 sequence is now the approved strategy. G0 bounded baseline acceptance
+passed on 2026-10-03, with reviewed Linux control/candidate receipts in the
+baseline runbook. G1 is next, awaiting explicit implementation authorization.
+The user subsequently approved the [pre-G1 security checkpoint](governance_security_checkpoint.md)
+on 2026-10-03. Its four steps must be satisfied before G1 resumes. The approved
+G1-G7 work packages are unchanged; Patch 24 is a separate security overlay, not
+a new accepted G0 baseline or an installer authorization.
+This does not authorize plugin activation or rebuilding a ready installer.
 
 This sequence supersedes the earlier session-write implementation order while
 preserving its contracts and dependency order within G1-G3. Its Stage 2 Step 1
@@ -369,7 +375,8 @@ dependencies and exact native test harness are established.
 
 ## Approval And Next Action
 
-G0 implementation is authorized. Complete its acceptance before moving to G1
-caller entry/cancellation work in the listed order. Do not jump to another installer.
+G0 bounded baseline acceptance is recorded. The next implementation checkpoint is
+G1 request/lifecycle contract work, followed by caller entry and cancellation in
+the listed order, after user authorization. Do not jump to another installer.
 Record milestone acceptance and evidence incrementally;
 an unforeseen dependency changes the plan only through a new approval checkpoint.

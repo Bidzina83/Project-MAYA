@@ -121,9 +121,15 @@ def verify_stage(stage, contract):
     return source
 
 
-def run(stage, python, mode, test_files=None):
+def run(stage, python, mode, test_files=None, *, security_checkpoint=False):
     contract = json.loads(CONTRACT.read_text())
-    source = verify_stage(stage, contract)
+    if security_checkpoint:
+        from prepare_governance_security_checkpoint import verify_security_stage
+        source = verify_security_stage(stage)
+    else:
+        source = verify_stage(stage, contract)
+    if mode == "security" and not security_checkpoint:
+        raise ValueError("security.explicit_stage_required")
     with tempfile.TemporaryDirectory(prefix="maya-g0-native-") as temp:
         home = Path(temp)
         # No ambient provider keys, Hermes profiles, Python paths or plugin flags.
@@ -151,8 +157,19 @@ def run(stage, python, mode, test_files=None):
         # repo, fixture imports or replacement native modules.
         env["PYTHONPATH"] = str(home)
         env["G0_NATIVE_RESULT"] = str(home / "native-result.json")
-        tests = ([r["path"] for r in contract["ordinary_regressions"]] if mode == "bounded"
-                 else sorted(p.relative_to(source).as_posix() for p in (source / "tests").rglob("test_*.py")))
+        if mode == "security":
+            from prepare_governance_security_checkpoint import security_contract, ROOT
+            checkpoint, _ = security_contract()
+            test_path = checkpoint["security_tests"]
+            shutil.copy2(ROOT / test_path, test_source / test_path)
+            if digest((test_source / test_path).read_bytes()) != checkpoint["security_tests_sha256"]:
+                raise ValueError("security.test_copy_modified")
+            tests = [test_path, *checkpoint["native_controls"]]
+            if any(not (source / p).is_file() for p in checkpoint["native_controls"]):
+                raise ValueError("security.native_control_missing")
+        else:
+            tests = ([r["path"] for r in contract["ordinary_regressions"]] if mode == "bounded"
+                     else sorted(p.relative_to(source).as_posix() for p in (source / "tests").rglob("test_*.py")))
         required = list(tests)
         if test_files:
             if mode != "bounded" or any(p not in required for p in test_files) or len(set(test_files)) != len(test_files):
@@ -176,6 +193,8 @@ def run(stage, python, mode, test_files=None):
                   all(r["exit_code"] == 0 for r in results) else "failed",
                   "files": results, "not_run_files": tests[len(results):],
                   "production_qualified": False}
+        if mode == "security":
+            result["security_tests_sha256"] = checkpoint["security_tests_sha256"]
         if test_files:
             result["scope"] = "diagnostic_subset_not_gate_acceptance"
             result["omitted_files"] = [p for p in required if p not in tests]
@@ -189,11 +208,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stage", required=True, type=Path)
     parser.add_argument("--python", required=True, type=Path)
-    parser.add_argument("--mode", choices=("bounded", "full"), required=True)
+    parser.add_argument("--mode", choices=("bounded", "full", "security"), required=True)
+    parser.add_argument("--security-checkpoint", action="store_true")
     parser.add_argument("--test-file", action="append", help="Registered bounded subset; never accepts the gate")
     args = parser.parse_args()
     try:
-        result = run(args.stage.resolve(), args.python.absolute(), args.mode, args.test_file)
+        result = run(args.stage.resolve(), args.python.absolute(), args.mode, args.test_file,
+                     security_checkpoint=args.security_checkpoint)
     except (ValueError, OSError, KeyError) as exc:
         code = str(exc) if str(exc).startswith("regression.") else "regression.job_failed"
         result = {"status": "blocked", "reason_code": code, "production_qualified": False}

@@ -1,0 +1,28 @@
+{
+  "schema": "maya.governance-security-checkpoint.v1",
+  "pin": "b13e2fd6948a59eeb59fe618914147d97a2ee90a",
+  "production_qualified": false,
+  "base_contract": "governance-g0-baseline.json",
+  "base_effective_inventory_sha256": "df31819a6346fce43e7ccef69c81e0991ccc65a93b89648d0d2983621672f54e",
+  "patch": "0024-codeql-security-checkpoint.patch",
+  "patch_sha256": "30924ec9a23953cf62f1445fea0ff2ea8d813cb90dde413dadb4eb5868708ba6",
+  "effective_native_sha256": {
+    "utils.py": "adf7ce832f8db8987141569e68e9be51865d920d4d645e6608658003b390050c",
+    "run_agent.py": "eaa81252daf26f2705eb60e48c21e6d22db43b76e8ab7aa8ed4e71206895a568",
+    "cli.py": "5de9b5ebfa74fc242e9c5552852478f890c553f07e53e6a6f28d330231e86b02",
+    "hermes_state.py": "aa57c50cfdc9d211ecfb992f119eb1f3f12babca9ab39c548a3132bd35bc7c92",
+    "agent/anthropic_adapter.py": "c47b3480551dcf600ebc6203a325d0a751e3c2207b4ed00fe7d63c75e1e2f31e",
+    "agent/auxiliary_client.py": "3ebb11bf382a0531da37813610380aea9c312a798371fa67eba3d87809c22379",
+    "agent/agent_init.py": "043a2799e41bb8497ada724e037f98a81243b1d55fca0f488b31c20f03e2f4ca",
+    "agent/conversation_loop.py": "06440b41d2c885928d42a6a2fd563d8c2ce6ca2220ddc094441b9ebd47ba7f29",
+    "agent/chat_completion_helpers.py": "30b1cb2b123947f525962ee7e6f6d6d6b46ab2e87e93251405e5c779aa5e27e2",
+    "hermes_cli/runtime_provider.py": "f0251d104ecc8c5558d2a4c157ed47439c9b975326fb12be39f9d57a183e75db"
+  },
+  "security_tests": "tests/hermes_security_checkpoint_native.py",
+  "security_tests_sha256": "6dfe36c028cb38a59813ac350edd3acc8c85c822c11272a0668b2e62dc04ffd5",
+  "native_controls": [
+    "tests/test_base_url_hostname.py",
+    "tests/hermes_cli/test_runtime_provider_resolution.py",
+    "tests/run_agent/test_anthropic_third_party_oauth_guard.py"
+  ]
+}
