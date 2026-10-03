@@ -182,6 +182,47 @@ class TestGovernanceBaseline(unittest.TestCase):
             self.assertEqual([r["path"] for r in records], ["native.py"])
             self.assertFalse((stage / "untracked.env").exists())
 
+    def test_patch_application_does_not_inherit_enclosing_repository(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            baseline.git(parent, "init", "-q")
+            source = parent / "export" / "source"
+            source.mkdir(parents=True)
+            target = source / "native.py"
+            target.write_bytes(b"value = 1\n")
+            candidate = parent / "candidate.patch"
+            candidate.write_bytes(
+                b"diff --git a/native.py b/native.py\n"
+                b"--- a/native.py\n+++ b/native.py\n"
+                b"@@ -1 +1 @@\n-value = 1\n+value = 2\n"
+            )
+            baseline.git(source, "apply", "--no-index", "--whitespace=error", str(candidate))
+            self.assertEqual(target.read_bytes(), b"value = 2\n")
+            self.assertFalse((parent / "native.py").exists())
+
+    def test_native_cli_preserves_selected_virtual_environment_path(self):
+        import types
+        selected = Path("selected-venv") / "bin" / "python"
+        args = types.SimpleNamespace(stage=ROOT, python=selected, mode="bounded", test_file=None)
+        with patch.object(native.argparse.ArgumentParser, "parse_args", return_value=args), \
+                patch.object(native, "run", return_value={"status": "passed"}) as run, \
+                patch("builtins.print"):
+            self.assertEqual(native.main(), 0)
+        self.assertEqual(run.call_args.args[1], selected.absolute())
+
+    def test_native_environment_uses_only_selected_python_library(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            python = root / "prepared" / "bin" / "python"
+            library = root / "prepared" / "lib"
+            library.mkdir(parents=True)
+            with patch.object(native.os, "name", "posix"), \
+                    patch.object(native, "Path", side_effect=lambda value: value), \
+                    patch.dict("os.environ", {"LD_LIBRARY_PATH": "untrusted-loader-path"}):
+                env = native.clean_environment(root, python)
+            self.assertEqual(env["LD_LIBRARY_PATH"], str(library))
+            self.assertNotIn("untrusted-loader-path", env.values())
+
 
 if __name__ == "__main__":
     unittest.main()

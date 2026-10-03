@@ -89,13 +89,18 @@ def pytest_sessionfinish(session,exitstatus):
 '''
 
 
-def clean_environment(home):
+def clean_environment(home, python=None):
     env = {k: v for k, v in os.environ.items()
            if k.upper() in {"PATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP"}}
     env.update(HOME=str(home), USERPROFILE=str(home), APPDATA=str(home),
                LOCALAPPDATA=str(home), HERMES_HOME=str(home / "hermes"),
                PYTHONNOUSERSITE="1", PYTHONDONTWRITEBYTECODE="1",
                PYTEST_DISABLE_PLUGIN_AUTOLOAD="1", UV_OFFLINE="1")
+    if python is not None and os.name == "posix":
+        # Hosted Python can need its own shared library; never inherit loader paths.
+        library = Path(python).resolve().parent.parent / "lib"
+        if library.is_dir():
+            env["LD_LIBRARY_PATH"] = str(library)
     return env
 
 
@@ -122,7 +127,7 @@ def run(stage, python, mode, test_files=None):
     with tempfile.TemporaryDirectory(prefix="maya-g0-native-") as temp:
         home = Path(temp)
         # No ambient provider keys, Hermes profiles, Python paths or plugin flags.
-        env = clean_environment(home)
+        env = clean_environment(home, python)
         prepared = subprocess.run([str(python), "-c", PREFLIGHT], cwd=source,
                                   env=env, capture_output=True, text=True)
         if not prepared.stdout.strip():
@@ -188,7 +193,7 @@ def main():
     parser.add_argument("--test-file", action="append", help="Registered bounded subset; never accepts the gate")
     args = parser.parse_args()
     try:
-        result = run(args.stage.resolve(), args.python.resolve(), args.mode, args.test_file)
+        result = run(args.stage.resolve(), args.python.absolute(), args.mode, args.test_file)
     except (ValueError, OSError, KeyError) as exc:
         code = str(exc) if str(exc).startswith("regression.") else "regression.job_failed"
         result = {"status": "blocked", "reason_code": code, "production_qualified": False}

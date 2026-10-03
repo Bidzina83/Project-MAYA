@@ -28,7 +28,11 @@ def git_env():
 
 
 def git(repo, *args):
-    result = subprocess.run(["git", "-C", str(repo), *args], env=git_env(),
+    env = git_env()
+    if args and args[0] == "apply":
+        # Exported trees must not inherit an enclosing repository's path prefix.
+        env["GIT_CEILING_DIRECTORIES"] = str(Path(repo).resolve().parent)
+    result = subprocess.run(["git", "-C", str(repo), *args], env=env,
                             capture_output=True)
     if result.returncode:
         raise ValueError("baseline.git_command_failed")

@@ -197,6 +197,37 @@ requires reordering or modifying the plan, recommend it and obtain approval.
 
 ## Remaining Acceptance Dependency
 
+### First Committed Linux Run
+
+The bounded [G0 run for commit 6bba261](https://github.com/Bidzina83/Project-MAYA/actions/runs/37128902786)
+failed in preparation, before native test execution. It does not establish a
+native behavioral regression or pass the Linux acceptance gate.
+
+- Candidate reconstruction inherited the enclosing Maya Git repository's path
+  prefix. Linux reproduced the failure at Patch 15 in a nested repository; the
+  same pin and patches reconstructed correctly outside that repository.
+- The runner resolved the prepared venv's Python symlink to the base executable,
+  discarding virtual-environment package selection. Its sanitized environment also
+  removed the hosted interpreter's shared-library search path.
+
+The local G0 tooling correction stops enclosing-repository discovery during patch
+application, preserves the selected venv executable path, and derives a loader
+directory only from that executable's resolved interpreter. Ambient loader paths,
+credentials and native profiles remain excluded. No patch bytes, pins, dependency
+locks, production gate or installer were modified.
+
+Two corrected nested Ubuntu reconstructions produced identical diagnostic
+manifests, SHA256 `8e79475c0d02e0d18fb53fc3e514d38fb9ca40606cb19692d65732e8ecca9122`.
+A temporary Linux venv retained its own `sys.prefix` under the sanitized launcher.
+These probes used locally available Python 3.14.4 for tooling diagnosis only;
+they are not the pinned Python 3.13 native regression job. Fifteen Windows G0
+tooling tests passed, including nested-repository isolation, venv-path selection
+and rejection of ambient loader paths. All three new regression tests also passed
+on Ubuntu. The 47 required product tests, context guard and script compilation
+passed. These corrections still require a new
+committed/pushed bounded Linux run and review of both result artifacts. G0 stays
+open; G1 is not authorized by these diagnostics.
+
 Both Windows control runs hit the same native
 `TestWriteClaudeCodeCredentials.test_credentials_file_created_with_0o600` skip
 in `tests/agent/test_anthropic_adapter.py:558`: POSIX mode bits do not apply on
@@ -209,9 +240,9 @@ ordinary/candidate jobs over the exact pin with independent reconstruction and
 lock-pinned preparation. `bounded` runs the registered controls; `full` runs the
 fork's non-integration files. Runtime testing is offline, no customer credentials
 are used, and required skips fail the jobs. No installer or capability marker is
-created. This workflow was authored locally, not pushed or dispatched.
+created. The first committed dispatch and preparation blockers are recorded above.
 
-After these changes are committed/pushed, run the bounded Linux job and review
+After the tooling corrections are committed/pushed, rerun the bounded Linux job and review
 both artifacts before accepting G0. A full-fork job is defined, not yet executed.
 If Linux reveals new environmental or native failures, retain them as blockers;
 do not weaken pins, delete tests, waive skips or reorder milestones automatically.
