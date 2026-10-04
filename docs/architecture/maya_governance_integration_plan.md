@@ -22,8 +22,10 @@ This does not authorize plugin activation or rebuilding a ready installer.
 Work package 3's Patch 26 source candidate and scoped method evidence are recorded
 in the lifecycle runbook. Work package 4 now exercises the actual caller/closure,
 native AIAgent, controlled real SDK transport and SQLite under a fixed resumed
-session. Its diagnostic matrix is not G1 acceptance: remaining cancellation-race
-and ordinary-control review must finish before advancing to G2.
+session. Its fourteen-case matrix now includes cancellation-race and late-callback
+checks; ordinary controls pass on patched and unpatched sources. Exact inputs are
+pinned in `governance-g1-full-caller.json`. G1 acceptance review is pending; do not
+advance to G2 or infer product qualification from this evidence.
 
 This sequence supersedes the earlier session-write implementation order while
 preserving its contracts and dependency order within G1-G3. Its Stage 2 Step 1

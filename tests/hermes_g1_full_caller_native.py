@@ -4,6 +4,7 @@ import json
 import sqlite3
 import threading
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import httpx
 import pytest
@@ -15,6 +16,7 @@ from gateway.session import SessionSource
 from hermes_cli import middleware
 from project_maya.governance import DenyByDefaultGateway, PolicyAuthorizationGateway, PolicyRule
 from project_maya.hermes_plugins import governance
+from project_maya.hermes_plugins.session_handoff import CandidateSessionExecutorHandoff
 from project_maya.hermes_plugins.candidate_transport import completion_response
 from project_maya.hermes_plugins.session_requests import (
     ACKNOWLEDGEMENT, CandidateSessionRequestBinding,
@@ -70,6 +72,8 @@ def full_host(host, monkeypatch, tmp_path):
     host.block_transport = False
     host.native_agents = []
     host.executor_contexts = []
+    host.probe_late_callbacks = False
+    host.late_denials = []
     original_init = run_agent.AIAgent.__init__
     original_conversation = run_agent.AIAgent.run_conversation
 
@@ -86,7 +90,30 @@ def full_host(host, monkeypatch, tmp_path):
         try:
             return original_conversation(agent, *args, **kwargs)
         finally:
+            if host.probe_late_callbacks:
+                probe_late_callbacks()
             host.worker_finished.set()
+
+    def probe_late_callbacks():
+        scope = governance._session_write.get()
+        assert scope.thread_id == threading.get_ident() and scope.task is None
+        assert scope.identity == host.owner and not scope.lease.is_active
+        transport, handler = Mock(), Mock()
+        for name, effect in (
+            ("model", lambda: middleware.run_llm_execution_middleware(
+                {"model": "synthetic-model", "messages": []}, transport,
+                provider="openai", base_url="https://api.openai.com/v1")),
+            ("tool", lambda: middleware.run_tool_execution_middleware(
+                "read_file", {"path": "synthetic.txt"}, handler)),
+            ("output", lambda: middleware.run_model_output_middleware("late synthetic response",
+                provider="openai", model="synthetic-model", base_url="https://api.openai.com/v1")),
+            ("write", lambda: host.db.append_message("fixed-session", "user", "late synthetic write")),
+        ):
+            with pytest.raises((governance.GovernanceBoundaryError, middleware.MandatoryMiddlewareError)):
+                effect()
+            host.late_denials.append(name)
+        transport.assert_not_called()
+        handler.assert_not_called()
 
     def respond(request):
         records = [json.loads(line) for line in host.audit.path.read_text().splitlines()]
@@ -312,3 +339,100 @@ async def test_complete_caller_cancellation_during_transport(full_host, terminat
         if not task.done():
             task.cancel()
         await asyncio.gather(task, return_exceptions=True)
+
+
+async def wait_signal(signal, task=None):
+    for _ in range(1000):
+        if signal.is_set():
+            return
+        if task is not None and task.done():
+            await task
+            raise AssertionError("native caller completed before the observed boundary")
+        await asyncio.sleep(.01)
+    raise AssertionError("native boundary was not reached")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("race", ["repeated-cancellation", "swallowed-child"])
+async def test_complete_caller_cancellation_races_and_late_callbacks(full_host, monkeypatch, race):
+    full_host.block_transport = True
+    full_host.probe_late_callbacks = True
+    cleanup_entered, child_caught, child_release = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    roots, children = [], []
+    original_schedule = full_host.factory.schedule
+
+    def schedule(*args):
+        task = original_schedule(*args)
+        children.append(task)
+        return task
+
+    monkeypatch.setattr(full_host.factory, "schedule", schedule)
+    if race == "repeated-cancellation":
+        original_wait = asyncio.wait
+
+        async def wait(*args, **kwargs):
+            scope = governance._session_write.get()
+            if scope is not None and scope.lease.parent is None and not scope.lease.is_active:
+                # Suspend the cleanup await after actual native synchronous revocation.
+                cleanup_entered.set()
+                await asyncio.Event().wait()
+            return await original_wait(*args, **kwargs)
+
+        monkeypatch.setattr(asyncio, "wait", wait)
+    else:
+        original_execute = CandidateSessionExecutorHandoff.execute
+
+        async def execute(handoff, *args):
+            try:
+                return await original_execute(handoff, *args)
+            except asyncio.CancelledError:
+                # Fault-inject a cancellation-swallowing await, not another agent/closure.
+                child_caught.set()
+                await child_release.wait()
+                assert not governance._session_write.get().lease.is_active
+                with pytest.raises(governance.GovernanceBoundaryError):
+                    full_host.plugin._actor()
+                return None
+
+        monkeypatch.setattr(CandidateSessionExecutorHandoff, "execute", execute)
+
+    async def request():
+        with full_host.binding.authenticated_request(full_host.owner):
+            roots.append(governance._session_write.get())
+            return await full_call(full_host)
+
+    task = asyncio.create_task(request())
+    try:
+        await wait_signal(full_host.transport_entered, task)
+        task.cancel()
+        if race == "repeated-cancellation":
+            await wait_signal(cleanup_entered, task)
+            assert not roots[0].lease.is_active
+            task.cancel()
+        else:
+            await wait_signal(child_caught, task)
+            assert not roots[0].lease.is_active
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert roots[0].lease.termination == "cancelled"
+        before = full_host.db.get_messages("fixed-session")
+        audit_before = [json.loads(line) for line in full_host.audit.path.read_text().splitlines()]
+        full_host.transport_release.set()
+        await wait_signal(full_host.worker_finished)
+        assert full_host.late_denials == ["model", "tool", "output", "write"]
+        assert full_host.db.get_messages("fixed-session") == before
+        audit_after = [json.loads(line) for line in full_host.audit.path.read_text().splitlines()]
+        assert audit_after[:len(audit_before)] == audit_before
+        assert audit_after[len(audit_before):]
+        assert all(record["decision"] == "deny" for record in audit_after[len(audit_before):])
+        assert len(full_host.requests) == 1
+        assert full_host.runner._running_agents == {}
+        child_release.set()
+        await asyncio.gather(*children, return_exceptions=True)
+        assert all(child.done() for child in children)
+    finally:
+        full_host.transport_release.set()
+        child_release.set()
+        if not task.done():
+            task.cancel()
+        await asyncio.gather(task, *children, return_exceptions=True)

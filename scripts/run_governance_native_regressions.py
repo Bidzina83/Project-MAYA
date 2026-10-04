@@ -196,8 +196,10 @@ def run(stage, python, mode, test_files=None, *, security_checkpoint=False, g1_c
                     raise ValueError("regression.lifecycle_test_copy_modified")
                 tests = [lifecycle_test, test_path]
             if mode == "caller-loop":
-                loop_test = "tests/hermes_g1_full_caller_native.py"
-                loop_hash = digest((ROOT / loop_test).read_bytes())
+                from prepare_governance_g1_caller_lifecycle import full_caller_contract, FULL_CALLER_CONTRACT
+                loop_contract = full_caller_contract()
+                loop_test = loop_contract["native_tests"]
+                loop_hash = loop_contract["native_tests_sha256"]
                 shutil.copy2(ROOT / loop_test, test_source / loop_test)
                 if digest((test_source / loop_test).read_bytes()) != loop_hash:
                     raise ValueError("regression.loop_test_copy_modified")
@@ -247,8 +249,13 @@ def run(stage, python, mode, test_files=None, *, security_checkpoint=False, g1_c
                 result["qualification"] = "source_cleanup_methods_not_complete_loop"
                 result["lifecycle_tests_sha256"] = lifecycle["native_tests_sha256"]
             if mode == "caller-loop":
-                result["qualification"] = "source_full_caller_diagnostic_not_g1_acceptance"
+                result["qualification"] = loop_contract["qualification"]
                 result["loop_tests_sha256"] = loop_hash
+                result["loop_contract_sha256"] = digest(FULL_CALLER_CONTRACT.read_bytes())
+                result["acceptance"] = loop_contract["acceptance"]
+                if sum(row.get("passed", 0) for row in results) != loop_contract["expected_tests"]:
+                    result["status"] = "failed"
+                    result["reason_code"] = "regression.full_caller_count_mismatch"
             result["maya_source_sha256"] = {
                 p: digest((ROOT / p).read_bytes()) for p in (
                     "src/project_maya/hermes_plugins/governance.py",

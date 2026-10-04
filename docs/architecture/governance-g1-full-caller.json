@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "pin": "b13e2fd6948a59eeb59fe618914147d97a2ee90a",
+  "production_qualified": false,
+  "acceptance": "pending_review",
+  "qualification": "source_full_caller_g1_review_pending",
+  "lifecycle_contract_sha256": "54c064cc7d7e53fad206bfc73c53dda56a1fb7d6f97ba3f73028ab99d6fc57f1",
+  "native_tests": "tests/hermes_g1_full_caller_native.py",
+  "native_tests_sha256": "d6d8ec97e090fd61f6922f020b46a8dae94080fca43905a867844d6c781908be",
+  "expected_tests": 14,
+  "maya_source_sha256": {
+    "src/project_maya/hermes_plugins/governance.py": "007026bbbe35820abe0d3f849b12ddbae5caa6c321bf8c5a0b752a91312851e8",
+    "src/project_maya/hermes_plugins/session_requests.py": "764c4cd38fda6d22e351d5166c121ad91bb9ab1a96fe9c508374e3a3d1a137ab",
+    "src/project_maya/hermes_plugins/session_handoff.py": "a29a4ea8952fc2a56dafa92c39d98c0040397d98ddc3d4451c2c35ad6f7a444e"
+  },
+  "profile": "fixed resumed Local API authority; synthetic Chat Completions HTTP; no connector delivery or tools",
+  "fault_injection": [
+    "second cancellation at the real native cleanup await",
+    "cancellation swallowed after the original selected executor handoff starts",
+    "late boundary probes on the original conversation executor"
+  ],
+  "excluded": [
+    "production model route and live-provider authentication",
+    "connectors and final frontend delivery",
+    "tool catalogue and arbitrary workers",
+    "schema provisioning and session-index transitions",
+    "installed-product qualification and production activation"
+  ]
+}

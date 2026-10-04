@@ -229,8 +229,11 @@ G1 work package 4 now has complete-caller source diagnostics using the actual
 native conversation closure, AIAgent, real SDK with synthetic HTTP transport,
 and native SQLite. The fixed resumed-session profile excludes connectors, tools,
 first-turn title workers, schema provisioning and session-index transitions.
-These diagnostics do not accept G1 or qualify the selected production model route;
-remaining cancellation-race and ordinary-control review stays in work package 4.
+The fourteen-case matrix now includes repeated/swallowed cancellation and late
+callback denial; ordinary controls pass on patched and unpatched native sources.
+Its hashed inputs are in `docs/architecture/governance-g1-full-caller.json`.
+G1 acceptance review remains pending; this does not qualify the production model
+route, advance to G2, or authorize plugin activation, wheels or installers.
 Full-loop qualification, provider-error redaction,
 automatic-route attribution, direct SDK paths, and worker coverage remain open;
 do not activate the plugin or change the production gate on these patches alone.

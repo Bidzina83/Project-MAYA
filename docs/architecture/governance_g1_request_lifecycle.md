@@ -270,8 +270,10 @@ python scripts/run_governance_native_regressions.py --stage <new-stage> --python
 The `caller-loop` diagnostic mode verifies the exact Patch 26 source composition
 before making a disposable offline copy. It copies the hash-checked caller-entry
 fixture and records the complete-loop test bytes and Maya host-source hashes in
-`native-caller-loop-result.json`. This evolving diagnostic file is not a frozen
-acceptance contract or installed-artifact receipt. Network sockets are blocked,
+`native-caller-loop-result.json`. The fourteen-case inputs are now fixed by
+`governance-g1-full-caller.json`, with pending acceptance and no production claim.
+Earlier twelve-case receipts were evolving diagnostics, not acceptance evidence.
+Neither receipt is installed-product qualification. Network sockets are blocked,
 ambient credentials are removed, and required skips remain failures.
 
 The test invokes the actual `_run_agent` and `_run_agent_inner`, selected native
@@ -298,10 +300,10 @@ authorized request may complete, but the real worker finishes without another
 stored message after revocation. Cleanup failure after a successful response must
 propagate while preserving the already committed response, not claiming rollback.
 
-G1 remains open. Remaining acceptance review includes complete-caller swallowed
-cancellation/repeated-cancellation races, late callback authorization, ordinary
-controls and exact frozen evidence. Do not advance to G2, create Patch 27, rebuild
-a wheel/installer or change the production gate on these diagnostics alone.
+G1 remains open for acceptance review. The evidence update below covers
+complete-caller cancellation races, late callback denial, ordinary controls and
+fixed inputs. Do not advance to G2, create Patch 27, rebuild a wheel/installer or
+change the production gate on these source receipts alone.
 
 Local verification on 2026-10-04: all 12 complete-caller diagnostic cases pass
 with zero skips or omitted files. The final loop-test SHA256 is
@@ -316,3 +318,55 @@ unchanged. No new Hermes patch, wheel, installer or production activation.
 ```text
 python scripts/run_governance_native_regressions.py --stage <Patch-26-stage> --python <prepared-python> --mode caller-loop --g1-caller-lifecycle
 ```
+
+### Cancellation-Race Evidence Update
+
+The additional two cases keep the real caller, closure, agent and SQLite. One
+fault-injects a suspended cleanup await after actual native synchronous revocation,
+then cancels the owning request a second time. The other catches cancellation
+only after invoking the original selected executor handoff, holds that child
+await beyond native bounded observation, then lets it finish without restoring
+authority. These are adversarial await faults, not replacement conversation loops
+or claims that ordinary Hermes deliberately swallows cancellation.
+
+After the original conversation loop exits, callback probes execute on its real
+executor thread under the same child scope. They assert owner/thread matching
+and revoked authority before attempting model execution, native tool dispatch,
+model output and SQLite append. No transport/handler executes and no row is
+added. Denial audit records are expected; no new allow record may appear. The
+already authorized model request is counted as completed or uncertain, not
+undone. Both selected child tasks are observed to finish, and the native running
+slot is released even on repeated cancellation.
+
+Local verification on 2026-10-04: fourteen full-caller cases pass with zero skips.
+All 57 ordinary controls pass on both the Patch 26 composition and unpatched
+native source. The new review contract binds the Patch 26 composition contract,
+all three Maya authority modules, the full-loop test SHA256 and exact test count.
+Tampered hashes, paths, host inventory, count or acceptance/production claims
+are rejected. Test SHA256:
+`d6d8ec97e090fd61f6922f020b46a8dae94080fca43905a867844d6c781908be`.
+The result label is now `source_full_caller_g1_review_pending`.
+
+The final pinned-input rerun passes all 14 full-caller cases, and the separate
+native entry/cleanup rerun passes 24 + 13 cases, without skips or omitted files.
+The host/product combined run passes 125 checks (55 lifecycle/authentication,
+23 then-current provenance and 47 required product checks). A separate final
+provenance run passes 25 checks, including both new input-contract tests.
+Context validation, required release-script syntax checks and diff checks pass.
+These overlapping suites are not additive independent qualification receipts.
+
+| G1 criterion | Bounded evidence | Review limitation |
+| --- | --- | --- |
+| Same owner/session/database/classification across caller/task/thread | Actual construction scope and root-lease ancestry; native handoff and authenticated SQLite tests | Fixed pre-provisioned session, not G2 ownership transitions |
+| Missing, wrong or expired authority denies effects | Full caller rejects before agent/transport; real SQLite deadline controls | No frontend transport lifecycle claim |
+| Alternate roots cannot borrow authority | Native proxy/background/profile entry exclusions and unrelated/nested handoff tests | General workers remain excluded, not supported |
+| Cancellation, timeout and cleanup failure remain terminal | Full caller cancellation/deadline, repeated cleanup cancellation and swallowed-child fault cases | No thread termination or external-effect rollback claim |
+| Late effects cannot gain new authorization | Real executor model/tool/output/write probes; denial-only audit suffix and unchanged rows | Connector final delivery is outside the fixed profile |
+| Prior effects reported accurately | One already-authorized request retained; committed response survives cleanup failure | Durable commit/outcome reconciliation remains G3 |
+| Ordinary behavior retained | Same 57 native controls pass on patched and unpatched sources | Not complete upstream feature or full-fork qualification |
+
+This is bounded source-level G1 evidence. Frontend transport/final delivery,
+session-index ownership, provisioning, durable outcome reconciliation, production
+provider routing, useful SMB tools and installed lifecycle remain their agreed
+later milestones. No native patch or product-runtime source changed here, and
+no wheel/installer was rebuilt. The next action is G1 acceptance review, not G2.
