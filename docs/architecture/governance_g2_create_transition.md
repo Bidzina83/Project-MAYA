@@ -148,9 +148,9 @@ exports or runtime artifacts are committed; all source inputs remain test-only.
    SQLite transaction for session, owner, route, receipt and projection generation.
    The synchronous authority guard surrounds actual commit; the remaining race
    and multi-process evidence belongs to step 4, not an implementation claim.
-3. Partially implemented, current: strict publication, acknowledgement and outcome
-   audit exist. Next complete mandatory reader/cache and fixed-session scope
-   composition only on verified success. No copy fallback, ordinary
+3. Implemented, scoped: strict publication, acknowledgement, outcome audit and
+   Patch 28's mandatory reader/cache and fixed-session scope composition exist
+   only on verified success. No copy fallback, ordinary
    recovery, JSONL fallback, blind replay or conversation-authorized repair.
 4. Qualify allowed/denied create, stale versions, crash/restart, concurrent writers,
    unknown commit outcomes, failed publication/acknowledgement/audit and unsafe
@@ -161,3 +161,40 @@ These are implementation details of the already approved create work, not new
 milestones or a reordered plan. Do not advance to another transition or package
 4 until scoped create evidence is reviewed. Full G2 acceptance requires the
 remaining agreed transitions and frontend/identity work.
+
+## Published Reader Increment
+
+Source-only Patch 28 adds explicit native reader and scope entries. The Maya
+reader checks the exact coordinator, host owner, native database, projection
+bytes/generation, published receipt and fixed route before returning a detached
+native SessionEntry. Cached entries are not authority; the ordinary loader fast
+path, index writer, list/lookup and existence paths remain denied in mandatory
+mode. History requires a separate `session.read` decision and audit.
+
+The fixed-session request scope reuses the frozen G1 binding with append-only
+limits. The projection OS lock spans selection/execution; native SQLite/store
+locks do not cross execution. Native history reads validate task/thread, lease
+ancestry, request, identity and database before reading and revalidate afterward.
+Bounded G1 executor handoff can read the selected history. Exit clears detached
+cache state and G1 revokes authority; captured expired contexts cannot read or
+append. This does not authorize a general resume transition or other workers.
+
+Reviewed reader inputs are in `governance-g2-reader.json`; preparation reconstructs
+the unchanged create parent and verifies full native inventory plus reader hashes.
+All 22 native diagnostics pass on the fresh reader export, manifest SHA256
+`037c8f59a32ee05504569a95d45c7d85985ce280608bb398644c000e35c17797`.
+The first run's allowed-append fixture used the old create-only plugin policy;
+that failed run is not acceptance evidence. The corrected run changes fixture
+policy only, not the frozen governance plugin. One known pytest cache_dir warning
+remains; no native cases were skipped. All 47 host/provenance checks and all 47
+required product regression tests pass; context, syntax and whitespace checks pass.
+All 88 ordinary session controls pass on both Patch 28 and exact unpatched
+Hermes. The reader export was then consumed as a disposable ordinary-control tree;
+its generated adapter guard marker prevents further immutable-input reuse.
+
+Direct SessionDB readers, other gateway index consumers, live frontend identities,
+cached agent/provider approvals and full native caller composition remain outside
+this increment. Cleanup failure precedence, process crash/restart, simultaneous
+read/write processes, cancellation/expiry races and filesystem durability still
+require step 4 evidence. No G2 acceptance, production activation, wheel or installer
+change follows. Do not advance to another transition before the create gate.

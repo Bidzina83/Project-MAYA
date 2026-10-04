@@ -405,8 +405,9 @@ index projection, correlation, recovery and compensation without cross-store
 atomicity. Next is package 3: implement and test create first, then each remaining
 transition individually. Package 3's first create authority/preflight increment is
 recorded in `governance_g2_create_transition.md`. Source-only Patch 27 now exercises
-native SQLite allocation/commit and strict index publication; current step 3 still
-requires mandatory reader/cache/scope composition, then step 4 crash/race evidence.
+native SQLite allocation/commit and strict index publication. Source-only Patch 28
+adds step 3's published-route reader, detached cache and bounded append-only G1
+scope. Step 4 crash/race evidence remains required before another transition.
 No operational transition or frontend is enabled by the source-only receipt path.
 G2 runtime acceptance, frontend composition, production governance
 activation and installers remain unqualified. Do not jump to an installer.

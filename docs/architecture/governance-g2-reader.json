@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "pin": "b13e2fd6948a59eeb59fe618914147d97a2ee90a",
+  "production_qualified": false,
+  "qualification": "source_reader_candidate_only",
+  "acceptance": "pending_review",
+  "expected_native_tests": 22,
+  "parent_contract_sha256": "4f3d412bed4dbb81c91b70da7be2fb65e87d9123aab511d4fb405628b74aab3c",
+  "patch_sha256": "bb4090a4218fbc6a15b50cc205f2657a3dc3bc737b2353ee76c408163a98a9a8",
+  "native_session_sha256": "7d7bbaf70a385cd20deb4462354a6e386d65a4b09ea815b4ef647d49b3099636",
+  "maya_source_sha256": {
+    "src/project_maya/hermes_plugins/session_readers.py": "7a621a63d296a2a698c5ae64051aef0c27b864d93d6ab7fca64649ba14d9164b",
+    "tests/hermes_g2_reader_native.py": "c91445c01a481057bdb5cfa571696f5bec3c5ee15a3e728e9fdac102945b0f18"
+  }
+}

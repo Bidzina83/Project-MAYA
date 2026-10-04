@@ -1,0 +1,95 @@
+diff --git a/gateway/session.py b/gateway/session.py
+--- a/gateway/session.py
++++ b/gateway/session.py
+@@ -13,6 +13,7 @@
+ import logging
+ import os
+ import json
++from contextlib import contextmanager
+ import threading
+ import uuid
+ from pathlib import Path
+@@ -816,3 +817,52 @@
++    def _maya_session_reader(self):
++        from hermes_cli.middleware import (
++            mandatory_middleware_enabled, validate_mandatory_middleware, MandatoryMiddlewareError,
++        )
++        reader = getattr(self, "_maya_published_reader", None)
++        try:
++            from project_maya.hermes_plugins.session_readers import CandidatePublishedSessionReader
++            if (not mandatory_middleware_enabled() or type(reader) is not CandidatePublishedSessionReader
++                    or validate_mandatory_middleware() is not True):
++                raise MandatoryMiddlewareError("session_reader_unqualified")
++            return reader
++        except MandatoryMiddlewareError:
++            raise
++        except Exception:
++            raise MandatoryMiddlewareError("session_reader_failed") from None
++
++    def read_owned_session_candidate(self, identity):
++        try:
++            return self._maya_session_reader().read(self, identity)
++        except Exception:
++            from hermes_cli.middleware import MandatoryMiddlewareError
++            raise MandatoryMiddlewareError("session_reader_failed") from None
++
++    @contextmanager
++    def authenticated_owned_session_candidate(self, identity):
++        from hermes_cli.middleware import MandatoryMiddlewareError
++        try:
++            scope = self._maya_session_reader().authenticated_request(identity)
++            entry = scope.__enter__()
++        except Exception:
++            raise MandatoryMiddlewareError("session_reader_failed") from None
++        try:
++            yield entry
++        except BaseException:
++            import sys
++            scope.__exit__(*sys.exc_info())
++            raise
++        else:
++            try:
++                scope.__exit__(None, None, None)
++            except Exception:
++                raise MandatoryMiddlewareError("session_reader_failed") from None
++
++    @staticmethod
++    def _maya_deny_legacy_index():
++        from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++        if mandatory_middleware_enabled():
++            raise MandatoryMiddlewareError("session_reader_unqualified")
++
+     def _ensure_loaded(self) -> None:
+         """Load sessions index from disk if not already loaded."""
+         with self._lock:
+@@ -822,4 +872,5 @@
+         """Load sessions index from disk. Must be called with self._lock held."""
++        self._maya_deny_legacy_index()
+         if self._loaded:
+             return
+ 
+@@ -849,4 +900,5 @@
+         """Save sessions index to disk (kept for session key -> ID mapping)."""
++        self._maya_deny_legacy_index()
+         import tempfile
+         self.sessions_dir.mkdir(parents=True, exist_ok=True)
+         sessions_file = self.sessions_dir / "sessions.json"
+@@ -1007,3 +1059,4 @@
+         """
++        self._maya_deny_legacy_index()
+         if self._db:
+             try:
+@@ -1504,5 +1557,13 @@
+         migrated (their DB row holds the full message history).
+         """
++        from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++        if mandatory_middleware_enabled():
++            try:
++                return self._maya_session_reader().load_transcript(self, session_id)
++            except MandatoryMiddlewareError:
++                raise
++            except Exception:
++                raise MandatoryMiddlewareError("session_reader_failed") from None
+         if not self._db:
+             return []
+         try:
