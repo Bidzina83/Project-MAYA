@@ -315,3 +315,37 @@ Four provenance controls, context, syntax and whitespace checks pass. Product
 regressions were not rerun for this test-only increment. Prior uncommitted test
 and documentation changes were preserved. No production source, native patch,
 runtime pin, wheel, installer or activation gate changed.
+
+## Step 4: Authority Loss At Native Boundaries
+
+Nine diagnostics in `tests/hermes_g2_create_authority_loss_native.py` pass
+(SHA256 `f32b7d5a8a8550c33db9b48d5f2bd393c2b73649abd44a0bcb3092ee7ca9e76f`).
+They exercise expiry, actual asyncio Task.cancel(), and explicit revocation at
+three native boundaries. The verified source reconstruction and frozen parent
+inputs remain unchanged. The earlier nine process diagnostics also pass. One
+known pytest cache_dir warning remains; no tests are skipped.
+
+Before commit, the native SQLite trace triggers authority loss after allocation
+statements but before commit_guard reauthorization. The entire transaction rolls
+back, restoring the prior SQL dump and projection. After commit, injection occurs
+at publication-guard entry, outside commit_guard. After replacement, it occurs
+when the acknowledgement transaction begins, outside publication_guard. Both
+post-commit paths preserve one session/owner/route and a
+`committed_pending_projection` receipt. Projection generation is respectively
+zero or one. No successful outcome audit is written, native cache remains empty,
+repeat authority use denies, no transaction remains active and OS exclusion can
+be reacquired. No effect is falsely described as rolled back after commit.
+
+Expiry uses a deterministic monotonic-clock boundary, not elapsed-time sleeps.
+Cancellation is requested on the actual calling task during synchronous native
+execution; the governance check observes cancellation before the next await,
+and CancelledError is delivered afterward. This does not qualify unrelated-thread
+revocation interleavings inside a guard or full native conversation cancellation.
+No await or reentrant revoke is inserted inside commit/publication guards.
+Earlier harness runs using reentrant injection are excluded as final evidence.
+
+Four provenance controls, context, syntax and whitespace checks pass. Product
+regressions were not rerun for these test-only changes. Next within Step 4 is
+the remaining acknowledgement/caller-failure and unsafe-path matrix before
+the create acceptance review. Step 4, create and G2 remain unaccepted. No
+production source, native patch, runtime pin, wheel, installer or gate changed.
