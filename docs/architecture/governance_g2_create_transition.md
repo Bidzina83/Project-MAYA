@@ -285,3 +285,33 @@ cancellation/expiry are still Step 4 work, followed by the remaining failure
 matrix. Four provenance checks, syntax, context and whitespace pass. Product
 regressions were not rerun for this test-only change. No production source,
 native patch, wheel, installer or activation gate changed; G2 is not accepted.
+
+## Step 4: Competing Allocation Hosts
+
+The extended native diagnostic file has SHA256
+`b9df761672d01e840d5e94ac8b18839d8651e93a6bba787db5a9f988f6d1c660`.
+All nine cases pass against the unchanged verified Patch 28 reconstruction,
+including the earlier crash/restart and lock-contention controls. The known
+cache_dir warning remains; no cases are skipped.
+
+Two independent native hosts open one explicitly provisioned empty fixture
+database and prepare distinct fresh create authorities for the same route.
+Both signal readiness before the parent releases their input barriers. The
+actual native create entry publishes exactly one result and denies the other.
+SQLite integrity/foreign keys remain valid; native session, owner, route and
+receipt counts are each one. The receipt is published at route version one,
+and generation-one projection bytes identify the same winning session. The
+parent cache stays empty and independent worker audit files contain exactly
+one successful outcome record. No agent or model transport runs.
+
+Child readiness and completion are bounded; failed workers are killed and
+reaped in cleanup. This is a bounded competing-allocation diagnostic, not a
+fairness, stress, general transition, multi-owner or power-loss qualification.
+It does not test reset/switch or recovery over newer versions. Next within
+Step 4 is cancellation/expiry, then remaining acknowledgement, unsafe-path and
+caller-failure cases. Step 4, create and G2 remain unaccepted.
+
+Four provenance controls, context, syntax and whitespace checks pass. Product
+regressions were not rerun for this test-only increment. Prior uncommitted test
+and documentation changes were preserved. No production source, native patch,
+runtime pin, wheel, installer or activation gate changed.

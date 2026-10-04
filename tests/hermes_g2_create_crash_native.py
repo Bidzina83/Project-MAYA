@@ -1,5 +1,6 @@
 """Real-process crash diagnostics; no recovery or production activation."""
 import importlib.util
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
@@ -45,7 +46,7 @@ def crash_worker(directory, boundary):
     raise RuntimeError("crash boundary not reached")
 
 
-def restart_worker(directory, *, published=False, contended=False):
+def restart_worker(directory, *, published=False, contended=False, race=False):
     from gateway.config import GatewayConfig
     from gateway.session import SessionStore
     from hermes_cli import middleware, plugins
@@ -66,7 +67,7 @@ def restart_worker(directory, *, published=False, contended=False):
     with pytest.MonkeyPatch.context() as patcher:
         patcher.setattr(hermes_state, "SessionDB", lambda: db)
         store = SessionStore(directory / "sessions", GatewayConfig())
-    audit = LocalJsonlAuditSink(directory / "restart-audit.jsonl")
+    audit = LocalJsonlAuditSink(directory / (f"race-audit-{os.getpid()}.jsonl" if race else "restart-audit.jsonl"))
     gateway = PolicyAuthorizationGateway(tuple(
         PolicyRule(capability, operation=operation, actor_id="alice")
         for capability, operation in (("session.read", "route_state"), ("session.read", "history"),
@@ -95,6 +96,22 @@ def restart_worker(directory, *, published=False, contended=False):
         middleware.require_middleware(kind, callback)
     coordinator = CandidateNativeSessionCreate(store, binding, acknowledgement=ACKNOWLEDGEMENT)
     reader = CandidatePublishedSessionReader(coordinator, acknowledgement=ACKNOWLEDGEMENT)
+    if race:
+        with binding.authenticated_create(owner) as authority:
+            print("ready", flush=True)
+            assert sys.stdin.readline().strip() == "go"
+            try:
+                receipt = store.create_owned_session_candidate(authority)
+            except middleware.MandatoryMiddlewareError:
+                report = {"status": "denied"}
+            else:
+                assert receipt["state"] == "published" and not receipt["dispatch_allowed"]
+                report = {"status": "published", "session_id": receipt["session_id"]}
+        assert reader._active is None and not store._entries
+        middleware._mandatory_enabled = False
+        db.close()
+        print(json.dumps(report), flush=True)
+        return
     dispatches = 0
     if published:
         entry = store.read_owned_session_candidate(owner)
@@ -225,6 +242,65 @@ def test_second_native_process_is_denied_during_projection_lock_then_can_select(
         monkeypatch.undo()
 
 
+def test_two_prepared_native_hosts_allocate_one_route_once(tmp_path):
+    source = Path(hermes_state.__file__).resolve().parent
+    sys.path.insert(0, str(ROOT / "scripts"))
+    try:
+        from prepare_governance_g2_reader import verify_reader_stage
+        verified, _ = verify_reader_stage(source.parent)
+        assert source == verified.resolve()
+    finally:
+        sys.path.pop(0)
+    module = fixture_module()
+    monkeypatch = pytest.MonkeyPatch()
+    fixture = module.host.__wrapped__(tmp_path, monkeypatch)
+    host = next(fixture)
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = os.pathsep.join((str(source), str(ROOT / "src")))
+    workers = []
+    try:
+        with ThreadPoolExecutor(max_workers=2) as readers:
+            try:
+                for _ in range(2):
+                    workers.append(subprocess.Popen(
+                        [sys.executable, "-B", str(Path(__file__).resolve()), "--race-worker", str(tmp_path)],
+                        cwd=source, env=environment, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE, text=True))
+                ready = [readers.submit(worker.stdout.readline) for worker in workers]
+                assert all(future.result(timeout=60).strip() == "ready" for future in ready)
+                for worker in workers:
+                    worker.stdin.write("go\n")
+                    worker.stdin.flush()
+                reports = []
+                for worker in workers:
+                    stdout, _ = worker.communicate(timeout=60)
+                    assert worker.returncode == 0, "native allocation worker failed"
+                    reports.append(json.loads(stdout))
+            finally:
+                for worker in workers:
+                    if worker.poll() is None:
+                        worker.kill()
+                    worker.wait(timeout=10)
+        assert sorted(report["status"] for report in reports) == ["denied", "published"]
+        winner = next(report["session_id"] for report in reports if report["status"] == "published")
+        conn = host[1]._conn
+        assert conn.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+        assert conn.execute("PRAGMA foreign_key_check").fetchone() is None
+        for table in ("sessions", "maya_session_owners_v1", "maya_session_routes_v1", "maya_session_transitions_v1"):
+            assert conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0] == 1
+        assert tuple(conn.execute("SELECT target_session,state,result_route_version FROM maya_session_transitions_v1").fetchone()) == (winner, "published", 1)
+        projection = json.loads((tmp_path / "sessions/sessions.json").read_bytes())
+        assert projection["generation"] == 1
+        assert projection["routes"] == {"telegram:fixture": {"session_id": winner, "version": 1}}
+        assert not host[0]._entries
+        outcomes = [json.loads(line) for path in tmp_path.glob("race-audit-*.jsonl")
+                    for line in path.read_text().splitlines()]
+        assert sum(row.get("event_type") == "outcome.session_transition" for row in outcomes) == 1
+    finally:
+        fixture.close()
+        monkeypatch.undo()
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 4 and sys.argv[1] == "--crash-worker":
         crash_worker(sys.argv[2], sys.argv[3])
@@ -234,5 +310,7 @@ if __name__ == "__main__":
         restart_worker(sys.argv[2], published=True)
     elif len(sys.argv) == 3 and sys.argv[1] == "--contended-worker":
         restart_worker(sys.argv[2], contended=True)
+    elif len(sys.argv) == 3 and sys.argv[1] == "--race-worker":
+        restart_worker(sys.argv[2], race=True)
     else:
         raise SystemExit("explicit crash-worker invocation required")
