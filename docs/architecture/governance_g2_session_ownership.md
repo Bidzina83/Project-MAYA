@@ -159,6 +159,10 @@ transition descriptor implementation, native patch or installer is produced here
 
 ## Work Package 1 Exit
 
+Work package 2's companion design is now specified in
+`governance_g2_session_consistency.md`. The next implementation step is package 3;
+the original package 1 exit below records the sequence at its completion.
+
 The owner/identity/permission distinction, operation matrix, cached-state and
 rotation constraints, effective writer inventory, exclusions and required tests
 are documented. Work package 1's design deliverable is complete; runtime G2

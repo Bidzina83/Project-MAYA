@@ -29,8 +29,10 @@ pinned in `governance-g1-full-caller.json`. Bounded source-level G1 was accepted
 on 2026-10-04 following the criterion review and the user's instruction to proceed.
 The frozen input contract is unchanged. See the acceptance decision in the G1
 runbook. G2 work package 1 is recorded in
-[the session-ownership design](governance_g2_session_ownership.md); work packages
-2-5 remain sequential. No product qualification or installer authorization follows.
+[the session-ownership design](governance_g2_session_ownership.md). Work package 2
+is specified in [the consistency protocol](governance_g2_session_consistency.md);
+packages 3-5 remain sequential. No product qualification or installer authorization
+follows these design deliverables.
 
 This sequence supersedes the earlier session-write implementation order while
 preserving its contracts and dependency order within G1-G3. Its Stage 2 Step 1
@@ -397,9 +399,12 @@ dependencies and exact native test harness are established.
 G0, the pre-G1 security checkpoint and bounded source-level G1 are accepted.
 The G1 decision and immutable evidence references are in the lifecycle runbook.
 G2 work package 1's owner-scoped transition design and effective writer inventory
-are documented in `governance_g2_session_ownership.md`. Next is work package 2:
-SQLite/index consistency, recovery and compensation, before package 3 implements
-any transition. G2 runtime acceptance, frontend composition, production governance
+are documented in `governance_g2_session_ownership.md`. Work package 2's design is
+in `governance_g2_session_consistency.md`: authoritative native SQLite, recoverable
+index projection, correlation, recovery and compensation without cross-store
+atomicity. Next is package 3: implement and test create first, then each remaining
+transition individually. No transition implementation is claimed by these designs.
+G2 runtime acceptance, frontend composition, production governance
 activation and installers remain unqualified. Do not jump to an installer.
 Record milestone acceptance and evidence incrementally;
 an unforeseen dependency changes the plan only through a new approval checkpoint.

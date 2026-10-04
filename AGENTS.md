@@ -240,7 +240,11 @@ pending-review label; the decision is in the G1 lifecycle runbook, not a rewritt
 test artifact. Production model routing, plugin activation, wheels and installers
 remain unqualified. G2 work package 1 is the owner-scoped transition design in
 `docs/architecture/governance_g2_session_ownership.md`; transitions remain blocked
-pending work package 2's consistency protocol and work package 3's native tests.
+pending work package 3's implementation and native tests. Work package 2's design
+is in `docs/architecture/governance_g2_session_consistency.md`: native SQLite is
+authoritative, the index is a recoverable projection, and cross-store atomicity is
+not claimed. Recovery requires explicit maintenance authority; production schema
+provisioning and durable audit reconciliation remain G3. G2 is not accepted.
 Full-loop qualification, provider-error redaction,
 automatic-route attribution, direct SDK paths, and worker coverage remain open;
 do not activate the plugin or change the production gate on these patches alone.
