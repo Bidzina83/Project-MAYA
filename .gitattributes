@@ -21,4 +21,6 @@
 /tests/hermes_g2_create_native.py text eol=lf
 /tests/hermes_g2_reader_native.py text eol=lf
 /tests/hermes_g2_caller_native.py text eol=lf
+/tests/hermes_g2_caller_qualification_native.py text eol=lf
+/tests/hermes_g2_create_crash_native.py text eol=lf
 /docs/architecture/governance-g2-*.json text eol=lf

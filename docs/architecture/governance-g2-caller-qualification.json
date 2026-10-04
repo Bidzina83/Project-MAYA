@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "production_qualified": false,
+  "acceptance": "pending_review",
+  "qualification": "source_caller_failure_matrix_only",
+  "expected_native_tests": 12,
+  "parent_sha256": "539a9186cca057006377cadb590bcc461487916accc86c3a68a6109097db5d63",
+  "tests_sha256": "4225b475d7320e4038a293b130c5c442783c59806339faf81e58a701cc25b28f",
+  "restart_helper_sha256": "b9df761672d01e840d5e94ac8b18839d8651e93a6bba787db5a9f988f6d1c660"
+}

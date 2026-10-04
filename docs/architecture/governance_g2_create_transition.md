@@ -470,3 +470,18 @@ arbitrary Python or unqualified async/background jobs. No full-loop, path-race,
 power-loss or production platform qualification follows from these probes.
 Create Step 4/G2 acceptance, production activation, runtime pin, wheel and
 installer remain unchanged and blocked.
+
+## Caller Refinement Step 3: Bounded Failure Matrix
+
+The separate qualification inputs and native-case mapping are in
+`governance_g2_caller_qualification.md` and its machine-readable input manifest.
+All twenty native cases pass: eight unchanged Step 2 probes and twelve new
+failure cases. Actual task cancellation, expiry/revocation, audit/SQL failures,
+unknown commit outcomes, duplicate/foreign/stale acknowledgement and process exit
+before acknowledgement have bounded native evidence. The restart helper is also
+hash-pinned; no implementation source or parent input changed.
+
+The matrix covers the seventeen required scenario names, not the complete native
+agent loop. Create-to-agent caller composition remains Step 3 work in the agreed
+sequence before Step 4/create acceptance review. This is not a new stage or an
+authorization to advance to another transition, frontend, wheel or installer.

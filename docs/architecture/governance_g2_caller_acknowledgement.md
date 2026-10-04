@@ -111,6 +111,8 @@ adopt legacy receipts or clear quarantine.
    duplicate/foreign/stale acknowledgement and before/after-ack reader denial/allow.
    Observe native rows, file bytes, audit outcomes and caller/dispatch counters.
    Preserve ordinary controls on pinned unpatched Hermes.
+   The bounded failure matrix is recorded in `governance_g2_caller_qualification.md`;
+   complete create-to-agent caller composition remains open within this step.
 4. Review create acceptance against the full Step 4 matrix and remaining path,
    caller and platform limitations before any other G2 transition. Acceptance
    of this bounded design does not accept create, G2 or production governance.

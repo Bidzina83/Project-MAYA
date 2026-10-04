@@ -815,6 +815,9 @@ publication stays blocked until guarded normal-exit acknowledgement. This is
 design-defined; source-only Patch 29 implements its bounded caller scope and
 staged native sink/reader. Full acknowledgement/failure qualification is next.
 Legacy published receipts must not be silently adopted. G2 remains unaccepted.
+The separate Step 3 caller failure matrix has bounded native receipt/reader and
+restart evidence in `docs/architecture/governance_g2_caller_qualification.md`.
+Complete create-to-agent caller qualification remains open; do not advance yet.
 
 Before each implementation step, consult the applicable agreed plan and identify
 its current step and acceptance criteria. If inspection requires a different

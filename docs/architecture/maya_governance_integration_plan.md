@@ -413,6 +413,9 @@ The approved Step 4 caller-completion refinement is now design-defined in
 the bounded scope in an isolated native/Maya source overlay. Next is its full
 native qualification, then create acceptance review. Design tests alone are
 not runtime qualification, and the normal product runtime remains unchanged.
+The separate caller failure matrix now has bounded evidence in
+`governance_g2_caller_qualification.md`; complete create-to-agent caller evidence
+is still Step 3 work before create acceptance review.
 No operational transition or frontend is enabled by the source-only receipt path.
 G2 runtime acceptance, frontend composition, production governance
 activation and installers remain unqualified. Do not jump to an installer.
