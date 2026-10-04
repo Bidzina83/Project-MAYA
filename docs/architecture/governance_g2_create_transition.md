@@ -349,3 +349,48 @@ regressions were not rerun for these test-only changes. Next within Step 4 is
 the remaining acknowledgement/caller-failure and unsafe-path matrix before
 the create acceptance review. Step 4, create and G2 remain unaccepted. No
 production source, native patch, runtime pin, wheel, installer or gate changed.
+
+## Step 4: Acknowledgement, Caller And Path Diagnostics
+
+Five cases in `tests/hermes_g2_create_failures_native.py` pass (SHA256
+`9ffef641af1da58f159d3b5d07e1238167c39a28febd0720b4ba325160af3305`).
+The combined failure, authority-loss and process suite reports 23 passed with
+one known cache_dir warning and no skips on the unchanged verified Patch 28
+reconstruction. Four provenance checks, syntax, context and whitespace pass.
+Product regressions were not rerun for this test-only increment.
+
+Native SQLite triggers reject receipt acknowledgement and final publication.
+Acknowledgement failure retains `committed_pending_projection`; final publication
+failure retains `projection_verified` even though the outcome audit was written.
+Both preserve the generation-one file and allocated session, deny blind create
+retry without mutation, release exclusion and expose only fixed native errors.
+These cases demonstrate why an audit event alone is not dispatch authority.
+
+Real directory replacement uses a Windows junction (directory symlink on other
+platforms). Replacement before the request denies with no allocation; replacement
+after actual commit denies publication with the old file and pending receipt.
+These are path-validation checkpoints, not continuous path-race, ACL, hostile
+lockfile replacement or power-loss guarantees. Other platforms were not run.
+
+### Create Acceptance Blocker: Caller Completion
+
+The caller-exception diagnostic deliberately raises after the native entry
+returns its published receipt. The receipt has dispatch_allowed=false and no
+caller body/agent scope is entered. No automatic compensation or second create
+occurs. However, the durable receipt remains published: the current entry has
+no acknowledgement of later caller completion and no durable caller-failure
+quarantine. A future reader would not learn of that exception from this receipt.
+The test documents this limitation; its passing status does not close the
+protocol matrix's committed-but-blocked caller-failure requirement.
+
+Recommendation, pending user approval: define a bounded host-owned caller
+acknowledgement/quarantine contract within the current create work, then implement
+and qualify it through a separate source overlay without rewriting accepted
+parent inputs. Do not silently reinterpret every published receipt as proof of
+caller completion, invent maintenance authority, or compensate automatically.
+No revised contract or production behavior is implemented by this recommendation.
+
+Step 4 and create remain unaccepted pending this contract decision and the
+remaining acceptance review, including filesystem limitations and full-caller
+coverage. Do not advance to another transition or frontend composition. No
+production source, native patch, wheel, installer or activation gate changed.
