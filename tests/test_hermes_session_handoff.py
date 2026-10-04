@@ -1,5 +1,6 @@
 """Bounded executor authority with real native SQLite and native helper."""
 import asyncio
+import gc
 from contextvars import copy_context
 from pathlib import Path
 import subprocess
@@ -104,6 +105,120 @@ class TestSessionHandoff(unittest.IsolatedAsyncioTestCase):
         with self.native.binding.authenticated_request(self.native.owner):
             self.assertEqual(await self.runner.scheduling_seam(self.job), 'accepted')
         self.assertEqual(len(self.native.rows()), 1)
+
+    async def test_cancel_revokes_root_before_receiver_cleanup_await(self):
+        from project_maya.hermes_plugins.session_handoff import _LeasedRequestTask
+        entered, cleanup, release = asyncio.Event(), asyncio.Event(), asyncio.Event()
+        async def receiver(source, lease):
+            with governance._bind_session_handoff(source, lease):
+                entered.set()
+                try:
+                    await asyncio.Event().wait()
+                finally:
+                    cleanup.set()
+                    await release.wait()
+        with self.native.binding.authenticated_request(self.native.owner):
+            root = governance._session_write.get()
+            lease = governance._SessionWriteLease(parent=root.lease)
+            task = _LeasedRequestTask(receiver(root, lease), lease)
+            try:
+                await asyncio.wait_for(entered.wait(), 2)
+                self.assertTrue(task.cancel())
+                self.assertFalse(root.lease.is_active)
+                await asyncio.wait_for(cleanup.wait(), 2)
+                with self.assertRaises(governance.GovernanceBoundaryError):
+                    governance.MayaGovernancePlugin._actor(None)
+                with self.assertRaises(self.native.engine.MandatoryMiddlewareError):
+                    self.native.db.append_message('synthetic-session', 'user', 'late parent')
+                self.assertEqual(root.lease.termination, 'cancelled')
+            finally:
+                release.set()
+                with self.assertRaises(asyncio.CancelledError):
+                    await task
+        self.assertEqual(self.native.rows(), [])
+
+    async def test_failed_executor_revokes_root_and_failure_still_reaches_awaiter(self):
+        self.conversation_factory()
+        def job():
+            raise ValueError('synthetic private worker detail')
+        with self.native.binding.authenticated_request(self.native.owner):
+            root = governance._session_write.get()
+            task = self.runner.scheduling_seam(job)
+            with self.assertRaises(self.native.engine.MandatoryMiddlewareError) as failure:
+                await task
+            self.assertNotIn('private worker detail', str(failure.exception))
+            self.assertFalse(root.lease.is_active)
+            self.assertEqual(root.lease.termination, 'failed')
+            with self.assertRaises(self.native.engine.MandatoryMiddlewareError):
+                self.native.db.append_message('synthetic-session', 'user', 'late parent')
+        self.assertEqual(self.native.rows(), [])
+
+    async def test_cancelling_completed_task_does_not_revoke_live_request(self):
+        self.conversation_factory()
+        with self.native.binding.authenticated_request(self.native.owner):
+            root = governance._session_write.get()
+            task = self.runner.scheduling_seam(self.job)
+            self.assertEqual(await task, 'accepted')
+            self.assertFalse(task.cancel())
+            self.assertTrue(root.lease.is_active)
+        self.assertEqual(len(self.native.rows()), 1)
+
+    async def test_abandoned_task_failure_is_observed_without_public_diagnostics(self):
+        from project_maya.hermes_plugins.session_handoff import _LeasedRequestTask
+        loop = asyncio.get_running_loop()
+        previous = loop.get_exception_handler()
+        diagnostics = []
+        loop.set_exception_handler(lambda _, context: diagnostics.append(context))
+        try:
+            with self.native.binding.authenticated_request(self.native.owner):
+                root = governance._session_write.get()
+                async def fail():
+                    raise ValueError('synthetic private marker')
+                task = _LeasedRequestTask(fail(), governance._SessionWriteLease(parent=root.lease))
+                await asyncio.wait({task}, timeout=2)
+                self.assertTrue(task.done())
+                await asyncio.sleep(0)
+                self.assertFalse(root.lease.is_active)
+                self.assertEqual(root.lease.termination, 'failed')
+                del task
+                gc.collect()
+                await asyncio.sleep(0)
+            self.assertEqual(diagnostics, [])
+        finally:
+            loop.set_exception_handler(previous)
+
+    async def test_caller_revocation_requires_owner_and_preserves_timeout(self):
+        factory = self.conversation_factory()
+        self.runner._session_db = self.native.db
+        with self.native.binding.authenticated_request(self.native.owner):
+            root = governance._session_write.get()
+            with factory.caller_scope(self.runner, root.session_id):
+                with self.assertRaises(governance.GovernanceBoundaryError):
+                    factory.revoke_caller(self.runner, 'wrong-session', 'failed')
+                async def wrong_owner():
+                    factory.revoke_caller(self.runner, root.session_id, 'failed')
+                with self.assertRaises(governance.GovernanceBoundaryError):
+                    await asyncio.create_task(wrong_owner())
+                self.assertTrue(root.lease.is_active)
+                root.lease.revoke('timeout')
+                factory.revoke_caller(self.runner, root.session_id, 'cancelled')
+                self.assertEqual(root.lease.termination, 'timeout')
+        with self.assertRaises(governance.GovernanceBoundaryError):
+            factory.revoke_caller(self.runner, 'synthetic-session', 'failed')
+
+    async def test_deadline_timer_installation_failure_revokes_and_resets_scope(self):
+        from project_maya.hermes_plugins.session_handoff import _caller_entry
+        factory = self.conversation_factory()
+        self.runner._session_db = self.native.db
+        with self.native.binding.authenticated_request(self.native.owner):
+            root = governance._session_write.get()
+            with patch.object(asyncio.get_running_loop(), 'call_later', side_effect=RuntimeError('synthetic timer failure')):
+                with self.assertRaises(RuntimeError):
+                    with factory.caller_scope(self.runner, root.session_id):
+                        self.fail('failed timer must not enter native caller')
+            self.assertFalse(root.lease.is_active)
+            self.assertEqual(root.lease.termination, 'failed')
+            self.assertIsNone(_caller_entry.get())
 
     async def test_conversation_cancel_revokes_running_worker_immediately(self):
         self.conversation_factory()

@@ -1,0 +1,283 @@
+diff --git a/gateway/run.py b/gateway/run.py
+index 9254222..653e026 100644
+--- a/gateway/run.py
++++ b/gateway/run.py
+@@ -12869,7 +12869,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
+             yield
+         finally:
+             try:
+-                scope.__exit__(None, None, None)
++                scope.__exit__(*sys.exc_info())
+             except Exception:
+                 raise MandatoryMiddlewareError("caller_entry_failed") from None
+ 
+@@ -12895,6 +12895,62 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
+         if mandatory_middleware_enabled():
+             raise MandatoryMiddlewareError("caller_entry_excluded")
+ 
++    @staticmethod
++    def _maya_support_delivery_task(coroutine):
++        from hermes_cli.middleware import mandatory_middleware_enabled
++        if mandatory_middleware_enabled():
++            coroutine.close()
++            return None
++        return asyncio.create_task(coroutine)
++
++    def _maya_timeout_caller(self, factory, session_id, executor):
++        from hermes_cli.middleware import MandatoryMiddlewareError
++        try:
++            factory.revoke_caller(self, session_id, "timeout")
++            executor.cancel()
++        except Exception:
++            raise MandatoryMiddlewareError("caller_cleanup_failed") from None
++        raise MandatoryMiddlewareError("caller_request_timeout")
++
++    async def _maya_finish_caller(self, factory, session_id, tasks, executor,
++                                  session_key, run_generation, error):
++        from hermes_cli.middleware import MandatoryMiddlewareError
++        reason = "cancelled" if isinstance(error, asyncio.CancelledError) else (
++            "failed" if error is not None else "completed")
++        failed = False
++        try:
++            factory.revoke_caller(self, session_id, reason)
++        except Exception:
++            failed = True
++        pending_tasks = set(task for task in [*tasks, executor] if task is not None)
++        def observe(task):
++            if not task.cancelled():
++                task.exception()
++        for task in pending_tasks:
++            try:
++                task.add_done_callback(observe)
++                if not task.done():
++                    task.cancel()
++            except Exception:
++                failed = True
++        try:
++            if pending_tasks:
++                done, pending = await asyncio.wait(pending_tasks, timeout=1.0)
++                for task in done:
++                    if not task.cancelled() and task.exception() is not None:
++                        failed = True
++                failed = failed or bool(pending)
++        finally:
++            try:
++                if session_key:
++                    self._release_running_agent_state(session_key, run_generation=run_generation)
++                if self._draining:
++                    self._update_runtime_status("draining")
++            except Exception:
++                failed = True
++        if failed and not isinstance(error, (MandatoryMiddlewareError, asyncio.CancelledError)):
++            raise MandatoryMiddlewareError("caller_cleanup_failed") from None
++
+     def _schedule_maya_conversation_executor(self, func):
+         from hermes_cli.middleware import (
+             MandatoryMiddlewareError, mandatory_middleware_enabled,
+@@ -14634,6 +14690,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
+         Supports interruption via new messages.
+         """
+         self._maya_require_caller(session_id, _interrupt_depth)
++        _maya_cleanup_factory = getattr(self, "_maya_conversation_executor_factory", None)
+         # ---- Proxy mode: delegate to remote API server ----
+         if self._get_proxy_url():
+             self._maya_deny_excluded_caller()
+@@ -15526,7 +15583,8 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
+                 else bool(_plat_streaming)
+             )
+             _want_stream_deltas = _streaming_enabled
+-            _want_interim_messages = interim_assistant_messages_enabled
++            from hermes_cli.middleware import mandatory_middleware_enabled
++            _want_interim_messages = interim_assistant_messages_enabled and not mandatory_middleware_enabled()
+             _want_interim_consumer = _want_interim_messages
+             if _want_stream_deltas or _want_interim_consumer:
+                 try:
+@@ -16438,7 +16496,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
+         # Start progress message sender if enabled
+         progress_task = None
+         if tool_progress_enabled:
+-            progress_task = asyncio.create_task(send_progress_messages())
++            progress_task = self._maya_support_delivery_task(send_progress_messages())
+ 
+         # Start stream consumer task — polls for consumer creation since it
+         # happens inside run_sync (thread pool) after the agent is constructed.
+@@ -16452,7 +16510,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
+                     return
+                 await asyncio.sleep(0.05)
+ 
+-        stream_task = asyncio.create_task(_start_stream_consumer())
++        stream_task = self._maya_support_delivery_task(_start_stream_consumer())
+         
+         # Track this agent as running for this session (for interrupt support)
+         # We do this in a callback after the agent is created
+@@ -16572,7 +16630,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
+                 except Exception as _mon_err:
+                     logger.debug("monitor_for_interrupt error (will retry): %s", _mon_err)
+         
+-        interrupt_monitor = asyncio.create_task(monitor_for_interrupt())
++        interrupt_monitor = self._maya_support_delivery_task(monitor_for_interrupt())
+ 
+         # Periodic "still working" notifications for long-running tasks.
+         # Fires every N seconds so the user knows the agent hasn't died.
+@@ -16678,8 +16736,9 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
+                 except Exception as _ne:
+                     logger.debug("Long-running notification error: %s", _ne)
+ 
+-        _notify_task = asyncio.create_task(_notify_long_running())
++        _notify_task = self._maya_support_delivery_task(_notify_long_running())
+ 
++        _executor_task = None
+         try:
+             # Run in thread pool to not block.  Use an *inactivity*-based
+             # timeout instead of a wall-clock limit: the agent can run for
+@@ -16694,6 +16753,9 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
+             _agent_timeout = _agent_timeout_raw if _agent_timeout_raw > 0 else None
+             _agent_warning_raw = _float_env("HERMES_AGENT_TIMEOUT_WARNING", 900)
+             _agent_warning = _agent_warning_raw if _agent_warning_raw > 0 else None
++            from hermes_cli.middleware import mandatory_middleware_enabled
++            if mandatory_middleware_enabled():
++                _agent_warning = None
+             _warning_fired = False
+             _executor_task = self._schedule_maya_conversation_executor(run_sync)
+ 
+@@ -16791,6 +16853,9 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
+                             _interrupt_detected.set()
+ 
+             if _inactivity_timeout:
++                from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++                if mandatory_middleware_enabled():
++                    self._maya_timeout_caller(_maya_cleanup_factory, session_id, _executor_task)
+                 # Build a diagnostic summary from the agent's activity tracker.
+                 _timed_out_agent = agent_holder[0]
+                 _activity = {}
+@@ -17132,61 +17197,69 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
+                 )
+                 return _preserve_queued_followup_history_offset(result, followup_result)
+         finally:
+-            # Stop progress sender, interrupt monitor, and notification task
+-            if progress_task:
+-                progress_task.cancel()
+-            interrupt_monitor.cancel()
+-            _notify_task.cancel()
+-
+-            # Wait for stream consumer to finish its final edit
+-            if stream_task:
+-                # If the agent never created a stream consumer (e.g. non-
+-                # streaming code path, or a test stub returning synchronously)
+-                # there is nothing to flush — cancel immediately instead of
+-                # waiting out the 5s timeout on a task that's just polling for
+-                # a consumer that will never arrive.  This was a 5-second
+-                # cost per non-streaming test run.
+-                _has_stream_consumer = (
+-                    stream_consumer_holder
+-                    and stream_consumer_holder[0] is not None
++            from hermes_cli.middleware import mandatory_middleware_enabled
++            if mandatory_middleware_enabled():
++                await self._maya_finish_caller(
++                    _maya_cleanup_factory, session_id,
++                    [progress_task, interrupt_monitor, tracking_task, _notify_task, stream_task],
++                    _executor_task, session_key, run_generation, sys.exc_info()[1],
+                 )
+-                if not _has_stream_consumer:
+-                    stream_task.cancel()
+-                    try:
+-                        await stream_task
+-                    except asyncio.CancelledError:
+-                        pass
+-                else:
+-                    try:
+-                        await asyncio.wait_for(stream_task, timeout=5.0)
+-                    except (asyncio.TimeoutError, asyncio.CancelledError):
++            else:
++                # Stop progress sender, interrupt monitor, and notification task
++                if progress_task:
++                    progress_task.cancel()
++                interrupt_monitor.cancel()
++                _notify_task.cancel()
++
++                # Wait for stream consumer to finish its final edit
++                if stream_task:
++                    # If the agent never created a stream consumer (e.g. non-
++                    # streaming code path, or a test stub returning synchronously)
++                    # there is nothing to flush — cancel immediately instead of
++                    # waiting out the 5s timeout on a task that's just polling for
++                    # a consumer that will never arrive.  This was a 5-second
++                    # cost per non-streaming test run.
++                    _has_stream_consumer = (
++                        stream_consumer_holder
++                        and stream_consumer_holder[0] is not None
++                    )
++                    if not _has_stream_consumer:
+                         stream_task.cancel()
+                         try:
+                             await stream_task
+                         except asyncio.CancelledError:
+                             pass
+-            
+-            # Clean up tracking
+-            tracking_task.cancel()
+-            if session_key:
+-                # Only release the slot if this run's generation still owns
+-                # it.  A /stop or /new that bumped the generation while we
+-                # were unwinding has already installed its own state; this
+-                # guard prevents an old run from clobbering it on the way
+-                # out.
+-                self._release_running_agent_state(
+-                    session_key, run_generation=run_generation
+-                )
+-            if self._draining:
+-                self._update_runtime_status("draining")
+-            
+-            # Wait for cancelled tasks
+-            for task in [progress_task, interrupt_monitor, tracking_task, _notify_task]:
+-                if task:
+-                    try:
+-                        await task
+-                    except asyncio.CancelledError:
+-                        pass
++                    else:
++                        try:
++                            await asyncio.wait_for(stream_task, timeout=5.0)
++                        except (asyncio.TimeoutError, asyncio.CancelledError):
++                            stream_task.cancel()
++                            try:
++                                await stream_task
++                            except asyncio.CancelledError:
++                                pass
++
++                # Clean up tracking
++                tracking_task.cancel()
++                if session_key:
++                    # Only release the slot if this run's generation still owns
++                    # it.  A /stop or /new that bumped the generation while we
++                    # were unwinding has already installed its own state; this
++                    # guard prevents an old run from clobbering it on the way
++                    # out.
++                    self._release_running_agent_state(
++                        session_key, run_generation=run_generation
++                    )
++                if self._draining:
++                    self._update_runtime_status("draining")
++
++                # Wait for cancelled tasks
++                for task in [progress_task, interrupt_monitor, tracking_task, _notify_task]:
++                    if task:
++                        try:
++                            await task
++                        except asyncio.CancelledError:
++                            pass
+ 
+         # If streaming already delivered the response, mark it so the
+         # caller's send() is skipped (avoiding duplicate messages).
+diff --git a/hermes_cli/middleware.py b/hermes_cli/middleware.py
+index 2add8b8..b1f87ad 100644
+--- a/hermes_cli/middleware.py
++++ b/hermes_cli/middleware.py
+@@ -62,6 +62,7 @@ class MandatoryMiddlewareError(RuntimeError):
+             "session_write_failed",
+             "session_lock_busy",
+             "caller_entry_unqualified", "caller_entry_failed", "caller_entry_excluded",
++            "caller_cleanup_failed", "caller_request_timeout",
+         }
+         reason = code.removeprefix("mandatory_middleware.") if isinstance(code, str) else "callback_failed"
+         if reason not in allowed:

@@ -122,15 +122,28 @@ def verify_stage(stage, contract):
     return source
 
 
-def run(stage, python, mode, test_files=None, *, security_checkpoint=False):
+def run(stage, python, mode, test_files=None, *, security_checkpoint=False, g1_caller_entry=False,
+        g1_caller_lifecycle=False):
     contract = json.loads(CONTRACT.read_text())
-    if security_checkpoint:
+    if sum((security_checkpoint, g1_caller_entry, g1_caller_lifecycle)) > 1:
+        raise ValueError("regression.conflicting_stage_profiles")
+    if g1_caller_lifecycle:
+        from prepare_governance_g1_caller_lifecycle import verify_lifecycle_stage
+        source, _ = verify_lifecycle_stage(stage)
+    elif g1_caller_entry:
+        from prepare_governance_g1_caller_entry import verify_caller_stage
+        source, _ = verify_caller_stage(stage)
+    elif security_checkpoint:
         from prepare_governance_security_checkpoint import verify_security_stage
         source = verify_security_stage(stage)
     else:
         source = verify_stage(stage, contract)
     if mode == "security" and not security_checkpoint:
         raise ValueError("security.explicit_stage_required")
+    if mode == "caller-entry" and not (g1_caller_entry or g1_caller_lifecycle):
+        raise ValueError("regression.explicit_caller_stage_required")
+    if mode in ("caller-lifecycle", "caller-loop") and not g1_caller_lifecycle:
+        raise ValueError("regression.explicit_lifecycle_stage_required")
     with tempfile.TemporaryDirectory(prefix="maya-g0-native-") as temp:
         home = Path(temp)
         # No ambient provider keys, Hermes profiles, Python paths or plugin flags.
@@ -158,7 +171,38 @@ def run(stage, python, mode, test_files=None, *, security_checkpoint=False):
         # repo, fixture imports or replacement native modules.
         env["PYTHONPATH"] = str(home)
         env["G0_NATIVE_RESULT"] = str(home / "native-result.json")
-        if mode == "security":
+        if mode == "caller-controls":
+            from prepare_governance_g1_caller_entry import caller_contract
+            caller, _ = caller_contract()
+            tests = caller["ordinary_controls"]
+            if any(not (source / p).is_file() for p in tests):
+                raise ValueError("regression.caller_control_missing")
+        elif mode in ("caller-entry", "caller-lifecycle", "caller-loop"):
+            from prepare_governance_g1_caller_entry import caller_contract, ROOT
+            caller, _ = caller_contract()
+            test_path = caller["native_tests"]
+            shutil.copy2(ROOT / test_path, test_source / test_path)
+            if digest((test_source / test_path).read_bytes()) != caller["native_tests_sha256"]:
+                raise ValueError("regression.caller_test_copy_modified")
+            # Explicit source integration only: never an installed-product receipt.
+            env["PYTHONPATH"] += os.pathsep + str(ROOT / "src")
+            tests = [test_path]
+            if mode == "caller-lifecycle":
+                from prepare_governance_g1_caller_lifecycle import lifecycle_contract
+                lifecycle, _ = lifecycle_contract()
+                lifecycle_test = lifecycle["native_tests"]
+                shutil.copy2(ROOT / lifecycle_test, test_source / lifecycle_test)
+                if digest((test_source / lifecycle_test).read_bytes()) != lifecycle["native_tests_sha256"]:
+                    raise ValueError("regression.lifecycle_test_copy_modified")
+                tests = [lifecycle_test, test_path]
+            if mode == "caller-loop":
+                loop_test = "tests/hermes_g1_full_caller_native.py"
+                loop_hash = digest((ROOT / loop_test).read_bytes())
+                shutil.copy2(ROOT / loop_test, test_source / loop_test)
+                if digest((test_source / loop_test).read_bytes()) != loop_hash:
+                    raise ValueError("regression.loop_test_copy_modified")
+                tests = [loop_test]
+        elif mode == "security":
             from prepare_governance_security_checkpoint import security_contract, ROOT
             checkpoint, _ = security_contract()
             test_path = checkpoint["security_tests"]
@@ -196,6 +240,22 @@ def run(stage, python, mode, test_files=None, *, security_checkpoint=False):
                   "production_qualified": False}
         if mode == "security":
             result["security_tests_sha256"] = checkpoint["security_tests_sha256"]
+        if mode in ("caller-entry", "caller-lifecycle", "caller-loop"):
+            result["qualification"] = "source_entry_methods_not_complete_loop"
+            result["native_tests_sha256"] = caller["native_tests_sha256"]
+            if mode == "caller-lifecycle":
+                result["qualification"] = "source_cleanup_methods_not_complete_loop"
+                result["lifecycle_tests_sha256"] = lifecycle["native_tests_sha256"]
+            if mode == "caller-loop":
+                result["qualification"] = "source_full_caller_diagnostic_not_g1_acceptance"
+                result["loop_tests_sha256"] = loop_hash
+            result["maya_source_sha256"] = {
+                p: digest((ROOT / p).read_bytes()) for p in (
+                    "src/project_maya/hermes_plugins/governance.py",
+                    "src/project_maya/hermes_plugins/session_requests.py",
+                    "src/project_maya/hermes_plugins/session_handoff.py",
+                )
+            }
         if test_files:
             result["scope"] = "diagnostic_subset_not_gate_acceptance"
             result["omitted_files"] = [p for p in required if p not in tests]
@@ -209,13 +269,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stage", required=True, type=Path)
     parser.add_argument("--python", required=True, type=Path)
-    parser.add_argument("--mode", choices=("bounded", "full", "security"), required=True)
+    parser.add_argument("--mode", choices=("bounded", "full", "security", "caller-entry", "caller-controls", "caller-lifecycle", "caller-loop"), required=True)
     parser.add_argument("--security-checkpoint", action="store_true")
+    parser.add_argument("--g1-caller-entry", action="store_true")
+    parser.add_argument("--g1-caller-lifecycle", action="store_true")
     parser.add_argument("--test-file", action="append", help="Registered bounded subset; never accepts the gate")
     args = parser.parse_args()
     try:
         result = run(args.stage.resolve(), args.python.absolute(), args.mode, args.test_file,
-                     security_checkpoint=args.security_checkpoint)
+                     security_checkpoint=args.security_checkpoint, g1_caller_entry=args.g1_caller_entry,
+                     g1_caller_lifecycle=getattr(args, "g1_caller_lifecycle", False))
     except (ValueError, OSError, KeyError) as exc:
         code = str(exc) if str(exc).startswith("regression.") else "regression.job_failed"
         result = {"status": "blocked", "reason_code": code, "production_qualified": False}

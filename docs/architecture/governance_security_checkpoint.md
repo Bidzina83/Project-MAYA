@@ -12,7 +12,9 @@ The user approved this checkpoint on 2026-10-03 before G1:
    fixture provenance and without blanket scanner exclusions.
 4. Resume G1 only after the checkpoint acceptance below passes.
 
-G1 remains held. Implementation is a source-only security candidate, not an
+The checkpoint is accepted based on reviewed Linux run 37147131920. The user
+authorized G1 implementation afterward; its gate remains separate. Implementation
+is a source-only security candidate, not an
 accepted production runtime. No alert has been dismissed. No wheel, installer,
 runtime pin, capability marker or production activation guard has changed.
 
@@ -144,6 +146,15 @@ The manual `Governance Security Checkpoint` workflow implements these Linux
 checks. It needs the committed/pushed candidate, then reviewed receipts. It does
 not install customer software, use credentials, build an installer or enable G1.
 Until those receipts are accepted, step 4 above is not complete.
+
+Acceptance recorded on 2026-10-03: Linux run 37147131920 at Maya commit
+`5eaaca2e007760fb007c43c064b4f78ab69acf41` passed 193 focused controls and all
+16 required files for each of the patched and ordinary stages (1,272 tests each).
+No failures, skips or omitted required files; independent reconstruction comparison
+passed. The 57-item register and its exclusions remain unchanged. GitHub's Node
+action deprecation warning and upcoming ubuntu-latest migration notice concern
+runner infrastructure, not failed assertions. They do not qualify another OS or
+future runner image. G1 is now authorized, not accepted; production stays blocked.
 
 The first Linux run (37146339919) passed all 193 focused native checks, then
 blocked before bounded regressions: native Bedrock import triggered lazy

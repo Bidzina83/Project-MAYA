@@ -36,18 +36,21 @@ class CandidateSessionRequestBinding:
     operations: frozenset[str]
     acknowledgement: str = field(repr=False)
     audit_sink: AuditSink = field(repr=False, kw_only=True)
+    timeout_seconds: float = field(default=120.0, kw_only=True)
     _lock: object = field(default_factory=Lock, init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if (self.acknowledgement != ACKNOWLEDGEMENT or not isinstance(self.owner, RequestIdentity)
-                or not isinstance(self.audit_sink, AuditSink) or isinstance(self.audit_sink, NullAuditSink)):
+                or not isinstance(self.audit_sink, AuditSink) or isinstance(self.audit_sink, NullAuditSink)
+                or self.timeout_seconds is None):
             raise GovernanceBoundaryError("governance.session_context_invalid")
         try:
             database = Path(self.database).resolve(strict=True)
             if not database.is_file():
                 raise ValueError
             with bind_request_identity(self.owner.actor_id, self.owner.data_classification):
-                with bind_session_write("binding-validation", self.session_id, database, self.operations):
+                with bind_session_write("binding-validation", self.session_id, database, self.operations,
+                                        timeout_seconds=self.timeout_seconds):
                     pass
         except Exception:
             raise GovernanceBoundaryError("governance.session_context_invalid") from None
@@ -80,7 +83,8 @@ class CandidateSessionRequestBinding:
             except Exception:
                 raise GovernanceBoundaryError("governance.audit_unavailable") from None
             with bind_request_identity(identity.actor_id, identity.data_classification):
-                with bind_session_write(request_id, self.session_id, self.database, self.operations):
+                with bind_session_write(request_id, self.session_id, self.database, self.operations,
+                                        timeout_seconds=self.timeout_seconds):
                     yield
         finally:
             self._lock.release()

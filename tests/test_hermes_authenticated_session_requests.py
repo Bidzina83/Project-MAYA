@@ -14,6 +14,7 @@ from unittest.mock import Mock, patch
 from project_maya.audit import LocalJsonlAuditSink
 
 from project_maya.hermes_plugins.governance import RequestIdentity, bind_request_identity
+from project_maya.hermes_plugins import governance
 from project_maya.hermes_plugins.session_requests import ACKNOWLEDGEMENT, CandidateSessionRequestBinding
 from project_maya.local_api import BearerTokenAuthenticator, LocalAPI, LocalAPIRequest, build_local_api_http_server
 from tests import test_hermes_compression_lock_patch as locks
@@ -58,6 +59,22 @@ class TestAuthenticatedSessionRequests(unittest.TestCase):
         self.assertEqual(self.request().status_code, 200)
         self.assertEqual(self.rows()[0]['content'], 'safe input')
         self.agent.run.assert_called_once_with('safe input', idempotency_key=None, data_classification='confidential')
+
+    def test_expired_request_denies_real_native_sqlite_write(self):
+        binding = replace(self.binding, timeout_seconds=5)
+        with patch.object(governance, 'monotonic', return_value=100) as clock:
+            with binding.authenticated_request(self.owner):
+                self.append('authorized before deadline')
+                clock.return_value = 105
+                with self.assertRaises(self.engine.MandatoryMiddlewareError):
+                    self.append('denied after deadline')
+        self.assertEqual([row['content'] for row in self.rows()], ['authorized before deadline'])
+
+    def test_invalid_host_timeout_rejects_binding(self):
+        for timeout in (None, True, 0, float('inf'), float('nan')):
+            with self.subTest(timeout=timeout):
+                with self.assertRaisesRegex(governance.GovernanceBoundaryError, 'session_context_invalid'):
+                    replace(self.binding, timeout_seconds=timeout)
 
     def test_bad_missing_and_revoked_tokens_never_invoke_agent(self):
         self.assertEqual(self.request(token='wrong').status_code, 401)

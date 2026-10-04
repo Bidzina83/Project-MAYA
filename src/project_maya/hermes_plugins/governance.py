@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import math
 import re
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -12,7 +13,8 @@ from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
 from threading import get_ident
-from typing import Any, Iterator, Mapping
+from time import monotonic
+from typing import Any, ClassVar, Iterator, Mapping
 from urllib.parse import urlsplit
 
 from ..audit import AuditRecord, AuditSink, LocalJsonlAuditSink
@@ -57,6 +59,7 @@ class RequestIdentity:
 
 
 SESSION_WRITE_CONTRACT = "project-maya.hermes-session-write.v1"
+REQUEST_LIFECYCLE_CONTRACT = "project-maya.request-lifecycle.v1"
 SESSION_OPERATIONS = frozenset({"create", "append", "rewrite", "compact", "delete", "metadata"})
 
 
@@ -64,14 +67,36 @@ SESSION_OPERATIONS = frozenset({"create", "append", "rewrite", "compact", "delet
 class _SessionWriteLease:
     active: bool = True
     parent: _SessionWriteLease | None = None
+    deadline: float | None = None
+    termination: str | None = None
+
+    def revoke(self, reason: str) -> None:
+        if reason not in {"completed", "cancelled", "timeout", "failed"}:
+            raise GovernanceBoundaryError("governance.request_termination_invalid")
+        if reason == "completed" and self.deadline is not None and monotonic() >= self.deadline:
+            reason = "timeout"
+        self.active = False
+        if self.termination is None:
+            self.termination = reason
+
+    def revoke_request(self, reason: str) -> None:
+        """Invalidate siblings as well as this receiver's descendant leases."""
+        root = self
+        while root.parent is not None:
+            root = root.parent
+        root.revoke(reason)
+        self.revoke(reason)
 
     @property
     def is_active(self) -> bool:
+        if self.deadline is not None and monotonic() >= self.deadline:
+            self.revoke("timeout")
         return self.active and (self.parent is None or self.parent.is_active)
 
 
 @dataclass(frozen=True)
 class SessionWriteContext:
+    contract: ClassVar[str] = REQUEST_LIFECYCLE_CONTRACT
     identity: RequestIdentity
     request_id: str
     session_id: str
@@ -94,7 +119,8 @@ def _current_task() -> Any:
 
 @contextmanager
 def bind_session_write(request_id: str, session_id: str, database: Path,
-                       operations: frozenset[str]) -> Iterator[None]:
+                       operations: frozenset[str], *,
+                       timeout_seconds: float | None = None) -> Iterator[SessionWriteContext]:
     """Trusted host binding; never call with model/tool supplied authority."""
     identity = _identity.get()
     if identity is None:
@@ -104,13 +130,24 @@ def bind_session_write(request_id: str, session_id: str, database: Path,
             raise GovernanceBoundaryError("governance.session_context_invalid")
     if not isinstance(operations, frozenset) or not operations or not operations <= SESSION_OPERATIONS:
         raise GovernanceBoundaryError("governance.session_context_invalid")
-    lease = _SessionWriteLease()
-    token = _session_write.set(SessionWriteContext(identity, request_id, session_id,
-                              Path(database).resolve(), operations, get_ident(), _current_task(), lease))
+    if timeout_seconds is not None and (
+            isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float))
+            or not 0 < timeout_seconds <= 3600 or not math.isfinite(timeout_seconds)):
+        raise GovernanceBoundaryError("governance.request_timeout_invalid")
+    lease = _SessionWriteLease(deadline=None if timeout_seconds is None else monotonic() + timeout_seconds)
+    context = SessionWriteContext(identity, request_id, session_id,
+                                  Path(database).resolve(), operations, get_ident(), _current_task(), lease)
+    token = _session_write.set(context)
     try:
-        yield
+        yield context
+    except asyncio.CancelledError:
+        lease.revoke("cancelled")
+        raise
+    except BaseException:
+        lease.revoke("failed")
+        raise
     finally:
-        lease.active = False
+        lease.revoke("completed")
         _session_write.reset(token)
 
 

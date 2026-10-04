@@ -1,0 +1,125 @@
+diff --git a/gateway/run.py b/gateway/run.py
+--- a/gateway/run.py
++++ b/gateway/run.py
+@@ -11268,6 +11268,7 @@
+         media_types: Optional[List[str]] = None,
+     ) -> None:
+         """Execute a background agent task and deliver the result to the chat."""
++        self._maya_deny_excluded_caller()
+         from run_agent import AIAgent
+ 
+         media_urls = media_urls or []
+@@ -12849,6 +12850,51 @@
+         from gateway.session_context import clear_session_vars
+         clear_session_vars(tokens)
+ 
++    @_contextmanager
++    def _maya_caller_scope(self, session_id):
++        from hermes_cli.middleware import MandatoryMiddlewareError, validate_mandatory_middleware
++        factory = getattr(self, "_maya_conversation_executor_factory", None)
++        if getattr(factory, "caller_contract", None) != "project-maya.native-caller-entry.v1":
++            raise MandatoryMiddlewareError("caller_entry_unqualified")
++        try:
++            if validate_mandatory_middleware() is not True:
++                raise MandatoryMiddlewareError("caller_entry_unqualified")
++            scope = factory.caller_scope(self, session_id)
++            scope.__enter__()
++        except MandatoryMiddlewareError:
++            raise
++        except Exception:
++            raise MandatoryMiddlewareError("caller_entry_failed") from None
++        try:
++            yield
++        finally:
++            try:
++                scope.__exit__(None, None, None)
++            except Exception:
++                raise MandatoryMiddlewareError("caller_entry_failed") from None
++
++    def _maya_require_caller(self, session_id, interrupt_depth=0):
++        from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled, validate_mandatory_middleware
++        if not mandatory_middleware_enabled():
++            return
++        factory = getattr(self, "_maya_conversation_executor_factory", None)
++        if (interrupt_depth != 0 or
++                getattr(factory, "caller_contract", None) != "project-maya.native-caller-entry.v1"):
++            raise MandatoryMiddlewareError("caller_entry_unqualified")
++        try:
++            if validate_mandatory_middleware() is not True or factory.require_caller(self, session_id) is not True:
++                raise MandatoryMiddlewareError("caller_entry_unqualified")
++        except MandatoryMiddlewareError:
++            raise
++        except Exception:
++            raise MandatoryMiddlewareError("caller_entry_failed") from None
++
++    @staticmethod
++    def _maya_deny_excluded_caller():
++        from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++        if mandatory_middleware_enabled():
++            raise MandatoryMiddlewareError("caller_entry_excluded")
++
+     def _schedule_maya_conversation_executor(self, func):
+         from hermes_cli.middleware import (
+             MandatoryMiddlewareError, mandatory_middleware_enabled,
+@@ -14217,6 +14263,7 @@
+         agent runs on the host with full access to local files, memory,
+         skills, and a unified session store.
+         """
++        self._maya_deny_excluded_caller()
+         try:
+             from aiohttp import ClientSession as _AioClientSession, ClientTimeout
+         except ImportError:
+@@ -14512,6 +14559,19 @@
+         multiplexing is off this is a transparent pass-through — zero behavior
+         change for single-profile gateways.
+         """
++        from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++        if mandatory_middleware_enabled():
++            with self._maya_caller_scope(session_id):
++                if (_interrupt_depth != 0 or
++                        getattr(getattr(self, "config", None), "multiplex_profiles", False)):
++                    raise MandatoryMiddlewareError("caller_entry_excluded")
++                return await self._run_agent_inner(
++                    message, context_prompt, history, source, session_id,
++                    session_key=session_key, run_generation=run_generation,
++                    _interrupt_depth=_interrupt_depth, event_message_id=event_message_id,
++                    channel_prompt=channel_prompt, persist_user_message=persist_user_message,
++                    persist_user_timestamp=persist_user_timestamp,
++                )
+         if not getattr(getattr(self, "config", None), "multiplex_profiles", False):
+             return await self._run_agent_inner(
+                 message, context_prompt, history, source, session_id,
+@@ -14573,8 +14633,10 @@
+         This is run in a thread pool to not block the event loop.
+         Supports interruption via new messages.
+         """
++        self._maya_require_caller(session_id, _interrupt_depth)
+         # ---- Proxy mode: delegate to remote API server ----
+         if self._get_proxy_url():
++            self._maya_deny_excluded_caller()
+             return await self._run_agent_via_proxy(
+                 message=message,
+                 context_prompt=context_prompt,
+diff --git a/hermes_cli/middleware.py b/hermes_cli/middleware.py
+--- a/hermes_cli/middleware.py
++++ b/hermes_cli/middleware.py
+@@ -70,5 +70,6 @@
+             "session_write_failed",
+             "session_lock_busy",
++            "caller_entry_unqualified", "caller_entry_failed", "caller_entry_excluded",
+         }
+         reason = code.removeprefix("mandatory_middleware.") if isinstance(code, str) else "callback_failed"
+         if reason not in allowed:
+diff --git a/gateway/slash_commands.py b/gateway/slash_commands.py
+--- a/gateway/slash_commands.py
++++ b/gateway/slash_commands.py
+@@ -2274,6 +2274,9 @@
+         When it completes, sends the result back to the same chat without
+         modifying the active session's conversation history.
+         """
++        from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++        if mandatory_middleware_enabled():
++            raise MandatoryMiddlewareError("caller_entry_excluded")
+         prompt = event.get_command_args().strip()
+         if not prompt:
+             return t("gateway.background.usage")

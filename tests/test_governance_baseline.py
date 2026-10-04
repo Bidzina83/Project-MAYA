@@ -20,6 +20,11 @@ with patch.object(sys, "path", [str(ROOT / "scripts"), *sys.path]):
 
 
 class TestGovernanceBaseline(unittest.TestCase):
+    def test_full_caller_diagnostic_requires_explicit_lifecycle_stage(self):
+        with patch.object(native, "verify_stage", return_value=(ROOT, {})):
+            with self.assertRaisesRegex(ValueError, "explicit_lifecycle_stage_required"):
+                native.run(ROOT, Path(sys.executable), "caller-loop")
+
     def contract(self):
         return json.loads(baseline.CONTRACT.read_text())
 
@@ -207,7 +212,7 @@ class TestGovernanceBaseline(unittest.TestCase):
         import types
         selected = Path("selected-venv") / "bin" / "python"
         args = types.SimpleNamespace(stage=ROOT, python=selected, mode="bounded", test_file=None,
-                                     security_checkpoint=False)
+                                     security_checkpoint=False, g1_caller_entry=False)
         with patch.object(native.argparse.ArgumentParser, "parse_args", return_value=args), \
                 patch.object(native, "run", return_value={"status": "passed"}) as run, \
                 patch("builtins.print"):

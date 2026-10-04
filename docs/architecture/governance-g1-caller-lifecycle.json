@@ -1,0 +1,14 @@
+{
+  "schema": "project-maya.g1-caller-lifecycle-candidate.v1",
+  "pin": "b13e2fd6948a59eeb59fe618914147d97a2ee90a",
+  "production_qualified": false,
+  "entry_contract_sha256": "af925a1c8a118a205dc10a3f26c8719495eff510cb678febdf78e529d454bed6",
+  "patch": "0026-revocable-native-caller-cleanup.patch",
+  "patch_sha256": "a0590c7a8da902105d8f62fd50ca002ab11ff4dcc6dce3e03798896e00461967",
+  "effective_native_sha256": {
+    "gateway/run.py": "8c9aa2db1f3051ca1f856b075697b602fa8e1a01ad196a45c09a259e5ad35de1",
+    "hermes_cli/middleware.py": "da6f9a5e87c41ddc86448c701b9219390db2661a8afa38780b42067983bc0f14"
+  },
+  "native_tests": "tests/hermes_g1_caller_lifecycle_native.py",
+  "native_tests_sha256": "2c9600c03a689de0c04d698ea6101a887b1af45ce89dd81887ea6f767cf85695"
+}

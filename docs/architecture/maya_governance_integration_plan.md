@@ -6,12 +6,24 @@ Approved by the user on 2026-10-03 after the user-authorized
 [integration assessment](maya_governance_integration_assessment_20261003.md).
 The G0-G7 sequence is now the approved strategy. G0 bounded baseline acceptance
 passed on 2026-10-03, with reviewed Linux control/candidate receipts in the
-baseline runbook. G1 is next, awaiting explicit implementation authorization.
+baseline runbook. G1 implementation was authorized after the security checkpoint.
 The user subsequently approved the [pre-G1 security checkpoint](governance_security_checkpoint.md)
 on 2026-10-03. Its four steps must be satisfied before G1 resumes. The approved
 G1-G7 work packages are unchanged; Patch 24 is a separate security overlay, not
 a new accepted G0 baseline or an installer authorization.
+Security checkpoint run 37147131920 passed at commit
+`5eaaca2e007760fb007c43c064b4f78ab69acf41`. G1 work package 1 is recorded in
+[the request lifecycle contract](governance_g1_request_lifecycle.md); its source
+foundations do not satisfy the complete G1 gate. Work package 2 now has a
+source-only caller-entry candidate and complete-method probes. Work packages 3-4
+remain next in the listed order. No session-index transitions or installer changes.
 This does not authorize plugin activation or rebuilding a ready installer.
+
+Work package 3's Patch 26 source candidate and scoped method evidence are recorded
+in the lifecycle runbook. Work package 4 now exercises the actual caller/closure,
+native AIAgent, controlled real SDK transport and SQLite under a fixed resumed
+session. Its diagnostic matrix is not G1 acceptance: remaining cancellation-race
+and ordinary-control review must finish before advancing to G2.
 
 This sequence supersedes the earlier session-write implementation order while
 preserving its contracts and dependency order within G1-G3. Its Stage 2 Step 1
@@ -375,8 +387,13 @@ dependencies and exact native test harness are established.
 
 ## Approval And Next Action
 
-G0 bounded baseline acceptance is recorded. The next implementation checkpoint is
-G1 request/lifecycle contract work, followed by caller entry and cancellation in
-the listed order, after user authorization. Do not jump to another installer.
+G0 and the pre-G1 security checkpoint are accepted. G1 implementation is authorized;
+work package 1's request/lifecycle definition and tested lease foundations are
+recorded, with work package 2's source-only caller-entry candidate. Next is work
+package 3 cancellation, then 4 complete native caller/loop qualification. Work
+package 3 has host-side root revocation/task observation controls and source-only
+Patch 26 native cleanup/timeout integration with scoped method evidence. Complete
+native caller/agent-loop qualification is still work package 4. G1
+acceptance remains open. Do not jump to an installer.
 Record milestone acceptance and evidence incrementally;
 an unforeseen dependency changes the plan only through a new approval checkpoint.

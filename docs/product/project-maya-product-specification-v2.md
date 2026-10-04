@@ -393,8 +393,8 @@ qualification. Stay in the second Step 1 sub-item for full native caller/lifecyc
 evidence; session-index transitions, wheel, installer and production stay unchanged.
 The user approved `docs/architecture/maya_governance_integration_plan.md` on
 2026-10-03. Its G0-G7 sequence supersedes the earlier implementation sequence;
-G0 bounded baseline acceptance passed on 2026-10-03; G1 is next, awaiting explicit
-implementation authorization. Consult its work packages and acceptance gate before
+G0 bounded baseline acceptance passed on 2026-10-03; G1 implementation is authorized
+after the accepted security checkpoint. Consult its work packages and acceptance gate before
 editing. See `docs/architecture/governance_g0_baseline.md` and the machine-readable
 coverage register for evidence and unresolved roots. Full-fork and governed-path
 qualification remain open. Production activation, runtime pin, wheel and installer
@@ -764,8 +764,28 @@ CodeQL review items against the effective runtime, fix or explicitly exclude
 reachable risks, document the 29 metadata false positives, then resume G1 only
 after checkpoint acceptance. Patch 24 is a separate source-only security overlay;
 it does not rewrite the accepted 23-patch G0 baseline or installed artifacts.
-Consult `docs/architecture/governance_security_checkpoint.md`. G1 remains held;
-no production activation, runtime pin, wheel or installer changes are authorized.
+The checkpoint passed in Linux run 37147131920 at commit
+`5eaaca2e007760fb007c43c064b4f78ab69acf41`; G1 implementation is now authorized.
+Consult `docs/architecture/governance_g1_request_lifecycle.md`: work package 1
+defines the host contract and bounded lease foundations; work package 2 adds
+source-only native caller-entry enforcement through Patch 25. Cancellation and
+complete-loop qualification remain work packages 3-4 in order. G1 is not accepted.
+No production activation, runtime pin, wheel or installer change.
+
+G1 work package 3 now has source-only host revocation controls: cancelling the
+selected task revokes its root before cancellation delivery, task failures revoke
+the root and are observed without diagnostic output, and caller cleanup has an
+owner-bound synchronous revocation operation. Source-only Patch 26 connects native
+cleanup and inactivity timeout, preserves exception scope, observes bounded cleanup
+and disables unqualified supporting delivery tasks in mandatory mode. Scoped native
+method probes pass; complete caller/agent-loop qualification remains work package 4.
+G1 is not accepted; no production, wheel or installer activation follows.
+G1 work package 4 now has complete-caller source diagnostics using the actual
+native conversation closure, AIAgent, real SDK with synthetic HTTP transport,
+and native SQLite. The fixed resumed-session profile excludes connectors, tools,
+first-turn title workers, schema provisioning and session-index transitions.
+These diagnostics do not accept G1 or qualify the selected production model route;
+remaining cancellation-race and ordinary-control review stays in work package 4.
 
 Before each implementation step, consult the applicable agreed plan and identify
 its current step and acceptance criteria. If inspection requires a different

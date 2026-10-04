@@ -1,0 +1,20 @@
+{
+  "schema": "project-maya.g1-caller-entry-candidate.v1",
+  "pin": "b13e2fd6948a59eeb59fe618914147d97a2ee90a",
+  "production_qualified": false,
+  "patch": "0025-trusted-native-caller-entry.patch",
+  "patch_sha256": "d3d1e489907abd038cd39d863e10d33ef7beddffc377ded33c9f4f6d9f816847",
+  "effective_native_sha256": {
+    "gateway/run.py": "4fa9fd498070adc28b9c4e879f0b575156983de22cc68c04e932a44efc2f8262",
+    "gateway/slash_commands.py": "8679fb5307d9bd673ef3addf925854c41ac8401f215d3d5f01be0a250ee62f1c",
+    "hermes_cli/middleware.py": "0d3295a036c8757936eb48e5ce6d7c37c1140f6e9d66c741a620855ae5ba518a"
+  },
+  "native_tests": "tests/hermes_g1_caller_entry_native.py",
+  "native_tests_sha256": "dbf322e31310d7a3c1aaf8d52dcdf10bbe26c62b96aaabcfba45d805c501b2dd",
+  "ordinary_controls": [
+    "tests/gateway/test_proxy_mode.py",
+    "tests/gateway/test_background_command.py",
+    "tests/gateway/test_multiplex_adapter_registry.py",
+    "tests/gateway/test_session_model_override_routing.py"
+  ]
+}

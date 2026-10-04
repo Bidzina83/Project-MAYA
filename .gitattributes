@@ -3,3 +3,8 @@
 # Preserve upstream snapshots byte-for-byte for provenance checks.
 /tests/fixtures/hermes_middleware/*.py whitespace=-blank-at-eol
 /tests/hermes_security_checkpoint_native.py text eol=lf
+/tests/hermes_g1_caller_entry_native.py text eol=lf
+/tests/hermes_g1_caller_lifecycle_native.py text eol=lf
+/tests/hermes_g1_full_caller_native.py text eol=lf
+/docs/architecture/governance-g1-caller-entry.json text eol=lf
+/docs/architecture/governance-g1-caller-lifecycle.json text eol=lf
