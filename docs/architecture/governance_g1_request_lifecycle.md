@@ -2,6 +2,27 @@
 
 ## Current Step
 
+Bounded source-level G1 is accepted as of 2026-10-04. The user's instruction to
+proceed followed the explicit criterion review recommending acceptance. The
+accepted code/evidence commit is `391aae30ffd5dda8a76bcbb47d2cdc5a9190c9f4`;
+the user reported its origin-main CI green. The review independently checked the
+pinned inputs and reran 25 provenance checks; it did not rerun the native suites.
+The recorded 14 complete-caller, 37 native-method and 57-per-source ordinary
+control receipts remain the bounded native evidence described below.
+
+The frozen review-input contract SHA256 is
+`1a2313446944ed7f113622ea9f2168faf959392752c4f147a39a6d36a9cc4d42`.
+Its `pending_review` field and runner label are historical input/provenance
+metadata, not the current milestone decision. They are deliberately unchanged;
+this acceptance does not rewrite tests, hashes, native patches or receipts.
+Acceptance applies only to the fixed pre-provisioned session and controlled
+transport profile, not production model routing, frontend delivery, general tools,
+workers, provisioning, installer qualification or plugin activation.
+
+The following implementation-status paragraphs are historical. The current step
+is G2 work package 1, documented in
+[the owner-scoped session design](governance_g2_session_ownership.md).
+
 G1 was authorized on 2026-10-03 after security checkpoint run 37147131920 passed
 at Maya commit `5eaaca2e007760fb007c43c064b4f78ab69acf41`. Work package 1 defines
 the versioned host contract and implements bounded lease foundations. Work package
@@ -300,7 +321,8 @@ authorized request may complete, but the real worker finishes without another
 stored message after revocation. Cleanup failure after a successful response must
 propagate while preserving the already committed response, not claiming rollback.
 
-G1 remains open for acceptance review. The evidence update below covers
+At the time of the review-input freeze, G1 remained open for acceptance review.
+The evidence update below covers
 complete-caller cancellation races, late callback denial, ordinary controls and
 fixed inputs. Do not advance to G2, create Patch 27, rebuild a wheel/installer or
 change the production gate on these source receipts alone.
@@ -369,4 +391,5 @@ This is bounded source-level G1 evidence. Frontend transport/final delivery,
 session-index ownership, provisioning, durable outcome reconciliation, production
 provider routing, useful SMB tools and installed lifecycle remain their agreed
 later milestones. No native patch or product-runtime source changed here, and
-no wheel/installer was rebuilt. The next action is G1 acceptance review, not G2.
+no wheel/installer was rebuilt. The review has since led to the bounded acceptance
+decision at the top of this document; G2 starts with design, not transition activation.

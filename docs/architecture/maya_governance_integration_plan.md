@@ -16,7 +16,8 @@ Security checkpoint run 37147131920 passed at commit
 [the request lifecycle contract](governance_g1_request_lifecycle.md); its source
 foundations do not satisfy the complete G1 gate. Work package 2 now has a
 source-only caller-entry candidate and complete-method probes. Work packages 3-4
-remain next in the listed order. No session-index transitions or installer changes.
+subsequently completed the bounded evidence described below. No session-index
+transition or installer was enabled by those changes.
 This does not authorize plugin activation or rebuilding a ready installer.
 
 Work package 3's Patch 26 source candidate and scoped method evidence are recorded
@@ -24,8 +25,12 @@ in the lifecycle runbook. Work package 4 now exercises the actual caller/closure
 native AIAgent, controlled real SDK transport and SQLite under a fixed resumed
 session. Its fourteen-case matrix now includes cancellation-race and late-callback
 checks; ordinary controls pass on patched and unpatched sources. Exact inputs are
-pinned in `governance-g1-full-caller.json`. G1 acceptance review is pending; do not
-advance to G2 or infer product qualification from this evidence.
+pinned in `governance-g1-full-caller.json`. Bounded source-level G1 was accepted
+on 2026-10-04 following the criterion review and the user's instruction to proceed.
+The frozen input contract is unchanged. See the acceptance decision in the G1
+runbook. G2 work package 1 is recorded in
+[the session-ownership design](governance_g2_session_ownership.md); work packages
+2-5 remain sequential. No product qualification or installer authorization follows.
 
 This sequence supersedes the earlier session-write implementation order while
 preserving its contracts and dependency order within G1-G3. Its Stage 2 Step 1
@@ -389,13 +394,12 @@ dependencies and exact native test harness are established.
 
 ## Approval And Next Action
 
-G0 and the pre-G1 security checkpoint are accepted. G1 implementation is authorized;
-work package 1's request/lifecycle definition and tested lease foundations are
-recorded, with work package 2's source-only caller-entry candidate. Next is work
-package 3 cancellation, then 4 complete native caller/loop qualification. Work
-package 3 has host-side root revocation/task observation controls and source-only
-Patch 26 native cleanup/timeout integration with scoped method evidence. Complete
-native caller/agent-loop qualification is still work package 4. G1
-acceptance remains open. Do not jump to an installer.
+G0, the pre-G1 security checkpoint and bounded source-level G1 are accepted.
+The G1 decision and immutable evidence references are in the lifecycle runbook.
+G2 work package 1's owner-scoped transition design and effective writer inventory
+are documented in `governance_g2_session_ownership.md`. Next is work package 2:
+SQLite/index consistency, recovery and compensation, before package 3 implements
+any transition. G2 runtime acceptance, frontend composition, production governance
+activation and installers remain unqualified. Do not jump to an installer.
 Record milestone acceptance and evidence incrementally;
 an unforeseen dependency changes the plan only through a new approval checkpoint.

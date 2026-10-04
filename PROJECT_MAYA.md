@@ -653,7 +653,8 @@ The checkpoint passed in Linux run 37147131920 at commit
 Consult `docs/architecture/governance_g1_request_lifecycle.md`: work package 1
 defines the host contract and bounded lease foundations; work package 2 adds
 source-only native caller-entry enforcement through Patch 25. Cancellation and
-complete-loop qualification remain work packages 3-4 in order. G1 is not accepted.
+complete-loop qualification were work packages 3-4 in order. Bounded G1 acceptance
+is recorded below; these historical implementation stages alone were not acceptance.
 No production activation, runtime pin, wheel or installer change.
 
 G1 work package 3 now has source-only host revocation controls: cancelling the
@@ -663,7 +664,8 @@ owner-bound synchronous revocation operation. Source-only Patch 26 connects nati
 cleanup and inactivity timeout, preserves exception scope, observes bounded cleanup
 and disables unqualified supporting delivery tasks in mandatory mode. Scoped native
 method probes pass; complete caller/agent-loop qualification remains work package 4.
-G1 is not accepted; no production, wheel or installer activation follows.
+Scoped method probes alone were not G1 acceptance; no production, wheel or installer
+activation follows from them.
 G1 work package 4 now has complete-caller source diagnostics using the actual
 native conversation closure, AIAgent, real SDK with synthetic HTTP transport,
 and native SQLite. The fixed resumed-session profile excludes connectors, tools,
@@ -671,8 +673,13 @@ first-turn title workers, schema provisioning and session-index transitions.
 The fourteen-case matrix now includes repeated/swallowed cancellation and late
 callback denial; ordinary controls pass on patched and unpatched native sources.
 Its hashed inputs are in `docs/architecture/governance-g1-full-caller.json`.
-G1 acceptance review remains pending; this does not qualify the production model
-route, advance to G2, or authorize plugin activation, wheels or installers.
+Bounded source-level G1 was accepted on 2026-10-04 after the criterion review and
+the user's instruction to proceed. The frozen input contract retains its original
+pending-review label; the decision is in the G1 lifecycle runbook, not a rewritten
+test artifact. Production model routing, plugin activation, wheels and installers
+remain unqualified. G2 work package 1 is the owner-scoped transition design in
+`docs/architecture/governance_g2_session_ownership.md`; transitions remain blocked
+pending work package 2's consistency protocol and work package 3's native tests.
 
 Before each implementation step, consult the applicable agreed plan and identify
 its current step and acceptance criteria. If inspection requires a different
