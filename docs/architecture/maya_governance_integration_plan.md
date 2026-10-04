@@ -403,7 +403,11 @@ are documented in `governance_g2_session_ownership.md`. Work package 2's design 
 in `governance_g2_session_consistency.md`: authoritative native SQLite, recoverable
 index projection, correlation, recovery and compensation without cross-store
 atomicity. Next is package 3: implement and test create first, then each remaining
-transition individually. No transition implementation is claimed by these designs.
+transition individually. Package 3's first create authority/preflight increment is
+recorded in `governance_g2_create_transition.md`. Source-only Patch 27 now exercises
+native SQLite allocation/commit and strict index publication; current step 3 still
+requires mandatory reader/cache/scope composition, then step 4 crash/race evidence.
+No operational transition or frontend is enabled by the source-only receipt path.
 G2 runtime acceptance, frontend composition, production governance
 activation and installers remain unqualified. Do not jump to an installer.
 Record milestone acceptance and evidence incrementally;

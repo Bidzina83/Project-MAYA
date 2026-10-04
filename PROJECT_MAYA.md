@@ -684,6 +684,14 @@ is in `docs/architecture/governance_g2_session_consistency.md`: native SQLite is
 authoritative, the index is a recoverable projection, and cross-store atomicity is
 not claimed. Recovery requires explicit maintenance authority; production schema
 provisioning and durable audit reconciliation remain G3. G2 is not accepted.
+G2 work package 3 has source-only create authority and an explicit native create
+entry in `docs/architecture/governance_g2_create_transition.md`. Patch 27 and the
+Maya coordinator atomically allocate native SQLite records and strictly publish
+the index in isolated fixtures; unfinished publication/audit outcomes quarantine
+routing. No conversation authority or operational cache is issued. Finish current
+step 3's mandatory reader/cache composition before step 4's full crash/race matrix;
+do not advance to reset/switch/rotation or frontend composition yet. Production
+activation, wheels, installers and accepted G1 inputs remain unchanged.
 
 Before each implementation step, consult the applicable agreed plan and identify
 its current step and acceptance criteria. If inspection requires a different

@@ -1,0 +1,163 @@
+# G2 Create Transition Implementation
+
+## Current Step
+
+G2 work package 3, create only, under the approved integration plan and
+`governance_g2_session_consistency.md`. Host authority/preflight and an explicit
+source-candidate native create/SQLite/publication path are now implemented. This
+is not the complete qualified native create transition. Work package
+3 and G2 remain open. No reset/switch/rotation, frontend composition, maintenance
+identity, schema provisioning, production activation, wheel or installer change.
+
+## Implemented Boundary
+
+`src/project_maya/hermes_plugins/session_transitions.py` adds a source-candidate
+`project-maya.session-transition.v1` create descriptor and host binding:
+
+- Explicit configured owner, classification, instance, canonical existing database,
+  host-selected routing slot and binding version. No request payload selects them.
+- Host-generated target/request/correlation IDs and canonical descriptor digest.
+  These IDs are preparations, not allocated native rows or authority to dispatch.
+- Separate `session.read/route_state`, `session.transition/create` and
+  `session.write/create` decisions through
+  Maya's existing gateway. Non-exact allows, constrained/redacted decisions, policy
+  failures and unavailable audit deny. Audits use fixed codes and hashed selectors.
+- Single owning task/thread, finite expiry, pending-cancellation checks, one active
+  scope per binding and revocation on exit. Copied/replaced descriptors do not grant
+  authority. A binding-version/configuration change invalidates prepared authority.
+- A single-use synchronous commit guard rechecks policy and serializes cross-thread
+  revocation. A failed guard also consumes authority, without declaring any database
+  effect undone. Publication uses the same revocable authority after a consumed
+  commit; no second allocation/commit attempt is permitted.
+
+This binding requires fresh authentication by its trusted host caller, just as the
+G1 binding does; identity equality is not itself a credential authenticator. No
+product frontend registers it yet. G1's fixed-session binding and hashed source
+inputs are unchanged. No append/model/tool/session scope is issued by preflight.
+The new bounded authority precedes first-session allocation; composing it with
+frontend cancellation and issuance of the G1 conversation root remains unqualified.
+
+## Evidence And Limitations
+
+`tests/test_hermes_session_transition_authority.py` covers host permission, owner,
+classification, replay, expiry, pending cancellation, task/thread isolation,
+revocation ordering, configuration changes and secret-safe errors/audits. Its path
+fixture deliberately is not a SQLite schema and proves no native persistence.
+
+`tests/hermes_g2_create_preflight_native.py` verifies the complete existing Patch 26
+native export, constructs actual SessionStore and SessionDB in isolated state and
+asserts preflight cannot bypass native create/reset/switch denial. It checks native
+database contents, index absence and unchanged routing cache. This is denial-only
+evidence, not an allowed create or complete caller-loop qualification.
+
+Use a fresh export reconstructed by the existing lifecycle preparation tool.
+Run native diagnostics from that export with `--import-mode=importlib` to avoid
+the repository's legacy `hermes_cli` namespace shadowing pinned Hermes. Disable
+bytecode and pytest cache generation so verification of the exact export remains
+meaningful. Do not weaken inventory checks to tolerate contaminated source trees.
+
+Verification on 2026-10-04: 18 host authority tests, 4 actual native denial
+controls, 25 unchanged G0/G1 provenance checks and 47 required product regression
+tests passed. Product-context validation, syntax and whitespace checks passed.
+The native suite used a fresh Patch 26 export at
+`.codex-build/governance-g2-create-preflight-20261004-c`; its lifecycle manifest
+SHA256 was `93355be4627859615d9755f808883433ecb330df93c431a3152c9ea6b40d0d9e`.
+The native run reported one pytest configuration warning: disabling the cache
+plugin leaves the existing `cache_dir` option unrecognized. No tests were skipped.
+Earlier attempts were rejected for namespace shadowing, temporary-directory
+permissions and extra generated files in the reused export; none count as evidence.
+The complete G1 caller/ordinary suites were not rerun in that preflight increment; their
+frozen inputs and native source patches remain unchanged.
+
+## Native Persistence Increment
+
+Patch 27 adds only an explicit `SessionStore.create_owned_session_candidate`
+entry. It requires mandatory gate integrity and the exact Maya coordinator type;
+it cannot become the ordinary get/create fallback. The accepted Patch 26 inputs,
+production runtime pin and installed artifacts are unchanged.
+
+`session_creation.py` coordinates the actual native SessionDB connection:
+
+- Requires existing schema, projection, lockfile and matching database/instance/
+  projection path; no directory or schema provisioning occurs on the request.
+- Uses prepared portalocker 3.2.0 for bounded OS-backed file exclusion, then native
+  store and SQLite locks. Foreign/unowned records, missing schema, unsupported
+  schema version, stale/forged projection or unfinished receipts block.
+- Rechecks durable state inside BEGIN IMMEDIATE. Session, owner, route, correlated
+  receipt and projection generation/hash commit together under the single-use
+  authority guard. A native SQL failure rolls back the whole transaction.
+- Writes/fsyncs a same-directory temporary file, then uses strict os.replace and
+  byte verification. No native helper's copy fallback is used. Symlink/reparse
+  paths and network UNC paths are rejected; platform path-race/ACL/filesystem
+  durability qualification remains open, not claimed from these checks.
+- Records `committed_pending_projection`, then `projection_verified`. Only after
+  successful outcome audit and another state recheck is the receipt `published`.
+  Unknown commit outcomes and publication/audit failures retain quarantined
+  authority records. Later create attempts cannot silently replay or repair them.
+- Returns a source-only receipt with `dispatch_allowed=false`; it deliberately
+  does not issue a conversation scope, return an operational SessionEntry or load
+  the projection through ordinary readers. Cache/reader and scope composition are
+  the remaining part of implementation step 3, before full failure qualification.
+
+The fixture tables are versioned native extensions in the Hermes conversation
+database, not Maya SMB memory. Projection authority now also records the exact
+index path. The transition receipt's policy-decision reference correlates the
+preflight audit IDs; it is not proof of atomic SQLite/audit persistence. The
+profile currently rejects any foreign owner or differing classification/binding
+in this store; shared/multi-owner routing is not supported by this increment.
+All other native writer roots remain unqualified; existing _save/load behavior
+must not consume this envelope until the mandatory reader contract is implemented.
+
+Reviewed inputs are fixed in `governance-g2-create.json`. Preparation and native
+verification reconstruct the accepted parent, apply only Patch 27, compare the
+complete native inventory and check host/test hashes. Generated manifests cannot
+override those reviewed hashes. The artifact is source-only, not a new wheel.
+
+Seventeen native diagnostics pass: allowed create, pre-mutation policy/audit/gate/
+schema/legacy-owner/projection denials, rollback after native INSERT, revocation,
+repeat allocation denial, pending publication, unknown commit outcome, strict
+replacement failure, OS-lock contention and outcome-audit quarantine. They inspect
+the actual database, index and unchanged native cache, not a replacement store.
+Lock contention currently uses independent handles in one process: crash release,
+multiple processes, expiry at actual commit and cancellation races still need
+their own tests. No process-crash/restart or complete create caller is qualified.
+
+All 88 ordinary session controls pass on the patched and exact unpatched source.
+The controls write an adapter guard marker into their disposable export even with
+pytest caching disabled; this correctly prevents reuse as an immutable-input tree.
+Final candidate diagnostics must run on a separately reconstructed clean export.
+The 47 required product regression tests and 45 host/provenance checks pass.
+The native run has one known cache_dir configuration warning and no skipped tests.
+
+Final pinned-input verification on 2026-10-04 repeats all 17 create diagnostics
+on `.codex-build/governance-g2-create-20261004-final`, lifecycle/create manifest
+SHA256 `e8eaf3a4f58e8e55ab7d869d4a441db7557b6ea70381c5d6dcf9398d06b1c253`.
+The separate four Patch 26 preflight-denial controls also pass with the updated
+host binding. These results do not accept the create transition or G2. The
+ordinary session-control parity is 88 passed on each tree, with no skips.
+Context validation, syntax and whitespace checks pass. No generated source
+exports or runtime artifacts are committed; all source inputs remain test-only.
+
+## Remaining Create Work, In Order
+
+1. Implemented, scoped: connect the prepared descriptor to a source-candidate native create entry/sink,
+   with exact store/database/instance and fresh durable owner/route validation.
+   Keep all other native writers denied. Use explicitly provisioned test fixtures;
+   production setup/schema permissions remain G3.
+2. Implemented, scoped: the protocol's bounded OS-backed projection lock and one native
+   SQLite transaction for session, owner, route, receipt and projection generation.
+   The synchronous authority guard surrounds actual commit; the remaining race
+   and multi-process evidence belongs to step 4, not an implementation claim.
+3. Partially implemented, current: strict publication, acknowledgement and outcome
+   audit exist. Next complete mandatory reader/cache and fixed-session scope
+   composition only on verified success. No copy fallback, ordinary
+   recovery, JSONL fallback, blind replay or conversation-authorized repair.
+4. Qualify allowed/denied create, stale versions, crash/restart, concurrent writers,
+   unknown commit outcomes, failed publication/acknowledgement/audit and unsafe
+   paths against actual native state and dispatch counts. Recovery is quarantined
+   until an explicit authorized maintenance binding exists; no invented admin.
+
+These are implementation details of the already approved create work, not new
+milestones or a reordered plan. Do not advance to another transition or package
+4 until scoped create evidence is reviewed. Full G2 acceptance requires the
+remaining agreed transitions and frontend/identity work.

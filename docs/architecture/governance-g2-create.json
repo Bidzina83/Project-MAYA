@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "pin": "b13e2fd6948a59eeb59fe618914147d97a2ee90a",
+  "production_qualified": false,
+  "qualification": "source_create_candidate_only",
+  "acceptance": "pending_review",
+  "expected_native_tests": 17,
+  "parent_contract_sha256": "54c064cc7d7e53fad206bfc73c53dda56a1fb7d6f97ba3f73028ab99d6fc57f1",
+  "patch_sha256": "bc443c90f1724c189a1f46ee2cd3b20ff0532f976f7f1c0cf5f1fc9cc17a1411",
+  "native_session_sha256": "ac706a75d068dbb04b30645be0fd9097a0fc2faf2d8e79329a336464ffdcb23c",
+  "maya_source_sha256": {
+    "src/project_maya/hermes_plugins/session_creation.py": "e8444aca51ff7dfd459e521ff5137e05888558eb9f526da6d4c29fd29f1fe9d5",
+    "src/project_maya/hermes_plugins/session_transitions.py": "e4f56d38f087a419d0e5eb8342b64e5a2bcc1a0bc174f8ce2bdbe416e88d96e6",
+    "tests/hermes_g2_create_native.py": "3d204471966de19bf160c73c2b6e1728c2a07196b798d56e91480b33fce81b10"
+  }
+}

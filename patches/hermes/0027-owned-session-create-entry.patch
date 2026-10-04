@@ -1,0 +1,32 @@
+diff --git a/gateway/session.py b/gateway/session.py
+--- a/gateway/session.py
++++ b/gateway/session.py
+@@ -778,6 +778,28 @@
+         except Exception as e:
+             print(f"[gateway] Warning: SQLite session store unavailable, falling back to JSONL: {e}")
+     
++    def create_owned_session_candidate(self, authority):
++        """Explicit source-only creation; never ordinary get/create fallback."""
++        from hermes_cli.middleware import (
++            mandatory_middleware_enabled, validate_mandatory_middleware,
++            MandatoryMiddlewareError,
++        )
++        coordinator = getattr(self, "_maya_create_coordinator", None)
++        if (not mandatory_middleware_enabled() or
++                getattr(coordinator, "contract", None) != "project-maya.native-session-create.v1"):
++            raise MandatoryMiddlewareError("session_create_unqualified")
++        try:
++            from project_maya.hermes_plugins.session_creation import CandidateNativeSessionCreate
++            if type(coordinator) is not CandidateNativeSessionCreate:
++                raise MandatoryMiddlewareError("session_create_unqualified")
++            if validate_mandatory_middleware() is not True:
++                raise MandatoryMiddlewareError("session_create_unqualified")
++            return coordinator.create(self, authority)
++        except MandatoryMiddlewareError:
++            raise
++        except Exception:
++            raise MandatoryMiddlewareError("session_create_failed") from None
++
+     def _ensure_loaded(self) -> None:
+         """Load sessions index from disk if not already loaded."""
+         with self._lock:
