@@ -231,3 +231,29 @@ on their explicit import path. Four provenance controls, syntax, context and
 whitespace checks passed. The known pytest cache_dir warning remains; no cases
 were skipped. Product regressions were not rerun in this test-only increment.
 No production code, patch, wheel, installer or activation gate changed.
+
+## Step 4: Fresh-Host Restart Denial
+
+The next increment extends the same native diagnostic file (current SHA256
+`859d6c32c35bfbb37f2f4a09f9098c490c1f9a7b9c96735fd22a86604a07574a`).
+All seven cases pass: the four prior crashes plus a separate fresh host after
+each of the three post-commit crash boundaries. The native reader reconstruction
+and accepted parent hashes remain unchanged. One known cache_dir warning occurs;
+there are no skips.
+
+The restart process opens the retained native SessionDB, binds real Maya
+governance callbacks and the exact native coordinator/reader, then attempts a
+route read, fixed-session scope entry and blind create. All three attempts deny.
+The caller body immediately inside scope entry executes zero times. Native SQL
+dump and projection bytes remain unchanged by these attempts, cache is empty
+and reader authority is inactive. No fixture extension schema is provisioned
+on restart and no pending receipt is repaired or replayed.
+
+This qualifies bounded restart selection denial, not the complete native agent
+loop or platform power-loss recovery. The counter measures caller-body entry,
+not SDK transport or native agent construction. Tests use a trusted fixture
+identity, not live connector authentication. Four provenance checks, context,
+syntax and whitespace pass; product regressions are not rerun for this test-only
+increment. Next within Step 4 is concurrent-process writer/reader contention,
+then cancellation/expiry and the remaining failure cases. Step 4, create and G2
+remain unaccepted. Production sources, wheel, installer and gates are unchanged.

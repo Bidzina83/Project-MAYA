@@ -45,6 +45,74 @@ def crash_worker(directory, boundary):
     raise RuntimeError("crash boundary not reached")
 
 
+def restart_worker(directory):
+    from gateway.config import GatewayConfig
+    from gateway.session import SessionStore
+    from hermes_cli import middleware, plugins
+    from project_maya.audit import LocalJsonlAuditSink
+    from project_maya.config import config_from_mapping
+    from project_maya.governance import PolicyAuthorizationGateway, PolicyRule
+    from project_maya.hermes_plugins.governance import MayaGovernancePlugin, RequestIdentity
+    from project_maya.hermes_plugins.session_creation import CandidateNativeSessionCreate
+    from project_maya.hermes_plugins.session_readers import CandidatePublishedSessionReader
+    from project_maya.hermes_plugins.session_requests import ACKNOWLEDGEMENT
+    from project_maya.hermes_plugins.session_transitions import CandidateCreateSessionBinding
+
+    directory = Path(directory)
+    assert (directory / "native.db").is_file()
+    db = hermes_state.SessionDB(directory / "native.db")
+    before = list(db._conn.iterdump())
+    projection = (directory / "sessions/sessions.json").read_bytes()
+    with pytest.MonkeyPatch.context() as patcher:
+        patcher.setattr(hermes_state, "SessionDB", lambda: db)
+        store = SessionStore(directory / "sessions", GatewayConfig())
+    audit = LocalJsonlAuditSink(directory / "restart-audit.jsonl")
+    gateway = PolicyAuthorizationGateway(tuple(
+        PolicyRule(capability, operation=operation, actor_id="alice")
+        for capability, operation in (("session.read", "route_state"), ("session.read", "history"),
+                                     ("session.transition", "create"), ("session.write", "create"))))
+    owner = RequestIdentity("alice", "confidential")
+    binding = CandidateCreateSessionBinding(owner=owner, instance_id="g2-test", database=db.db_path,
+        route_slot="telegram:fixture", binding_version=1, gateway=gateway,
+        audit_sink=audit, acknowledgement=ACKNOWLEDGEMENT)
+    config = config_from_mapping({
+        "schema_version": 2, "product": {"edition": "enterprise", "instance_id": "g2-test"},
+        "deployment": {"class": "desktop", "network_policy": "standard", "data_dir": str(directory)},
+        "runtime": {"hermes_compatibility": ">=0.1", "enabled_profiles": ["maya-core"]},
+        "broker": {"mode": "disabled"},
+        "llm": {"mode": "customer_owned", "provider": "openai", "model": "synthetic-model",
+                "credential_ref": "secret://llm/test", "endpoint": "https://api.openai.com/v1"},
+        "memory": {"hermes_provider": "local", "retriever": "local_vector", "registry": "sqlite", "governance_enabled": True},
+        "governance": {"policy_file": str(directory / "policy.json"), "default_action": "deny", "minimum_memory_trust": 0.7},
+        "metabase": {"enabled": False, "deployment": "managed_local"},
+    })
+    plugin = MayaGovernancePlugin(config, gateway, audit)
+    context = plugins.PluginContext(plugins.PluginManifest(name="maya-restart-test"), plugins.get_plugin_manager())
+    for kind, callback in (("llm_execution", plugin.model_execution), ("tool_execution", plugin.tool_execution),
+                           ("tool_result", plugin.tool_result), ("model_output", plugin.model_output),
+                           ("session_write", plugin.session_write)):
+        context.register_middleware(kind, callback)
+        middleware.require_middleware(kind, callback)
+    coordinator = CandidateNativeSessionCreate(store, binding, acknowledgement=ACKNOWLEDGEMENT)
+    reader = CandidatePublishedSessionReader(coordinator, acknowledgement=ACKNOWLEDGEMENT)
+    dispatches = 0
+    with pytest.raises(middleware.MandatoryMiddlewareError):
+        store.read_owned_session_candidate(owner)
+    with pytest.raises(middleware.MandatoryMiddlewareError):
+        with store.authenticated_owned_session_candidate(owner):
+            dispatches += 1
+    with binding.authenticated_create(owner) as authority:
+        with pytest.raises(middleware.MandatoryMiddlewareError):
+            store.create_owned_session_candidate(authority)
+    assert dispatches == 0 and reader._active is None and not store._entries
+    assert list(db._conn.iterdump()) == before
+    assert (directory / "sessions/sessions.json").read_bytes() == projection
+    middleware._mandatory_enabled = False
+    db.close()
+    print(json.dumps({"status": "blocked_as_expected", "caller_body_entries": dispatches,
+                      "database_unchanged": True, "projection_unchanged": True}))
+
+
 @pytest.mark.parametrize("boundary", ["before_commit", "after_commit", "before_replace", "after_replace"])
 def test_process_crash_preserves_transaction_and_quarantines_publication(tmp_path, boundary):
     sys.path.insert(0, str(ROOT / "scripts"))
@@ -84,8 +152,35 @@ def test_process_crash_preserves_transaction_and_quarantines_publication(tmp_pat
     assert not any(row.get("event_type") == "outcome.session_transition" for row in audit)
 
 
+@pytest.mark.parametrize("boundary", ["after_commit", "before_replace", "after_replace"])
+def test_fresh_host_denies_pending_route_without_repair_or_dispatch(tmp_path, boundary):
+    source = Path(hermes_state.__file__).resolve().parent
+    sys.path.insert(0, str(ROOT / "scripts"))
+    try:
+        from prepare_governance_g2_reader import verify_reader_stage
+        verified, _ = verify_reader_stage(source.parent)
+        assert source == verified.resolve()
+    finally:
+        sys.path.pop(0)
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = os.pathsep.join((str(source), str(ROOT / "src")))
+    crashed = subprocess.run([sys.executable, "-B", str(Path(__file__).resolve()),
+                              "--crash-worker", str(tmp_path), boundary],
+                             cwd=source, env=environment, capture_output=True, timeout=60)
+    assert crashed.returncode == 73
+    restarted = subprocess.run([sys.executable, "-B", str(Path(__file__).resolve()),
+                                "--restart-worker", str(tmp_path)],
+                               cwd=source, env=environment, capture_output=True, timeout=60)
+    assert restarted.returncode == 0, "restart denial qualification failed"
+    report = json.loads(restarted.stdout)
+    assert report == {"status": "blocked_as_expected", "caller_body_entries": 0,
+                      "database_unchanged": True, "projection_unchanged": True}
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 4 and sys.argv[1] == "--crash-worker":
         crash_worker(sys.argv[2], sys.argv[3])
+    elif len(sys.argv) == 3 and sys.argv[1] == "--restart-worker":
+        restart_worker(sys.argv[2])
     else:
         raise SystemExit("explicit crash-worker invocation required")
