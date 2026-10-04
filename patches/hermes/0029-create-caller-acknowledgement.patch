@@ -1,0 +1,57 @@
+diff --git a/source/gateway/session.py b/source/gateway/session.py
+--- a/source/gateway/session.py
++++ b/source/gateway/session.py
+@@ -817,1 +817,25 @@
++    @contextmanager
++    def prepare_owned_session_candidate(self, identity):
++        from hermes_cli.middleware import MandatoryMiddlewareError
++        try:
++            from project_maya.hermes_plugins.caller_preparation import CandidateCallerPreparation
++            host = getattr(self, "_maya_caller_preparation", None)
++            if type(host) is not CandidateCallerPreparation:
++                raise MandatoryMiddlewareError("caller_preparation_unqualified")
++            scope = host.prepare(self, identity)
++            receipt = scope.__enter__()
++        except Exception:
++            raise MandatoryMiddlewareError("caller_preparation_failed") from None
++        try:
++            yield receipt
++        except BaseException:
++            import sys
++            scope.__exit__(*sys.exc_info())
++            raise
++        else:
++            try:
++                scope.__exit__(None, None, None)
++            except Exception:
++                raise MandatoryMiddlewareError("caller_preparation_failed") from None
++
+     def _maya_session_reader(self):
+diff --git a/host/src/project_maya/hermes_plugins/session_creation.py b/host/src/project_maya/hermes_plugins/session_creation.py
+--- a/host/src/project_maya/hermes_plugins/session_creation.py
++++ b/host/src/project_maya/hermes_plugins/session_creation.py
+@@ -51,1 +51,2 @@
+     contract = CREATE_CONTRACT
++    caller_contract = "project-maya.create-caller-acknowledgement.v1"
+@@ -167,1 +168,1 @@
+-                                        "WHERE state<>'published' LIMIT 1").fetchone()):
++                                        "WHERE state<>'caller_acknowledged' LIMIT 1").fetchone()):
+@@ -243,1 +244,1 @@
+-                        changed = conn.execute("UPDATE maya_session_transitions_v1 SET state='published' "
++                        changed = conn.execute("UPDATE maya_session_transitions_v1 SET state='published_pending_caller' "
+@@ -254,4 +255,3 @@
+-                # Return an explicitly unqualified receipt, not a conversation
+-                # scope/SessionEntry. Native reader/cache composition is still open.
++                # Publication does not acknowledge successful caller preparation.
+                 return {"session_id": descriptor.target_session, "correlation_id": descriptor.correlation_id,
+-                        "state": "published", "qualification": "source_candidate_only", "dispatch_allowed": False}
++                        "state": "published_pending_caller", "qualification": "source_candidate_only", "dispatch_allowed": False}
+diff --git a/host/src/project_maya/hermes_plugins/session_readers.py b/host/src/project_maya/hermes_plugins/session_readers.py
+--- a/host/src/project_maya/hermes_plugins/session_readers.py
++++ b/host/src/project_maya/hermes_plugins/session_readers.py
+@@ -87,1 +87,1 @@
+-                or conn.execute("SELECT 1 FROM maya_session_transitions_v1 WHERE state<>'published' LIMIT 1").fetchone()):
++                or conn.execute("SELECT 1 FROM maya_session_transitions_v1 WHERE state<>'caller_acknowledged' LIMIT 1").fetchone()):
+@@ -104,1 +104,1 @@
+-                or row[3] != "published" or row[4] != identity.actor_id or row[5] != self.binding.binding_version):
++                or row[3] != "caller_acknowledged" or row[4] != identity.actor_id or row[5] != self.binding.binding_version):

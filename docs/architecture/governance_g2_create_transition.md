@@ -414,3 +414,59 @@ Validation: all eight design/parent-provenance tests and all 47 required product
 regression tests pass. The dedicated design validator, coupled-context validator,
 syntax compilation and whitespace checks pass. Native tests are not rerun for
 this definition-only increment, and no new native behavior is claimed.
+
+## Caller Refinement Step 2: Separate Source Overlay
+
+Source-only Patch 29 implements the bounded caller refinement in a separately
+prepared native/Maya tree. Accepted G0/G1/Patch 27/28 source and their reviewed
+input hashes remain unchanged. `prepare_governance_g2_caller.py` first reconstructs
+the reviewed reader parent, copies the reviewed canonical Maya host sources, then
+applies the exact native and staged-host patch. The full native inventory, full
+portable host inventory and caller/test hashes are checked against
+`governance-g2-caller-overlay.json`. Text newline normalization in the staged host
+and explicit LF attributes keep reviewed inputs portable. No source export,
+wheel or installer is committed.
+
+The staged native create sink writes `published_pending_caller` directly after
+publication; it never first exposes a legacy selectable `published` receipt.
+The staged reader recognizes only `caller_acknowledged`, with the existing
+per-read gateway/audit checks. Direct create remains pending even if it bypasses
+the new bounded preparation entry, and old published rows are not adopted.
+
+The explicit native `prepare_owned_session_candidate` entry binds the exact
+Maya `CandidateCallerPreparation`. Its immutable pending receipt grants no
+conversation scope, append, model or tool permission. No native SQLite/store
+locks or transaction cross the body. Normal exit uses fresh acknowledge_create
+policy and audit, exact native route/receipt/generation/hash checks, and guarded
+SQLite compare-and-swap. Helper calls must match the exact live host scope and
+its acknowledgement phase; they cannot acknowledge from inside the body.
+
+Exception/cancellation invokes only the exact host-created cleanup descriptor,
+bound to its thread/task and failure phase. Cleanup changes that pending receipt
+to quarantined, never acknowledges, repairs or compensates. Cleanup failure leaves
+pending blocked and preserves the original exception. Cross-store durable audit
+reconciliation, production schema provisioning and frontend identities remain open.
+
+Final reconstructed manifest SHA256:
+`934b304ca0feb8b42a8997d98e466bc4e54f918340d5e59bab63326f61ba8c9f`.
+Eight scoped native probes pass: normal-exit acknowledgement with pre-ack reader
+denial/post-ack selection, original caller exception and CancelledError preservation,
+quarantine SQL failure, acknowledgement-policy denial, direct-create pending,
+legacy-published denial and early-helper denial. One known cache_dir warning
+occurs; no cases are skipped. These are not the complete required-case matrix.
+
+All ten design/overlay/parent provenance tests and all 47 required product
+regressions pass. All 88 ordinary session controls pass on both patched and exact
+unpatched native sources, using a separate disposable tree so the final reviewed
+export remains clean. Context, syntax and whitespace checks pass. Earlier
+implementation probes precede the final scoped-host/inventory checks and are
+not the final pinned evidence.
+
+Next is caller-refinement Step 3 in the agreed order: process exit before
+acknowledgement, actual task cancellation, expiry/revocation, audit/SQL/unknown
+commit failures, duplicate/foreign/stale descriptors and complete caller evidence.
+The preparation body is trusted host-owned synchronous work, not a sandbox for
+arbitrary Python or unqualified async/background jobs. No full-loop, path-race,
+power-loss or production platform qualification follows from these probes.
+Create Step 4/G2 acceptance, production activation, runtime pin, wheel and
+installer remain unchanged and blocked.

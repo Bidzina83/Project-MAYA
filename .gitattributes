@@ -13,3 +13,12 @@
 /src/project_maya/hermes_plugins/governance.py text eol=lf
 /src/project_maya/hermes_plugins/session_requests.py text eol=lf
 /src/project_maya/hermes_plugins/session_handoff.py text eol=lf
+# Keep G2 reviewed source overlays and their inputs portable across checkouts.
+/src/project_maya/hermes_plugins/session_creation.py text eol=lf
+/src/project_maya/hermes_plugins/session_transitions.py text eol=lf
+/src/project_maya/hermes_plugins/session_readers.py text eol=lf
+/src/project_maya/hermes_plugins/caller_preparation.py text eol=lf
+/tests/hermes_g2_create_native.py text eol=lf
+/tests/hermes_g2_reader_native.py text eol=lf
+/tests/hermes_g2_caller_native.py text eol=lf
+/docs/architecture/governance-g2-*.json text eol=lf

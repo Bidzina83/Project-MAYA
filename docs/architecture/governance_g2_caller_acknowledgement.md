@@ -3,10 +3,11 @@
 ## Status And Boundary
 
 The user approved this refinement of G2 work package 3, create Step 4.
-This document completes the contract-definition step only. Its machine-readable
+This document defines the contract. Its machine-readable
 companion is `governance-g2-caller-contract.json`. The validator checks design
-consistency, not runtime behavior. No overlay, enforcement, acceptance, wheel,
-installer or production activation is established by these artifacts.
+consistency, not runtime behavior. Source-only Patch 29 implements a separate
+staged native/Maya overlay; scoped probes are not complete qualification.
+No acceptance, wheel, installer or production activation is established.
 
 Caller completion means normal exit from one host-owned synchronous preparation
 scope. It does not mean successful future conversation, delivery or application
@@ -100,11 +101,11 @@ adopt legacy receipts or clear quarantine.
 
 1. Completed design increment: this contract, machine-readable states and
    consistency tests. These tests do not enforce Hermes behavior.
-2. Next: separate source overlay and immutable preparation inputs over the
+2. Implemented, scoped: separate source overlay and immutable preparation inputs over the
    unchanged accepted parent. Enforce pending state at the native sink; implement
    the bounded host scope, acknowledgement CAS and authority-reducing cleanup;
    update the exact native reader to require acknowledged state.
-3. Qualify all machine-readable required cases with actual native SessionStore,
+3. Next: qualify all machine-readable required cases with actual native SessionStore,
    SQLite, publication and caller scope: success, failure/cancellation/expiry,
    process exit, policy/audit/SQL/unknown commit outcomes, quarantine failure,
    duplicate/foreign/stale acknowledgement and before/after-ack reader denial/allow.

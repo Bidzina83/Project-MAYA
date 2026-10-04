@@ -257,7 +257,8 @@ activation, wheels, installers and accepted G1 inputs remain unchanged.
 The approved caller-completion refinement is defined in
 `docs/architecture/governance_g2_caller_acknowledgement.md`: pending caller
 publication stays blocked until guarded normal-exit acknowledgement. This is
-design-only; a separate source overlay and native qualification are next.
+design-defined; source-only Patch 29 implements its bounded caller scope and
+staged native sink/reader. Full acknowledgement/failure qualification is next.
 Legacy published receipts must not be silently adopted. G2 remains unaccepted.
 Full-loop qualification, provider-error redaction,
 automatic-route attribution, direct SDK paths, and worker coverage remain open;

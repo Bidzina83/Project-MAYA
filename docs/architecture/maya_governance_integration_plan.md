@@ -409,9 +409,10 @@ native SQLite allocation/commit and strict index publication. Source-only Patch 
 adds step 3's published-route reader, detached cache and bounded append-only G1
 scope. Step 4 crash/race evidence remains required before another transition.
 The approved Step 4 caller-completion refinement is now design-defined in
-`governance_g2_caller_acknowledgement.md`; next is its separate source overlay,
-then native qualification and create acceptance review. No runtime enforcement
-follows from design consistency tests.
+`governance_g2_caller_acknowledgement.md`; source-only Patch 29 now implements
+the bounded scope in an isolated native/Maya source overlay. Next is its full
+native qualification, then create acceptance review. Design tests alone are
+not runtime qualification, and the normal product runtime remains unchanged.
 No operational transition or frontend is enabled by the source-only receipt path.
 G2 runtime acceptance, frontend composition, production governance
 activation and installers remain unqualified. Do not jump to an installer.

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "pin": "b13e2fd6948a59eeb59fe618914147d97a2ee90a",
+  "production_qualified": false,
+  "qualification": "source_caller_overlay_only",
+  "acceptance": "pending_review",
+  "design_sha256": "9851b89563784ed32c9d6f2c20e95dc14899197bc427b1bc88c39fd4cb539849",
+  "patch_sha256": "1ae38309e3e6bedd633048475ef4793a523615b7d13db469fbffc809332a3aae",
+  "host_inventory_sha256": "93e43b5be70c7147d3ead8531c0fa900699f20ab222c64b54e38c9467b3adc32",
+  "maya_source_sha256": {
+    "src/project_maya/hermes_plugins/caller_preparation.py": "f436b2fc37e43babcc6a68a75ce27f8be79e9c054892d32e8bc9d2483301d36c",
+    "tests/hermes_g2_caller_native.py": "51dda90f933964552f6ac3d64661808e34d6230b30a22595ad653a736d5b4c52"
+  },
+  "effective_sha256": {
+    "host/src/project_maya/hermes_plugins/session_creation.py": "beb89db29be42e305e2830352530cb3caa6b6047b31fc2a6bd1b839c7eac8fe2",
+    "host/src/project_maya/hermes_plugins/session_readers.py": "7c67b46ee0353f6a011858310113df4db10b911e730ebefe7e69acfed266e042",
+    "source/gateway/session.py": "0be66e8deeb72e80b464f3abca69573c5a357052a6420e113053c4a9420e9a38"
+  }
+}
