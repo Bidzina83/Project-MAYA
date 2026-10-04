@@ -257,3 +257,31 @@ syntax and whitespace pass; product regressions are not rerun for this test-only
 increment. Next within Step 4 is concurrent-process writer/reader contention,
 then cancellation/expiry and the remaining failure cases. Step 4, create and G2
 remain unaccepted. Production sources, wheel, installer and gates are unchanged.
+
+## Step 4: Cross-Process Lock Contention
+
+The diagnostic file now has SHA256
+`e247961001f303edfb5c56bf48001bb25ead57dbf1a87e64a45c4112d35c4a71`.
+All eight native cases pass on the same verified source reconstruction: prior
+crash/restart evidence plus a two-process projection-lock contention control.
+The known cache_dir warning remains and no cases are skipped.
+
+An isolated parent native host publishes one route, then holds the coordinator's
+actual OS-backed projection lock. A separate native host opens the same database
+and attempts route read, fixed-session scope entry and blind create. These native
+entries deny, and an additional direct coordinator probe verifies the exact
+`governance.transition_busy` error rather than mistaking duplicate-route denial
+for lock evidence. The denied scope body executes zero times. SQL dump and index
+bytes remain unchanged; no additional native session is allocated.
+
+After lock release a fresh host selects that same published route and enters its
+bounded scope once. Duplicate create remains denied, durable state is unchanged
+and cache/authority clear on scope exit. This positive control distinguishes lock
+exclusion from a permanently broken reader. No model or agent loop runs.
+
+This is cross-process lock-holder/reader/writer contention, not simultaneous
+committing-writer race qualification. Simultaneous allocation/version races and
+cancellation/expiry are still Step 4 work, followed by the remaining failure
+matrix. Four provenance checks, syntax, context and whitespace pass. Product
+regressions were not rerun for this test-only change. No production source,
+native patch, wheel, installer or activation gate changed; G2 is not accepted.

@@ -45,14 +45,14 @@ def crash_worker(directory, boundary):
     raise RuntimeError("crash boundary not reached")
 
 
-def restart_worker(directory):
+def restart_worker(directory, *, published=False, contended=False):
     from gateway.config import GatewayConfig
     from gateway.session import SessionStore
     from hermes_cli import middleware, plugins
     from project_maya.audit import LocalJsonlAuditSink
     from project_maya.config import config_from_mapping
     from project_maya.governance import PolicyAuthorizationGateway, PolicyRule
-    from project_maya.hermes_plugins.governance import MayaGovernancePlugin, RequestIdentity
+    from project_maya.hermes_plugins.governance import GovernanceBoundaryError, MayaGovernancePlugin, RequestIdentity
     from project_maya.hermes_plugins.session_creation import CandidateNativeSessionCreate
     from project_maya.hermes_plugins.session_readers import CandidatePublishedSessionReader
     from project_maya.hermes_plugins.session_requests import ACKNOWLEDGEMENT
@@ -96,20 +96,30 @@ def restart_worker(directory):
     coordinator = CandidateNativeSessionCreate(store, binding, acknowledgement=ACKNOWLEDGEMENT)
     reader = CandidatePublishedSessionReader(coordinator, acknowledgement=ACKNOWLEDGEMENT)
     dispatches = 0
-    with pytest.raises(middleware.MandatoryMiddlewareError):
-        store.read_owned_session_candidate(owner)
-    with pytest.raises(middleware.MandatoryMiddlewareError):
+    if published:
+        entry = store.read_owned_session_candidate(owner)
         with store.authenticated_owned_session_candidate(owner):
             dispatches += 1
+        assert entry.session_key == binding.route_slot
+    else:
+        with pytest.raises(middleware.MandatoryMiddlewareError):
+            store.read_owned_session_candidate(owner)
+        with pytest.raises(middleware.MandatoryMiddlewareError):
+            with store.authenticated_owned_session_candidate(owner):
+                dispatches += 1
     with binding.authenticated_create(owner) as authority:
         with pytest.raises(middleware.MandatoryMiddlewareError):
             store.create_owned_session_candidate(authority)
-    assert dispatches == 0 and reader._active is None and not store._entries
+    if contended:
+        with binding.authenticated_create(owner) as authority:
+            with pytest.raises(GovernanceBoundaryError, match="governance.transition_busy"):
+                coordinator.create(store, authority)
+    assert dispatches == int(published) and reader._active is None and not store._entries
     assert list(db._conn.iterdump()) == before
     assert (directory / "sessions/sessions.json").read_bytes() == projection
     middleware._mandatory_enabled = False
     db.close()
-    print(json.dumps({"status": "blocked_as_expected", "caller_body_entries": dispatches,
+    print(json.dumps({"status": "selected_as_expected" if published else "blocked_as_expected", "caller_body_entries": dispatches,
                       "database_unchanged": True, "projection_unchanged": True}))
 
 
@@ -177,10 +187,52 @@ def test_fresh_host_denies_pending_route_without_repair_or_dispatch(tmp_path, bo
                       "database_unchanged": True, "projection_unchanged": True}
 
 
+def test_second_native_process_is_denied_during_projection_lock_then_can_select(tmp_path):
+    source = Path(hermes_state.__file__).resolve().parent
+    sys.path.insert(0, str(ROOT / "scripts"))
+    try:
+        from prepare_governance_g2_reader import verify_reader_stage
+        verified, _ = verify_reader_stage(source.parent)
+        assert source == verified.resolve()
+    finally:
+        sys.path.pop(0)
+    module = fixture_module()
+    monkeypatch = pytest.MonkeyPatch()
+    fixture = module.host.__wrapped__(tmp_path, monkeypatch)
+    host = next(fixture)
+    try:
+        module.create(host)
+        before = module.snapshot(host)
+        environment = os.environ.copy()
+        environment["PYTHONPATH"] = os.pathsep.join((str(source), str(ROOT / "src")))
+        with host[3]._exclusive():
+            denied = subprocess.run([sys.executable, "-B", str(Path(__file__).resolve()),
+                                     "--contended-worker", str(tmp_path)],
+                                    cwd=source, env=environment, capture_output=True, timeout=60)
+        assert denied.returncode == 0, "contending native host did not fail closed"
+        assert json.loads(denied.stdout)["caller_body_entries"] == 0
+        assert module.snapshot(host) == before
+        allowed = subprocess.run([sys.executable, "-B", str(Path(__file__).resolve()),
+                                  "--published-worker", str(tmp_path)],
+                                 cwd=source, env=environment, capture_output=True, timeout=60)
+        assert allowed.returncode == 0, "published route was not selectable after lock release"
+        assert json.loads(allowed.stdout)["caller_body_entries"] == 1
+        assert module.snapshot(host) == before
+        assert host[1]._conn.execute("SELECT count(*) FROM sessions").fetchone()[0] == 1
+        assert not host[0]._entries
+    finally:
+        fixture.close()
+        monkeypatch.undo()
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 4 and sys.argv[1] == "--crash-worker":
         crash_worker(sys.argv[2], sys.argv[3])
     elif len(sys.argv) == 3 and sys.argv[1] == "--restart-worker":
         restart_worker(sys.argv[2])
+    elif len(sys.argv) == 3 and sys.argv[1] == "--published-worker":
+        restart_worker(sys.argv[2], published=True)
+    elif len(sys.argv) == 3 and sys.argv[1] == "--contended-worker":
+        restart_worker(sys.argv[2], contended=True)
     else:
         raise SystemExit("explicit crash-worker invocation required")
