@@ -198,3 +198,36 @@ this increment. Cleanup failure precedence, process crash/restart, simultaneous
 read/write processes, cancellation/expiry races and filesystem durability still
 require step 4 evidence. No G2 acceptance, production activation, wheel or installer
 change follows. Do not advance to another transition before the create gate.
+
+## Step 4: Process-Crash Increment
+
+On 2026-10-04 four real child-process diagnostics passed in
+`tests/hermes_g2_create_crash_native.py` (SHA256
+`7176b52e357c9f2a8bef145731fa154dd215771cf9e0ac8f614c245a16b5393f`).
+They ran against a fresh verified Patch 28 source reconstruction with reader
+manifest `037c8f59a32ee05504569a95d45c7d85985ce280608bb398644c000e35c17797`.
+Accepted parent source and runtime inputs were unchanged.
+
+The worker terminates with os._exit at four coordinator boundaries: immediately
+before/after actual SQLite commit and before/after strict projection publication.
+Fresh SQLite connections after process exit verify integrity and foreign keys,
+native session/owner/route counts, projection generation and receipt state.
+Before commit, all allocation rows roll back. After commit, the correlated
+receipt remains `committed_pending_projection`; the projection is the complete
+old file, or complete new file after replacement. No successful outcome audit
+exists. A fresh OS-lock handle acquires exclusion after each process exit.
+
+This is process termination and database reopen evidence, not power-loss
+durability or complete host restart qualification. No agent is constructed, so
+these tests do not measure full caller dispatch. Fresh-host reader/dispatch
+denial after restart, concurrent native writers/readers, cancellation/expiry,
+acknowledgement failure and unsafe-path races remain Step 4 work. There is no
+automatic recovery or fabricated maintenance identity. Step 4 and the create
+transition are not accepted; do not advance to another transition.
+
+The initial child import failure occurred before injection and is excluded from
+evidence. Corrected children use only the verified native source and Maya src
+on their explicit import path. Four provenance controls, syntax, context and
+whitespace checks passed. The known pytest cache_dir warning remains; no cases
+were skipped. Product regressions were not rerun in this test-only increment.
+No production code, patch, wheel, installer or activation gate changed.
