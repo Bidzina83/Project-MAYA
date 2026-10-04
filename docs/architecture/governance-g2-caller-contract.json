@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "contract": "project-maya.create-caller-acknowledgement.v1",
+  "status": "design_only",
+  "production_qualified": false,
+  "runtime_enforced": false,
+  "parent_reader_manifest_sha256": "037c8f59a32ee05504569a95d45c7d85985ce280608bb398644c000e35c17797",
+  "scope": "host_owned_synchronous_preparation",
+  "acknowledgement_operation": "acknowledge_create",
+  "selectable_states": ["caller_acknowledged"],
+  "blocked_states": ["committed_pending_projection", "projection_verified", "published_pending_caller", "caller_quarantined", "published"],
+  "transitions": {
+    "committed_pending_projection": ["projection_verified"],
+    "projection_verified": ["published_pending_caller"],
+    "published_pending_caller": ["caller_acknowledged", "caller_quarantined"],
+    "caller_acknowledged": [],
+    "caller_quarantined": [],
+    "published": []
+  },
+  "required_binding": ["instance_id", "database", "principal", "classification", "binding_version", "route_slot", "route_version", "target_session", "correlation_id", "descriptor_digest", "projection_generation", "projection_hash", "thread_id", "task", "deadline"],
+  "invariants": {
+    "no_dispatch_inside_preparation": true,
+    "normal_exit_only_acknowledgement": true,
+    "fresh_policy_and_audit_before_ack_commit": true,
+    "guarded_native_sqlite_compare_and_swap": true,
+    "pending_is_fail_closed": true,
+    "cleanup_failure_preserves_original_exception": true,
+    "no_legacy_adoption": true,
+    "no_automatic_repair_or_compensation": true,
+    "separate_reader_reauthorization": true
+  },
+  "required_cases": ["successful_exit", "caller_exception", "cancellation", "expiry", "revocation", "process_exit_before_ack", "ack_policy_denial", "ack_audit_failure", "ack_sql_failure", "unknown_ack_commit", "quarantine_failure", "duplicate_ack", "foreign_receipt", "stale_route", "legacy_published", "reader_before_ack", "reader_after_ack"]
+}

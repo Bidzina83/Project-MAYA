@@ -383,7 +383,7 @@ quarantine. A future reader would not learn of that exception from this receipt.
 The test documents this limitation; its passing status does not close the
 protocol matrix's committed-but-blocked caller-failure requirement.
 
-Recommendation, pending user approval: define a bounded host-owned caller
+Recommendation, subsequently approved by the user: define a bounded host-owned caller
 acknowledgement/quarantine contract within the current create work, then implement
 and qualify it through a separate source overlay without rewriting accepted
 parent inputs. Do not silently reinterpret every published receipt as proof of
@@ -394,3 +394,23 @@ Step 4 and create remain unaccepted pending this contract decision and the
 remaining acceptance review, including filesystem limitations and full-caller
 coverage. Do not advance to another transition or frontend composition. No
 production source, native patch, wheel, installer or activation gate changed.
+
+## Approved Caller Contract Definition
+
+The user approved the caller-acknowledgement/quarantine refinement. The first
+ordered step is defined in `governance_g2_caller_acknowledgement.md` and its
+machine-readable design companion. Pending caller publication is distinct from
+acknowledged completion of one synchronous preparation scope; neither yields
+model/tool permission. Old `published` outcomes cannot be adopted by the future
+overlay. Failure-path cleanup is authority-reducing and pending remains blocked
+even if cleanup fails. Later independent request failures belong to G1.
+
+The contract validator and unit tests check design consistency and parent hashes
+only, not native enforcement. Next is the separately hashed source overlay, then
+native caller/reader/failure qualification before create acceptance review.
+No accepted parent input, runtime enforcement, native patch, wheel, installer or
+production gate is changed by this design increment.
+Validation: all eight design/parent-provenance tests and all 47 required product
+regression tests pass. The dedicated design validator, coupled-context validator,
+syntax compilation and whitespace checks pass. Native tests are not rerun for
+this definition-only increment, and no new native behavior is claimed.

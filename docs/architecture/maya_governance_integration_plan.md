@@ -408,6 +408,10 @@ recorded in `governance_g2_create_transition.md`. Source-only Patch 27 now exerc
 native SQLite allocation/commit and strict index publication. Source-only Patch 28
 adds step 3's published-route reader, detached cache and bounded append-only G1
 scope. Step 4 crash/race evidence remains required before another transition.
+The approved Step 4 caller-completion refinement is now design-defined in
+`governance_g2_caller_acknowledgement.md`; next is its separate source overlay,
+then native qualification and create acceptance review. No runtime enforcement
+follows from design consistency tests.
 No operational transition or frontend is enabled by the source-only receipt path.
 G2 runtime acceptance, frontend composition, production governance
 activation and installers remain unqualified. Do not jump to an installer.

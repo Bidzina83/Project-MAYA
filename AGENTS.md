@@ -254,6 +254,11 @@ cache and append-only G1 scope; legacy loaders/writers remain denied. Step 3's
 scoped reader evidence is separate from step 4's full crash/race matrix;
 do not advance to reset/switch/rotation or frontend composition yet. Production
 activation, wheels, installers and accepted G1 inputs remain unchanged.
+The approved caller-completion refinement is defined in
+`docs/architecture/governance_g2_caller_acknowledgement.md`: pending caller
+publication stays blocked until guarded normal-exit acknowledgement. This is
+design-only; a separate source overlay and native qualification are next.
+Legacy published receipts must not be silently adopted. G2 remains unaccepted.
 Full-loop qualification, provider-error redaction,
 automatic-route attribution, direct SDK paths, and worker coverage remain open;
 do not activate the plugin or change the production gate on these patches alone.
