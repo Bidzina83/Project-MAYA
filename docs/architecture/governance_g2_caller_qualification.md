@@ -82,6 +82,9 @@ complete. Next is complete caller composition evidence: preparation completion
 through the acknowledged native reader and G1 lease into the actual native agent
 loop, with failure/denial stopping before unauthorized execution. Do not infer
 that G1's earlier resumed-session profile already qualifies this create path.
+The new empty-history native-loop diagnostic found blocked lazy session
+recreation; see `governance_g2_create_loop.md` for evidence and the proposed
+approval checkpoint. The allowed new-session loop is not qualified.
 Then perform the Step 4/create acceptance review, including filesystem, platform,
 frontend and other unresolved coverage limitations. No other G2 transition,
 production activation, wheel or installer follows from this increment.

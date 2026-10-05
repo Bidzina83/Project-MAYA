@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "production_qualified": false,
+  "acceptance": "pending_review",
+  "qualification": "source_existing_session_recognition_only",
+  "expected_native_tests": 24,
+  "expected_ordinary_tests": 3,
+  "design_sha256": "5291a16186fd8011d902a850df69e5f45145b99abf3e62730856eaa59fa04884",
+  "parent_sha256": "3d401701762ce805c9cf25a258c95688217c59cf1edc1dad5ced6a3b28bffe04",
+  "loop_inputs_sha256": "44b38901c459d654700fccddbf468abe596a387550b0fec1c448cd941325c895",
+  "patch_sha256": "89deae15c5c49945934bf68798c0edc3ce5f5003b97c00bef663c1e3dd7b8ad3",
+  "effective_sha256": {
+    "source/run_agent.py": "6544166e81474eaab53f4985106d11cfe13625bc8a0d75137f5afecc69836f58",
+    "host/src/project_maya/hermes_plugins/session_readers.py": "6e06ce7d29509891ccbc36e37aed63519342158447f34c3c77d51291da32c3ea"
+  },
+  "test_sha256": {
+    "tests/hermes_g2_recognition_native.py": "511ff4a32c084bb940641febed5e975e565bd6d052c82065084af2032cb52a99",
+    "tests/hermes_g2_recognition_ordinary.py": "8ccf463b8bb16544ba5da01dfc01d34d1decf62c28f6864b86be603fb161023b"
+  }
+}

@@ -416,6 +416,12 @@ not runtime qualification, and the normal product runtime remains unchanged.
 The separate caller failure matrix now has bounded evidence in
 `governance_g2_caller_qualification.md`; complete create-to-agent caller evidence
 is still Step 3 work before create acceptance review.
+The empty-history native-loop diagnostic now identifies blocked lazy session
+recreation. The user approved the bounded existing-session recognition dependency;
+source-only Patch 30 implements the read-only contract in
+`governance_g2_existing_session_recognition.md`. Native prompt-cache metadata
+denial/catch still needs review before complete create-loop acceptance; no broad
+metadata grant, reordered milestone or ready installer is authorized.
 No operational transition or frontend is enabled by the source-only receipt path.
 G2 runtime acceptance, frontend composition, production governance
 activation and installers remain unqualified. Do not jump to an installer.

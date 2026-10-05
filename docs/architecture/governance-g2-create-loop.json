@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "production_qualified": false,
+  "acceptance": "blocked_lazy_session_recreation",
+  "qualification": "source_create_loop_denial_diagnostic_only",
+  "expected_native_tests": 5,
+  "parent_sha256": "3d401701762ce805c9cf25a258c95688217c59cf1edc1dad5ced6a3b28bffe04",
+  "tests_sha256": "1d50476b322fb0fbafdb4426cf640fcb8071f1ec0fc5524264f3e0bf9668e060"
+}

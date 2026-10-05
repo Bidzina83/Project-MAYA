@@ -485,3 +485,46 @@ The matrix covers the seventeen required scenario names, not the complete native
 agent loop. Create-to-agent caller composition remains Step 3 work in the agreed
 sequence before Step 4/create acceptance review. This is not a new stage or an
 authorization to advance to another transition, frontend, wheel or installer.
+
+## Approved Read-Only Recognition Dependency
+
+The empty-history agent-loop diagnostic found native lazy recreation after a
+successful create/acknowledgement. The user approved the bounded read-only fix.
+Source-only Patch 30 and its separate hashed native/Maya overlay recognize exact
+acknowledged state under fresh read policy/audit and a live reader-rooted executor
+lease. The native cached flag cannot grant or skip recognition. No create or
+metadata operation is added to the append-only G1 lease; ordinary mode is preserved.
+
+| Boundary | Current source scope |
+| --- | --- |
+| Native lazy initialization | Read-only existing-session recognition in Patch 30; no mandatory lazy allocation. |
+| New empty-history caller loop | Actual native acknowledgement/reader/task/executor/AIAgent with real SDK, synthetic HTTP and zero retries. |
+| Optional prompt-cache metadata | Write denied; native prompt-building caller catches/logs and continues. Catch and omission semantics remain unqualified. |
+| Provisioning, metadata lifecycle, frontends and production | Still outside recognition; no G2 or installer acceptance. |
+
+Consult `governance_g2_existing_session_recognition.md` before further changes.
+Review the optional cache boundary before declaring complete create-loop evidence;
+do not widen metadata authority or proceed to another transition implicitly.
+
+The final recognition manifest SHA256 is
+`89446a4f051e42884cc525623efa48c0e73f4336575cf0f9305dc0a688e620b0`.
+Twenty-four native recognition/loop cases pass with no skips, including actual
+empty-history allowed inference/persistence and independently denied model egress
+after successful recognition. The denied egress produces zero synthetic HTTP
+requests. Recognition happens before model authorization; no lazy native create
+is called on the allowed path. Thread/task/request/classification, foreign-root,
+cached-flag, pending/legacy/stale state, gate/policy/audit and audit-time revocation
+denials are covered without broadening the lease.
+
+Three actual lazy-initialization ordinary controls pass on both the patched
+overlay and a fresh exact-pin unpatched export. The twenty frozen caller/failure
+cases pass against the unchanged reconstructed parent. Fifteen repository
+provenance/design checks pass. Native pytest runs have only the known cache_dir
+configuration warning. This is bounded source evidence, not full-fork, live-provider,
+prompt-cache catch, frontend, platform or product qualification.
+
+All 47 required product regressions pass. The context validator, release-tool and
+new Python syntax checks, whitespace checks and full post-test parent/native/host
+inventory verification also pass. Generated source exports remain uncommitted
+under the ignored build directory. No production runtime, wheel or installer was
+modified or rebuilt by this increment.

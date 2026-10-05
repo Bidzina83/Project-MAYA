@@ -1,0 +1,66 @@
+diff --git a/source/run_agent.py b/source/run_agent.py
+--- a/source/run_agent.py
++++ b/source/run_agent.py
+@@ -525,0 +526,18 @@
++        from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++        if mandatory_middleware_enabled():
++            try:
++                from project_maya.hermes_plugins.session_readers import CandidatePublishedSessionReader
++                reader = getattr(self._session_db, "_maya_existing_session_reader", None)
++                if (type(reader) is not CandidatePublishedSessionReader
++                        or getattr(reader, "existing_session_contract", None)
++                        != "project-maya.existing-session-recognition.v1"
++                        or reader.recognize_existing(self._session_db, self.session_id) is not True):
++                    raise MandatoryMiddlewareError("session_write_unqualified")
++            except MandatoryMiddlewareError:
++                raise
++            except Exception:
++                raise MandatoryMiddlewareError("session_write_failed") from None
++            # This flag records verified existing state, never authority to create.
++            self._session_db_created = True
++            return
++
+diff --git a/host/src/project_maya/hermes_plugins/session_readers.py b/host/src/project_maya/hermes_plugins/session_readers.py
+--- a/host/src/project_maya/hermes_plugins/session_readers.py
++++ b/host/src/project_maya/hermes_plugins/session_readers.py
+@@ -26,0 +27,1 @@
++    existing_session_contract = "project-maya.existing-session-recognition.v1"
+@@ -40,0 +42,3 @@
++        if getattr(coordinator.database, "_maya_existing_session_reader", None) is not None:
++            raise GovernanceBoundaryError("governance.session_reader_invalid")
++        coordinator.database._maya_existing_session_reader = self
+@@ -191,0 +196,34 @@
++
++    def recognize_existing(self, database, session_id):
++        """Read-only first-turn recognition; no session creation or metadata grant."""
++        bound = _session_write.get()
++        selected = self._active
++        if bound is None or selected is None:
++            raise GovernanceBoundaryError("governance.session_context_invalid")
++        root = bound.lease
++        while root.parent is not None:
++            root = root.parent
++        if (database is not self.coordinator.database
++                or getattr(database, "_maya_existing_session_reader", None) is not self
++                or root is not selected.lease or not bound.lease.is_active
++                or bound.identity != selected.identity or bound.identity != _identity.get()
++                or bound.request_id != selected.request_id or bound.database != selected.database
++                or bound.session_id != selected.session_id or session_id != selected.session_id
++                or bound.operations != frozenset({"append"})
++                or bound.lease.parent is None or bound.task is not None
++                or bound.thread_id != get_ident() or bound.task is not _current_task()):
++            raise GovernanceBoundaryError("governance.session_context_invalid")
++        self._require(self.store, bound.identity)
++        with self.store._lock, database._lock:
++            entry = self._validated_entry(bound.identity)
++            if entry.session_id != session_id:
++                raise GovernanceBoundaryError("governance.session_context_invalid")
++            self._authorize(bound.identity, "existing_session", session_id)
++            # Policy/audit callbacks cannot turn revoked or changed state into success.
++            if (not bound.lease.is_active or _session_write.get() is not bound
++                    or _identity.get() != bound.identity or self._active is not selected
++                    or database is not self.coordinator.database
++                    or self._validated_entry(bound.identity).session_id != session_id
++                    or not bound.lease.is_active):
++                raise GovernanceBoundaryError("governance.session_context_invalid")
++        return True

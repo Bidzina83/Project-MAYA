@@ -263,6 +263,13 @@ Legacy published receipts must not be silently adopted. G2 remains unaccepted.
 The separate Step 3 caller failure matrix has bounded native receipt/reader and
 restart evidence in `docs/architecture/governance_g2_caller_qualification.md`.
 Complete create-to-agent caller qualification remains open; do not advance yet.
+The real empty-history first-turn diagnostic found blocked native lazy session
+recreation; see `docs/architecture/governance_g2_create_loop.md`. A new bounded
+existing-session recognition dependency was approved by the user. Source-only
+Patch 30 recognizes exact reader-bound acknowledged state without create or
+metadata authority; see `docs/architecture/governance_g2_existing_session_recognition.md`.
+Native prompt-cache metadata denial/catch remains outside that contract and
+requires review before complete create-loop acceptance. G2 remains unaccepted.
 Full-loop qualification, provider-error redaction,
 automatic-route attribution, direct SDK paths, and worker coverage remain open;
 do not activate the plugin or change the production gate on these patches alone.
