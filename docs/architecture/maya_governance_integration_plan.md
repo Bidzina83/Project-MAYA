@@ -432,6 +432,11 @@ The separate two-process conversation qualification is recorded in
 frozen Patch 31 profile, not production startup, frontend or general resume
 qualification. Next reconcile Step 3/create-loop evidence against Step 4 criteria;
 create, work package 3 and G2 remain unaccepted.
+The approved evidence closure is reviewed in `governance_g2_create_acceptance_review.md`:
+80 final-profile native cases, including independent-process contention/crash and
+separate write/fsync failures, pass. Bounded source-level create acceptance is
+recommended, not yet recorded. Another transition and frontend composition remain
+blocked pending that decision; no runtime patch or installed artifact changed.
 No operational transition or frontend is enabled by the source-only receipt path.
 G2 runtime acceptance, frontend composition, production governance
 activation and installers remain unqualified. Do not jump to an installer.

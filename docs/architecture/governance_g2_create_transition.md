@@ -544,3 +544,15 @@ not production schema/provisioning, frontend identities, general resume or
 complete create acceptance. The next approved action is reconciliation of
 Step 3/create-loop evidence with the Step 4 acceptance criteria and exclusions.
 Do not advance to another transition, work package 4, activation or installers.
+
+## Final-Profile Create Acceptance Review
+
+The review and approved evidence closure are in
+`governance_g2_create_acceptance_review.md`. The separate frozen matrix over
+unchanged Patch 31 passes 80 native cases, including parent failure replay,
+independent-process crashes/restart/contending allocation and separate projection
+write/fsync failures. Ordinary session/cache parity is 90 passed on each side;
+47 required product regressions and eight provenance/checkout checks pass.
+Bounded source-level create acceptance is recommended, pending a recorded decision.
+Work package 3 and G2 are not accepted. No native patch, installed artifact,
+production activation or new transition is authorized by these results.

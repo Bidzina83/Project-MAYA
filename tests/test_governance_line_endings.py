@@ -29,6 +29,10 @@ PROTECTED = (
     "scripts/verify_governance_g2_restart.py",
     "tests/hermes_g2_restart_loop_native.py",
     "tests/test_governance_g2_restart.py",
+    "docs/architecture/governance-g2-final-create.json",
+    "scripts/verify_governance_g2_final_create.py",
+    "tests/hermes_g2_final_create_native.py",
+    "tests/test_governance_g2_final_create.py",
 )
 
 

@@ -278,6 +278,11 @@ Bounded two-process conversation evidence is in
 `docs/architecture/governance_g2_restart_loop.md`. It checks fresh authority over
 existing native records, not frontend credentials or production provisioning.
 Remain in create qualification/acceptance review before another transition.
+The approved final-profile closure is in
+`docs/architecture/governance_g2_create_acceptance_review.md`: 80 native cases
+pass, including process contention/crash and separate write/fsync failures.
+Bounded source-level create acceptance is recommended but not yet recorded.
+Work package 3, G2, production activation, wheels and installers remain unchanged.
 Full-loop qualification, provider-error redaction,
 automatic-route attribution, direct SDK paths, and worker coverage remain open;
 do not activate the plugin or change the production gate on these patches alone.

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "qualification": "source_final_create_matrix_only",
+  "production_qualified": false,
+  "acceptance": "pending_review",
+  "expected_native_tests": 80,
+  "parent_inputs_sha256": "32c6816bd9f3422eeabb3a47cc30b5d1411a77e8e2cda747982c4a2318b19a30",
+  "test_sha256": "798b199bfb4b0381e5367f55412acf8f52b44f92b37e9d440946f4bf2620361b",
+  "fixture_sha256": {
+    "tests/hermes_g2_create_native.py": "3d204471966de19bf160c73c2b6e1728c2a07196b798d56e91480b33fce81b10",
+    "tests/hermes_g2_caller_native.py": "51dda90f933964552f6ac3d64661808e34d6230b30a22595ad653a736d5b4c52",
+    "tests/hermes_g2_caller_qualification_native.py": "4225b475d7320e4038a293b130c5c442783c59806339faf81e58a701cc25b28f",
+    "tests/hermes_g2_create_authority_loss_native.py": "f32b7d5a8a8550c33db9b48d5f2bd393c2b73649abd44a0bcb3092ee7ca9e76f",
+    "tests/hermes_g2_create_failures_native.py": "9ffef641af1da58f159d3b5d07e1238167c39a28febd0720b4ba325160af3305",
+    "tests/hermes_g2_reader_native.py": "c91445c01a481057bdb5cfa571696f5bec3c5ee15a3e728e9fdac102945b0f18",
+    "tests/hermes_g2_create_crash_native.py": "b9df761672d01e840d5e94ac8b18839d8651e93a6bba787db5a9f988f6d1c660"
+  }
+}
