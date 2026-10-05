@@ -836,7 +836,9 @@ Remain in create qualification/acceptance review before another transition.
 The approved final-profile closure is in
 `docs/architecture/governance_g2_create_acceptance_review.md`: 80 native cases
 pass, including process contention/crash and separate write/fsync failures.
-Bounded source-level create acceptance is recommended but not yet recorded.
+The user accepted bounded source-level create on 2026-10-05.
+Next is the reset transition within G2 work package 3; consult its owner-scoped
+design and consistency criteria before implementation. Reset remains blocked.
 Work package 3, G2, production activation, wheels and installers remain unchanged.
 
 Before each implementation step, consult the applicable agreed plan and identify

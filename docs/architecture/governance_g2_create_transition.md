@@ -553,6 +553,7 @@ unchanged Patch 31 passes 80 native cases, including parent failure replay,
 independent-process crashes/restart/contending allocation and separate projection
 write/fsync failures. Ordinary session/cache parity is 90 passed on each side;
 47 required product regressions and eight provenance/checkout checks pass.
-Bounded source-level create acceptance is recommended, pending a recorded decision.
+The user accepted bounded source-level create on 2026-10-05, with the review's
+explicit exclusions. Next is reset within work package 3, not frontend composition.
 Work package 3 and G2 are not accepted. No native patch, installed artifact,
 production activation or new transition is authorized by these results.

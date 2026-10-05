@@ -1,7 +1,7 @@
 # G2 Create Acceptance Review
 
-Review date: 2026-10-05. Recommendation: accept bounded source-level create.
-Formal milestone decision pending; work package 3 and G2 remain unaccepted.
+Review date: 2026-10-05. Decision: bounded source-level create accepted by the user
+on 2026-10-05. Work package 3 and G2 remain unaccepted.
 
 ## Plan Location
 
@@ -44,13 +44,13 @@ It does not qualify live providers, real connectors/tools, background workers,
 production schema provisioning, continuous hostile path races, ACL attacks,
 power-loss durability, or clean-install lifecycle. The outer handoff preserves
 a typed stop but does not qualify exact denial-code preservation. These limits
-must remain visible even if bounded create acceptance is subsequently granted.
+remain exclusions of the accepted bounded source-level create profile.
 
 The two evidence gaps identified in the initial review are now closed within
 the approved bounded profile. No runtime defect was identified and no runtime
-repair was applied. Recommend bounded source-level create acceptance, retaining
-the exclusions above. Formal acceptance is not inferred from a passing test or
-from approval to execute qualification. Work package 3 still has other transitions;
+repair was applied. The user's explicit acceptance grants bounded source-level
+create acceptance, retaining the exclusions above. Acceptance is not inferred
+from CI or approval to execute qualification. Work package 3 still has other transitions;
 G2 additionally requires authenticated frontend composition and identity lifecycle.
 
 ## Approved Closure Evidence
@@ -80,5 +80,10 @@ The allowed cross-process reader enters/exits its request scope before asserting
 cache cleanup. Initial harness-only failures are not final acceptance evidence.
 
 No production activation, runtime pin, native patch, wheel, installer or installed
-data changes. Do not advance to another transition until the bounded create
-acceptance decision is recorded against this review.
+data changes. The create acceptance decision is now recorded. Next is reset
+within work package 3, following the existing owner-scoped design and consistency
+protocol. Reset remains disabled until its own implementation and native allowed,
+denied and failure-path acceptance criteria pass. This decision does not accept
+general resume, switch, rotation, frontend composition, G2 or production.
+Frozen input manifests retain their original pending-review labels; this document
+records the decision without rewriting evidence.
