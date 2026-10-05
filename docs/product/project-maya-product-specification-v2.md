@@ -829,6 +829,10 @@ The cache boundary review in `docs/architecture/governance_g2_prompt_cache_revie
 records the approved fixed no-snapshot behavior for the append-only profile.
 Patch 31 is a separate source-only candidate with fresh request-bound policy/audit
 decisions; no snapshot metadata grant, G2 acceptance or production activation follows.
+Bounded two-process conversation evidence is in
+`docs/architecture/governance_g2_restart_loop.md`. It checks fresh authority over
+existing native records, not frontend credentials or production provisioning.
+Remain in create qualification/acceptance review before another transition.
 
 Before each implementation step, consult the applicable agreed plan and identify
 its current step and acceptance criteria. If inspection requires a different

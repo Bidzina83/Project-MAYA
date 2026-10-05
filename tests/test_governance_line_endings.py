@@ -25,6 +25,10 @@ PROTECTED = (
     "tests/hermes_g2_prompt_cache_native.py",
     "tests/hermes_g2_prompt_cache_ordinary.py",
     "tests/test_governance_g2_prompt_cache.py",
+    "docs/architecture/governance-g2-restart-loop.json",
+    "scripts/verify_governance_g2_restart.py",
+    "tests/hermes_g2_restart_loop_native.py",
+    "tests/test_governance_g2_restart.py",
 )
 
 

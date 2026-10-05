@@ -528,3 +528,19 @@ new Python syntax checks, whitespace checks and full post-test parent/native/hos
 inventory verification also pass. Generated source exports remain uncommitted
 under the ignored build directory. No production runtime, wheel or installer was
 modified or rebuilt by this increment.
+
+## No-Snapshot And Process-Restart Caller Evidence
+
+The approved optional-cache dependency is now implemented as source-only Patch 31;
+its scoped mode/catch tests and limitations are in `governance_g2_prompt_cache_review.md`.
+Separate two-process qualification over that unchanged overlay is in
+`governance_g2_restart_loop.md`. Four native cases cover allowed continuation,
+wrong owner, denied cache mode and stale projection with actual persisted history.
+The restarted host issues fresh append-only request authority and grants no
+create/acknowledgement permission. No projection repair or legacy adoption occurs.
+
+This closes the identified bounded process-restart conversation evidence gap,
+not production schema/provisioning, frontend identities, general resume or
+complete create acceptance. The next approved action is reconciliation of
+Step 3/create-loop evidence with the Step 4 acceptance criteria and exclusions.
+Do not advance to another transition, work package 4, activation or installers.

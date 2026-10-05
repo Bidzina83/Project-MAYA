@@ -427,6 +427,11 @@ an explicitly governed no-snapshot profile with mandatory-denial propagation and
 ordinary parity. The user approved that bounded decision; Patch 31 implements a
 separate source-only overlay. Qualify its mode and cache paths before resuming
 Step 3/create acceptance review. Accepted parent inputs and installed runtime stay unchanged.
+The separate two-process conversation qualification is recorded in
+`governance_g2_restart_loop.md`: bounded continuation/denial evidence under the
+frozen Patch 31 profile, not production startup, frontend or general resume
+qualification. Next reconcile Step 3/create-loop evidence against Step 4 criteria;
+create, work package 3 and G2 remain unaccepted.
 No operational transition or frontend is enabled by the source-only receipt path.
 G2 runtime acceptance, frontend composition, production governance
 activation and installers remain unqualified. Do not jump to an installer.
