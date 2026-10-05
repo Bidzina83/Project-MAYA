@@ -422,6 +422,11 @@ source-only Patch 30 implements the read-only contract in
 `governance_g2_existing_session_recognition.md`. Native prompt-cache metadata
 denial/catch still needs review before complete create-loop acceptance; no broad
 metadata grant, reordered milestone or ready installer is authorized.
+The boundary review is now in `governance_g2_prompt_cache_review.md`. It recommends
+an explicitly governed no-snapshot profile with mandatory-denial propagation and
+ordinary parity. The user approved that bounded decision; Patch 31 implements a
+separate source-only overlay. Qualify its mode and cache paths before resuming
+Step 3/create acceptance review. Accepted parent inputs and installed runtime stay unchanged.
 No operational transition or frontend is enabled by the source-only receipt path.
 G2 runtime acceptance, frontend composition, production governance
 activation and installers remain unqualified. Do not jump to an installer.

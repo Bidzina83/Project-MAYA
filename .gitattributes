@@ -28,3 +28,21 @@
 /docs/architecture/governance_g2_existing_session_recognition.md text eol=lf
 /tests/hermes_g2_create_crash_native.py text eol=lf
 /docs/architecture/governance-g2-*.json text eol=lf
+# Keep context and current governance tooling stable on Windows checkouts.
+/.gitattributes text eol=lf
+/AGENTS.md text eol=lf
+/PROJECT_MAYA.md text eol=lf
+/docs/product/project-maya-product-specification-v2.md text eol=lf
+/docs/architecture/maya_governance_integration_plan.md text eol=lf
+/docs/architecture/governance_g2_caller_qualification.md text eol=lf
+/docs/architecture/governance_g2_create_transition.md text eol=lf
+/docs/architecture/governance_g2_create_loop.md text eol=lf
+/docs/architecture/governance_g2_prompt_cache_review.md text eol=lf
+/scripts/prepare_governance_g2_recognition.py text eol=lf
+/tests/test_governance_g2_recognition.py text eol=lf
+/tests/test_governance_g2_create_loop.py text eol=lf
+/tests/test_governance_line_endings.py text eol=lf
+/scripts/prepare_governance_g2_prompt_cache.py text eol=lf
+/tests/test_governance_g2_prompt_cache.py text eol=lf
+/tests/hermes_g2_prompt_cache_native.py text eol=lf
+/tests/hermes_g2_prompt_cache_ordinary.py text eol=lf

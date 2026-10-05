@@ -709,6 +709,10 @@ Patch 30 recognizes exact reader-bound acknowledged state without create or
 metadata authority; see `docs/architecture/governance_g2_existing_session_recognition.md`.
 Native prompt-cache metadata denial/catch remains outside that contract and
 requires review before complete create-loop acceptance. G2 remains unaccepted.
+The cache boundary review in `docs/architecture/governance_g2_prompt_cache_review.md`
+records the approved fixed no-snapshot behavior for the append-only profile.
+Patch 31 is a separate source-only candidate with fresh request-bound policy/audit
+decisions; no snapshot metadata grant, G2 acceptance or production activation follows.
 
 Before each implementation step, consult the applicable agreed plan and identify
 its current step and acceptance criteria. If inspection requires a different

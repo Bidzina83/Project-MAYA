@@ -1,0 +1,96 @@
+--- a/source/agent/conversation_loop.py
++++ b/source/agent/conversation_loop.py
+@@ -301,9 +301,28 @@
+     (which constructs a fresh ``AIAgent`` per turn and depends on this
+     DB roundtrip).
+     """
++    from hermes_cli.middleware import MandatoryMiddlewareError, mandatory_middleware_enabled
++    omit_snapshot = mandatory_middleware_enabled()
++    if omit_snapshot:
++        try:
++            from project_maya.hermes_plugins.session_readers import CandidatePublishedSessionReader
++            reader = getattr(agent._session_db, "_maya_existing_session_reader", None)
++            if (type(reader) is not CandidatePublishedSessionReader
++                    or reader.prompt_cache_contract != "project-maya.prompt-cache-mode.v1"
++                    or getattr(reader.prompt_cache_mode, "__self__", None) is not reader
++                    or getattr(reader.prompt_cache_mode, "__func__", None)
++                    is not CandidatePublishedSessionReader.prompt_cache_mode
++                    or reader.prompt_cache_mode(agent._session_db, agent.session_id)
++                    != "rebuild_without_snapshot"):
++                raise MandatoryMiddlewareError("mandatory_middleware.callback_failed")
++        except Exception:
++            raise MandatoryMiddlewareError("mandatory_middleware.callback_failed") from None
++        # Preserve native per-agent caching only after fresh request authorization.
++        if agent._cached_system_prompt is not None:
++            return
+     stored_prompt = None
+     stored_state = "missing"
+-    if conversation_history and agent._session_db:
++    if not omit_snapshot and conversation_history and agent._session_db:
+         try:
+             session_row = agent._session_db.get_session(agent.session_id)
+             if session_row is not None:
+@@ -316,6 +335,8 @@
+                     stored_prompt = raw_prompt
+                     stored_state = "present"
+         except Exception as exc:
++            if mandatory_middleware_enabled() and isinstance(exc, MandatoryMiddlewareError):
++                raise MandatoryMiddlewareError("mandatory_middleware.callback_failed") from None
+             logger.warning(
+                 "Session DB get_session failed for system-prompt restore "
+                 "(session=%s): %s. Falling back to fresh build — prefix "
+@@ -389,10 +410,12 @@
+     # to log at DEBUG, which silently broke prefix-cache reuse on the
+     # gateway path (fresh AIAgent per turn → reads from this row every
+     # subsequent turn).
+-    if agent._session_db:
++    if not omit_snapshot and agent._session_db:
+         try:
+             agent._session_db.update_system_prompt(agent.session_id, agent._cached_system_prompt)
+         except Exception as exc:
++            if mandatory_middleware_enabled() and isinstance(exc, MandatoryMiddlewareError):
++                raise MandatoryMiddlewareError("mandatory_middleware.callback_failed") from None
+             logger.warning(
+                 "Session DB update_system_prompt failed for session %s: "
+                 "%s. Subsequent turns will rebuild the system prompt and "
+--- a/source/agent/turn_context.py
++++ b/source/agent/turn_context.py
+@@ -280,7 +280,8 @@
+         )
+ 
+     # ── System prompt (cached per session for prefix caching) ──
+-    if agent._cached_system_prompt is None:
++    from hermes_cli.middleware import mandatory_middleware_enabled
++    if mandatory_middleware_enabled() or agent._cached_system_prompt is None:
+         restore_or_build_system_prompt(agent, system_message, conversation_history)
+ 
+     active_system_prompt = agent._cached_system_prompt
+--- a/host/src/project_maya/hermes_plugins/session_readers.py
++++ b/host/src/project_maya/hermes_plugins/session_readers.py
+@@ -25,6 +25,7 @@
+ 
+     contract = READER_CONTRACT
+     existing_session_contract = "project-maya.existing-session-recognition.v1"
++    prompt_cache_contract = "project-maya.prompt-cache-mode.v1"
+ 
+     def __init__(self, coordinator, *, acknowledgement):
+         if (acknowledgement != ACKNOWLEDGEMENT or type(coordinator) is not CandidateNativeSessionCreate
+@@ -194,6 +195,18 @@
+                 raise GovernanceBoundaryError("governance.session_context_invalid")
+         return messages
+ 
++    def prompt_cache_mode(self, database, session_id):
++        """Fixed host profile; no snapshot read/write permission is granted."""
++        self.recognize_existing(database, session_id)
++        bound = _session_write.get()
++        selected = self._active
++        self._authorize(bound.identity, "prompt_cache_rebuild_without_snapshot", session_id)
++        # Revalidate after policy/audit callbacks, before returning the decision.
++        self.recognize_existing(database, session_id)
++        if _session_write.get() is not bound or self._active is not selected:
++            raise GovernanceBoundaryError("governance.session_context_invalid")
++        return "rebuild_without_snapshot"
++
+     def recognize_existing(self, database, session_id):
+         """Read-only first-turn recognition; no session creation or metadata grant."""
+         bound = _session_write.get()
