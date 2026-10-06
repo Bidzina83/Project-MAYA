@@ -1,0 +1,377 @@
+diff --git a/source/gateway/session.py b/source/gateway/session.py
+--- a/source/gateway/session.py
++++ b/source/gateway/session.py
+@@ -795,1 +795,25 @@
++    @contextmanager
++    def prepare_owned_reset_candidate(self, identity):
++        from hermes_cli.middleware import MandatoryMiddlewareError
++        try:
++            from project_maya.hermes_plugins.reset_publication import CandidateResetPreparation
++            host = getattr(self, "_maya_reset_preparation", None)
++            if type(host) is not CandidateResetPreparation:
++                raise MandatoryMiddlewareError("reset_preparation_unqualified")
++            scope = host.prepare(self, identity)
++            receipt = scope.__enter__()
++        except Exception:
++            raise MandatoryMiddlewareError("reset_preparation_failed") from None
++        try:
++            yield receipt
++        except BaseException:
++            import sys
++            scope.__exit__(*sys.exc_info())
++            raise
++        else:
++            try:
++                scope.__exit__(None, None, None)
++            except Exception:
++                raise MandatoryMiddlewareError("reset_preparation_failed") from None
++
+     def reset_owned_session_candidate(self, authority):
+
+
+
+diff --git a/host/src/project_maya/hermes_plugins/session_readers.py b/host/src/project_maya/hermes_plugins/session_readers.py
+--- a/host/src/project_maya/hermes_plugins/session_readers.py
++++ b/host/src/project_maya/hermes_plugins/session_readers.py
+@@ -92,15 +92,20 @@
+         if route is None:
+             raise GovernanceBoundaryError("governance.session_route_unavailable")
+         row = conn.execute(
+-            "SELECT s.started_at,r.route_version,t.target_session,t.state,t.principal,t.binding_version "
+-            "FROM maya_session_routes_v1 r JOIN sessions s ON s.id=r.session_id "
+-            "JOIN maya_session_transitions_v1 t ON t.correlation_id=r.correlation_id "
+-            "WHERE r.route_slot=? AND s.ended_at IS NULL AND s.archived=0 "
+-            "AND s.source='maya-governed-candidate' AND s.parent_session_id IS NULL",
+-            (self.binding.route_slot,),
+-        ).fetchone()
+-        if (row is None or row[1] != route["version"] or row[2] != route["session_id"]
+-                or row[3] != "caller_acknowledged" or row[4] != identity.actor_id or row[5] != self.binding.binding_version):
++            "SELECT s.started_at,r.route_version,t.target_session,t.state,t.principal,t.binding_version,s.parent_session_id,t.operation "
++            "FROM maya_session_routes_v1 r JOIN sessions s ON s.id=r.session_id "
++            "JOIN maya_session_transitions_v1 t ON t.correlation_id=r.correlation_id "
++            "WHERE r.route_slot=? AND s.ended_at IS NULL AND s.archived=0 "
++            "AND s.source='maya-governed-candidate'",
++            (self.binding.route_slot,),
++        ).fetchone()
++        if (row is None or row[1] != route["version"] or row[2] != route["session_id"]
++                or row[3] != "caller_acknowledged" or row[4] != identity.actor_id or row[5] != self.binding.binding_version):
++            raise GovernanceBoundaryError("governance.session_route_unavailable")
++        if row[7] == "reset":
++            from .reset_publication import validate_reset_lineage
++            validate_reset_lineage(conn, self.binding, route["session_id"])
++        elif row[7] != "create" or row[6] is not None or route["version"] != 1:
+             raise GovernanceBoundaryError("governance.session_route_unavailable")
+         stamp = datetime.fromtimestamp(row[0])
+         return SessionEntry(session_key=self.binding.route_slot, session_id=route["session_id"],
+diff --git a/host/src/project_maya/hermes_plugins/session_reset.py b/host/src/project_maya/hermes_plugins/session_reset.py
+--- a/host/src/project_maya/hermes_plugins/session_reset.py
++++ b/host/src/project_maya/hermes_plugins/session_reset.py
+@@ -167,47 +167,54 @@
+     @contextmanager
+     def authenticated_reset(self, identity):
+         from hermes_cli.middleware import MandatoryMiddlewareError
+-        try:
+-            with self._authenticated_reset(identity) as authority:
+-                yield authority
+-        except (GovernanceBoundaryError, MandatoryMiddlewareError):
+-            raise
+-        except Exception:
+-            raise GovernanceBoundaryError("governance.reset_store_failed") from None
+-
+-    @contextmanager
+-    def _authenticated_reset(self, identity):
+-        self.require(self.store)
+-        if identity != self.binding.owner or self._active is not None:
+-            raise GovernanceBoundaryError("governance.reset_context_invalid")
+-        authority = None
+-        with self.coordinator._exclusive(), self.store._lock, self.database._lock:
+-            try:
+-                self.authorize("session.read", "route_state", self.binding.route_slot)
+-                _, _, _, source, version = self.source(self.database._conn)
+-                b = self.binding
+-                descriptor = ResetDescriptor(b.instance_id, str(b.database), b.owner.actor_id,
+-                    b.owner.data_classification, b.binding_version, b.route_slot, source,
+-                    uuid4().hex, version, uuid4().hex, uuid4().hex)
+-                authority = ResetAuthority(self, descriptor)
+-                self._active = authority
+-                authority.authorize()
+-                yield authority
+-            finally:
+-                if authority is not None:
+-                    authority.revoke()
+-                self._active = None
+-
+-    def _commit(self, conn):
+-        conn.commit()
+-
+-    def reset(self, store, authority):
+-        self.require(store)
+-        if type(authority) is not ResetAuthority or authority.host is not self:
+-            raise GovernanceBoundaryError("governance.reset_context_invalid")
+-        attempted_commit = False
+-        try:
+-            with authority.lock:
++        entered = False
++        try:
++            with self._authenticated_reset(identity) as authority:
++                entered = True
++                yield authority
++        except (GovernanceBoundaryError, MandatoryMiddlewareError):
++            raise
++        except Exception:
++            if entered:
++                raise
++            raise GovernanceBoundaryError("governance.reset_store_failed") from None
++
++    @contextmanager
++    def _authenticated_reset(self, identity):
++        self.require(self.store)
++        if identity != self.binding.owner or self._active is not None:
++            raise GovernanceBoundaryError("governance.reset_context_invalid")
++        authority = None
++        try:
++            with self.coordinator._exclusive(), self.store._lock, self.database._lock:
++                if self._active is not None:
++                    raise GovernanceBoundaryError("governance.reset_context_invalid")
++                self.authorize("session.read", "route_state", self.binding.route_slot)
++                _, _, _, source, version = self.source(self.database._conn)
++                b = self.binding
++                descriptor = ResetDescriptor(b.instance_id, str(b.database), b.owner.actor_id,
++                    b.owner.data_classification, b.binding_version, b.route_slot, source,
++                    uuid4().hex, version, uuid4().hex, uuid4().hex)
++                authority = ResetAuthority(self, descriptor)
++                self._active = authority
++                authority.authorize()
++            yield authority
++        finally:
++            if authority is not None:
++                authority.revoke()
++                if self._active is authority:
++                    self._active = None
++
++    def _commit(self, conn):
++        conn.commit()
++
++    def reset(self, store, authority):
++        self.require(store)
++        if type(authority) is not ResetAuthority or authority.host is not self:
++            raise GovernanceBoundaryError("governance.reset_context_invalid")
++        attempted_commit = False
++        try:
++            with self.coordinator._exclusive(), self.store._lock, self.database._lock, authority.lock:
+                 authority.authorize()
+                 if authority.attempted:
+                     raise GovernanceBoundaryError("governance.transition_consumed")
+diff --git a/host/src/project_maya/hermes_plugins/reset_publication.py b/host/src/project_maya/hermes_plugins/reset_publication.py
+new file mode 100644
+--- /dev/null
++++ b/host/src/project_maya/hermes_plugins/reset_publication.py
+@@ -0,0 +1,208 @@
++"""Source-only reset publication and normal-exit acknowledgement."""
++from contextlib import contextmanager
++from threading import Lock, get_ident
++
++from ..audit import AuditRecord
++from types import MappingProxyType
++
++from .governance import GovernanceBoundaryError, _session_write, _current_task
++from .session_reset import CandidateNativeSessionReset
++from .session_requests import ACKNOWLEDGEMENT
++from .session_creation import _digest
++
++CONTRACT = "project-maya.reset-caller-acknowledgement.v1"
++
++
++def validate_reset_lineage(conn, binding, target, expected="caller_acknowledged"):
++    """Initial reset only: retain an acknowledged create parent, never adopt lineage."""
++    row = conn.execute(
++        "SELECT s.parent_session_id,s.user_id,s.ended_at,s.archived,s.source,"
++        "o.lifecycle_status,o.parent_session_id,t.operation,t.expected_route_version,"
++        "t.result_route_version,t.state,t.principal,t.binding_version,t.generation,t.projection_hash,t.correlation_id "
++        "FROM sessions s JOIN maya_session_owners_v1 o ON o.session_id=s.id "
++        "JOIN maya_session_transitions_v1 t ON t.target_session=s.id WHERE s.id=?", (target,)).fetchall()
++    if len(row) != 1:
++        raise GovernanceBoundaryError("governance.reset_lineage_invalid")
++    r = row[0]
++    if (not r[0] or r[1] != binding.owner.actor_id or r[2] is not None or r[3] != 0
++            or r[4] != "maya-governed-candidate" or r[5] != "active" or r[6] != r[0]
++            or tuple(r[7:13]) != ("reset", 1, 2, expected, binding.owner.actor_id, binding.binding_version)):
++        raise GovernanceBoundaryError("governance.reset_lineage_invalid")
++    projection = conn.execute("SELECT generation,projection_hash FROM maya_session_projection_v1 WHERE singleton=1").fetchone()
++    route = conn.execute("SELECT session_id,route_version,correlation_id FROM maya_session_routes_v1 WHERE route_slot=?",
++                         (binding.route_slot,)).fetchone()
++    if (projection is None or route is None or tuple(r[13:15]) != tuple(projection)
++            or tuple(route) != (target, 2, r[15])):
++        raise GovernanceBoundaryError("governance.reset_lineage_invalid")
++    parent = conn.execute(
++        "SELECT s.user_id,s.ended_at,s.end_reason,s.parent_session_id,s.archived,"
++        "o.lifecycle_status,o.parent_session_id,t.operation,t.result_route_version,t.state,t.principal,t.binding_version,t.expected_route_version,s.source "
++        "FROM sessions s JOIN maya_session_owners_v1 o ON o.session_id=s.id "
++        "JOIN maya_session_transitions_v1 t ON t.target_session=s.id WHERE s.id=?", (r[0],)).fetchall()
++    if (len(parent) != 1 or parent[0][0] != binding.owner.actor_id or parent[0][1] is None
++            or tuple(parent[0][2:]) != ("session_reset", None, 0, "ended", None, "create", 1, "caller_acknowledged", binding.owner.actor_id, binding.binding_version, 0, "maya-governed-candidate")):
++        raise GovernanceBoundaryError("governance.reset_lineage_invalid")
++    return r[0]
++
++
++class CandidateResetPreparation:
++    contract = CONTRACT
++
++    def __init__(self, reset, *, acknowledgement):
++        if (type(reset) is not CandidateNativeSessionReset or acknowledgement != ACKNOWLEDGEMENT
++                or getattr(reset.store, "_maya_reset_preparation", None) is not None):
++            raise GovernanceBoundaryError("governance.reset_preparation_invalid")
++        self.reset = reset
++        self.store = reset.store
++        self.coordinator = reset.coordinator
++        self._lock = Lock()
++        self._current = None
++        self._phase = "idle"
++        self.store._maya_reset_preparation = self
++
++    def _bound(self, authority, expected, *, projection=True):
++        self.reset.require(self.store)
++        d = authority.descriptor
++        conn = self.reset.database._conn
++        generation, routes, raw = (self.coordinator._state_in_transaction(conn) if conn.in_transaction
++                                  else self.coordinator._state(conn))
++        row = conn.execute("SELECT descriptor_digest,principal,binding_version,operation,target_session,"
++            "expected_route_version,result_route_version,state,generation,projection_hash "
++            "FROM maya_session_transitions_v1 WHERE correlation_id=?", (d.correlation_id,)).fetchone()
++        route = conn.execute("SELECT correlation_id FROM maya_session_routes_v1 WHERE route_slot=?",
++                             (d.route_slot,)).fetchone()
++        if (row is None or tuple(row) != (d.digest, d.principal, d.binding_version, "reset", d.target_session,
++                d.expected_route_version, d.expected_route_version + 1, expected, generation, _digest(raw))
++                or routes.get(d.route_slot) != {"session_id": d.target_session, "version": d.expected_route_version + 1}
++                or route is None or route[0] != d.correlation_id
++                or (projection and self.coordinator.index.read_bytes() != raw)
++                or conn.execute("SELECT 1 FROM maya_session_transitions_v1 WHERE correlation_id<>? "
++                                "AND state<>'caller_acknowledged' LIMIT 1", (d.correlation_id,)).fetchone()
++                or validate_reset_lineage(conn, self.reset.binding, d.target_session, expected) != d.source_session):
++            raise GovernanceBoundaryError("governance.reset_receipt_invalid")
++        return raw
++
++    def _audit(self, authority, operation, decision):
++        d = authority.descriptor
++        try:
++            self.reset.binding.audit.write(AuditRecord(
++                event_type="outcome.session_reset", decision=decision,
++                reason_code="governance." + operation, actor_id=d.principal,
++                capability="session.transition", operation=operation,
++                target="sha256:" + _digest(d.route_slot.encode()),
++                data_classification=d.classification,
++                metadata={"contract": CONTRACT, "descriptor_digest": d.digest,
++                          "qualification": "source_candidate_only"}))
++        except Exception:
++            raise GovernanceBoundaryError("governance.reset_audit_unavailable") from None
++
++    def _commit(self, conn):
++        conn.commit()
++
++    def _change(self, authority, old, new):
++        conn = self.reset.database._conn
++        with authority.lock:
++            authority.check()
++            conn.execute("BEGIN IMMEDIATE")
++            try:
++                self._bound(authority, old)
++                changed = conn.execute("UPDATE maya_session_transitions_v1 SET state=? "
++                    "WHERE correlation_id=? AND descriptor_digest=? AND state=?",
++                    (new, authority.descriptor.correlation_id, authority.descriptor.digest, old))
++                if changed.rowcount != 1:
++                    raise GovernanceBoundaryError("governance.reset_receipt_invalid")
++                authority.check()
++                self._commit(conn)
++            except BaseException:
++                conn.rollback()
++                raise
++
++    def _publish(self, authority):
++        with self.coordinator._exclusive(), self.store._lock, self.reset.database._lock, authority.lock:
++            authority.authorize()
++            raw = self._bound(authority, "committed_pending_projection", projection=False)
++            self.coordinator._publish(raw)
++            authority.check()
++            self._change(authority, "committed_pending_projection", "projection_verified")
++            # Fixed, secret-safe publication audit must succeed before readiness advances.
++            self.reset.authorize("session.transition", "reset", authority.descriptor.route_slot, authority.descriptor)
++            authority.check()
++            self._audit(authority, "reset_published", "allow")
++            authority.check()
++            self._change(authority, "projection_verified", "published_pending_caller")
++            self.store._entries = {}
++            self.store._loaded = False
++
++    def _acknowledge(self, authority):
++        if self._phase != "acknowledging" or self._current is not authority:
++            raise GovernanceBoundaryError("governance.reset_caller_invalid")
++        with self.coordinator._exclusive(), self.store._lock, self.reset.database._lock, authority.lock:
++            authority.check()
++            self._bound(authority, "published_pending_caller")
++            self.reset.authorize("session.transition", "acknowledge_reset",
++                                 authority.descriptor.route_slot, authority.descriptor)
++            authority.check()
++            self._audit(authority, "acknowledge_reset", "allow")
++            authority.check()
++            self._change(authority, "published_pending_caller", "caller_acknowledged")
++            self._bound(authority, "caller_acknowledged")
++
++    def _quarantine(self, authority):
++        # Cleanup reduces this exact failed pending/uncertain receipt only.
++        if (self._phase != "failed" or self._current is not authority
++                or authority.thread != get_ident() or authority.task is not _current_task()):
++            raise GovernanceBoundaryError("governance.reset_cleanup_invalid")
++        try:
++            self._audit(authority, "quarantine_reset", "deny")
++        except GovernanceBoundaryError:
++            pass
++        with self.coordinator._exclusive(), self.store._lock, self.reset.database._lock:
++            conn = self.reset.database._conn
++            for state in ("published_pending_caller", "caller_acknowledged"):
++                try:
++                    self._bound(authority, state)
++                except GovernanceBoundaryError:
++                    continue
++                conn.execute("BEGIN IMMEDIATE")
++                try:
++                    self._bound(authority, state)
++                    changed = conn.execute("UPDATE maya_session_transitions_v1 SET state='caller_quarantined' "
++                        "WHERE correlation_id=? AND descriptor_digest=? AND state=?",
++                        (authority.descriptor.correlation_id, authority.descriptor.digest, state))
++                    if changed.rowcount != 1:
++                        raise GovernanceBoundaryError("governance.reset_cleanup_invalid")
++                    conn.commit()
++                except BaseException:
++                    conn.rollback()
++                    raise
++                return
++
++    @contextmanager
++    def prepare(self, store, identity):
++        self.reset.require(store)
++        if (store is not self.store or getattr(store, "_maya_reset_preparation", None) is not self
++                or _session_write.get() is not None or not self._lock.acquire(blocking=False)):
++            raise GovernanceBoundaryError("governance.reset_preparation_invalid")
++        try:
++            with self.reset.authenticated_reset(identity) as authority:
++                store.reset_owned_session_candidate(authority)
++                self._publish(authority)
++                self._current = authority
++                self._phase = "preparing"
++                try:
++                    yield MappingProxyType({"session_id": authority.descriptor.target_session,
++                        "source_session": authority.descriptor.source_session,
++                        "state": "published_pending_caller", "dispatch_allowed": False})
++                    self._phase = "acknowledging"
++                    self._acknowledge(authority)
++                except BaseException:
++                    self._phase = "failed"
++                    try:
++                        self._quarantine(authority)
++                    except BaseException:
++                        pass  # Original failure wins; unresolved pending remains unqualified.
++                    raise
++        finally:
++            self._current = None
++            self._phase = "idle"
++            self._lock.release()

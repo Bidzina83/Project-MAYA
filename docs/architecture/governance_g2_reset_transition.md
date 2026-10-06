@@ -3,7 +3,8 @@
 ## Current Step
 
 2026-10-06: G2 work package 3, reset Step 1 was explicitly approved by the user.
-Step 2 (authority and atomic native sink) is the current source-only candidate.
+Step 2's scoped atomic-sink gate passed; the user authorized Step 3 after committing
+the changes and reporting green CI. Step 3's source candidate is pending review.
 Bounded source-level create is accepted; ordinary mandatory reset stays disabled.
 This document specializes the existing ownership and consistency designs. It
 does not reorder G0-G7 or authorize frontend composition, production activation,
@@ -120,12 +121,12 @@ this explicitly, including cancellation that outlives the initiating task.
    lineage, acknowledgement and exclusion rules against the existing design
    and actual pinned source. Record unresolved representation/caller dependencies
    before coding. Gate: explicit review of this sequence and contract.
-2. **Authority and atomic native sink (current):** add a separate hashed source candidate
+2. **Authority and atomic native sink (scoped gate passed):** add a separate hashed source candidate
    with a reset-specific descriptor, exact native entry and synchronized SQLite
    finalization/allocation/route CAS. Keep ordinary reset and unbound mandatory
    reset unchanged. Gate: actual native allowed/denied and rollback tests;
    reset permission without end/create must have zero effects.
-3. **Publication, caller and reader composition:** qualify operation-bound
+3. **Publication, caller and reader composition (current, pending review):** qualify operation-bound
    acknowledgement/quarantine, strict publication and exact lineage selection,
    fresh request scope and actual empty-history new-agent conversation. Gate:
    caller failure cannot dispatch; old transcript preserved; independent model
@@ -220,3 +221,58 @@ full source inventories are verified before execution. This meets Step 2's
 scoped atomic-sink test gate, not bounded reset acceptance or G2 acceptance.
 The next approved step is Step 3 publication, caller and reader composition;
 no implementation of that step or downstream installer change is included here.
+
+## Step 3 Source Composition
+
+Patch 33 reconstructs four declared paths over the frozen Patch 32 candidate:
+the native SessionStore entry, staged reset authority, existing published reader,
+and a staged `reset_publication` module. `governance-g2-reset-composition.json`
+binds parent/patch/test hashes and effective source hashes; the preparation script
+verifies the entire source/host inventory. Earlier manifests, source checkouts,
+runtime pin and installed artifacts are unchanged.
+
+`prepare_owned_reset_candidate` exposes explicit reset preparation, not an
+ordinary reset fallback. It uses the existing strict temporary-file publication
+primitive and native receipt states: committed pending projection, verified
+projection, published pending caller, then guarded normal-exit acknowledgement.
+Publication outcome audit must succeed before the pending caller state advances.
+Acknowledgement independently requires `session.transition/acknowledge_reset`;
+create/reset permission alone is insufficient. The caller receives immutable
+correlation data, not a conversation lease, and holds no storage locks or SQLite
+transaction. Typed failures/cancellation retain their scope; cleanup can reduce
+only the exact failed receipt and cannot repair a newer route.
+
+The reader checks the acknowledged reset operation, expected/result versions,
+generation/hash, route correlation, both parent fields and the retained source's
+owner/create receipt/finalization. It then uses the existing freshly authenticated
+G1 append-only scope. Old agents and stored prompt snapshots are not reused; the
+fixed no-snapshot profile remains. No model/tool permission is granted by reset.
+
+This composition deliberately covers one initial acknowledged create-to-reset
+lineage. Subsequent reset of a reset target remains denied, not implicitly adopted.
+The actual conversation uses native AIAgent/SDK/SQLite with synthetic HTTP, an
+inert tool catalogue and excluded title/background execution. It does not qualify
+live credentials/transports, general tools or tool-approval transfer.
+
+### Verification And Remaining Gate
+
+2026-10-06: all 37 combined native cases pass (15 composition plus the unchanged
+22 atomic tests, re-executed against the combined source). The composition covers
+normal exit, exception/cancellation, missing acknowledgement permission,
+revocation/expiry, publication/audit failure, corrupted lineage, fresh actual-agent
+execution and independent model denial with zero SDK transport calls. A second
+actual conversation after an old-agent turn proves distinct agent instances and
+absence of old history, agent cache and stored snapshot in its synthetic request.
+The native ordinary session suite passes 88 cases; nine preparation tests and
+47 required product regressions pass. Context, syntax and whitespace checks pass.
+The native matrix has one cache-provider configuration warning and no skips.
+
+These results are scoped source evidence, not full Step 3 acceptance, bounded
+reset acceptance or G2 acceptance. Step 3's criterion review still needs to
+reconcile the excluded approval/tool profile. Uncertain acknowledgement commits
+combined with failed quarantine are not qualified: this candidate must not be
+claimed to block every failure combination or restart outcome. Crash/restart,
+process contention, late executors, combined commit/publication/acknowledgement
+faults and recovery remain the planned Step 4 matrix; durable audit reconciliation
+and production provisioning remain G3. Consult this gate before proceeding; do
+not activate production or rebuild a ready installer from these results.

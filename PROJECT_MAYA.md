@@ -726,8 +726,14 @@ design and consistency criteria before implementation. Reset remains blocked.
 Reset Step 1's source-informed contract and ordered Steps 1-4 are in
 `docs/architecture/governance_g2_reset_transition.md`, approved on 2026-10-06.
 Reset Step 2 is the source-only Patch 32 authority and atomic SQLite sink candidate.
-Publication, reset acknowledgement and reader composition remain Step 3; no
-schema change, agent-dispatch authority or production activation is enabled.
+Source-only Patch 33 adds Step 3 publication, reset-specific normal-exit
+acknowledgement and lineage-checked reader composition. Its 15 composition cases
+and 22 unchanged atomic cases pass on the combined candidate; 88 ordinary native
+session tests pass. Fresh agent/history/cache isolation and independent model
+denial use real native callers and synthetic SDK transport. This initial
+create-to-reset profile is pending review; repeat reset, tool-approval transfer,
+uncertain acknowledgement/quarantine combinations and Step 4's crash/race matrix
+remain unqualified. No schema, production activation, wheel or installer change.
 Work package 3, G2, production activation, wheels and installers remain unchanged.
 
 Before each implementation step, consult the applicable agreed plan and identify

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "production_qualified": false,
+  "acceptance": "pending_review",
+  "qualification": "source_reset_composition_only",
+  "parent_sha256": "b1c84fe597a240136e35e3096dc0ab57f4e13f024a7e7eb69958e5ef3b4b639e",
+  "patch_sha256": "ee2175b767a0677895a1b1ae273f2eed569eccb4a03d3ef089cfda2652ed1804",
+  "test_sha256": "25caa78d404da6466bb7e11c3db7e3e44257a4346e2ab1d92404818654c8db07",
+  "expected_composition_tests": 15,
+  "expected_atomic_regression_tests": 22,
+  "atomic_regression_sha256": "8365ffd0039f75aadaa41ebb5087fb35402428ba68a1326e9d4b6ab1c99e8a49",
+  "effective_sha256": {
+    "source/gateway/session.py": "e6471fc90e665162daba89c0870fc26960f6874b12654a02ceb7c85e97b0efc3",
+    "host/src/project_maya/hermes_plugins/session_readers.py": "5d7d19bc43937b89f358665fe3b6f879e3f2678e35160db59e0ca893706f6416",
+    "host/src/project_maya/hermes_plugins/session_reset.py": "673cd5828521cf3a5b3e21e6d8b8e3b42313bd4e6fb9a8dd0d38fcb332e32b51",
+    "host/src/project_maya/hermes_plugins/reset_publication.py": "6864f950d677ec7e6379734cdd6fe5b70125a3fcb9f9cc2b983a917f03edaf6f"
+  }
+}
