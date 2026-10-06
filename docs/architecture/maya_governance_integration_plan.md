@@ -438,6 +438,9 @@ separate write/fsync failures, pass. The user accepted bounded source-level crea
 on 2026-10-05 with the review's exclusions. Next is reset within work package 3:
 consult the owner-scoped design and consistency criteria before implementation;
 reset remains disabled until its own native allowed/denied and failure tests pass.
+Reset Step 1's specialized contract and ordered implementation sequence are in
+`governance_g2_reset_transition.md`, pending explicit review before Step 2.
+The existing G2 order is unchanged; no reset runtime candidate is implemented.
 Frontend composition, work package 3/G2 acceptance and production remain open;
 no runtime patch or installed artifact changed.
 No operational transition or frontend is enabled by the source-only receipt path.

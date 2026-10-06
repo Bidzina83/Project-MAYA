@@ -843,6 +843,9 @@ pass, including process contention/crash and separate write/fsync failures.
 The user accepted bounded source-level create on 2026-10-05.
 Next is the reset transition within G2 work package 3; consult its owner-scoped
 design and consistency criteria before implementation. Reset remains blocked.
+Reset Step 1's source-informed contract and ordered Steps 1-4 are in
+`docs/architecture/governance_g2_reset_transition.md`, pending explicit review.
+No reset authority, native sink, reader relaxation or schema change is enabled.
 Work package 3, G2, production activation, wheels and installers remain unchanged.
 
 Before each implementation step, consult the applicable agreed plan and identify
