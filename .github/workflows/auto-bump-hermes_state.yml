@@ -11,10 +11,10 @@ permissions:
 
 jobs:
   bump:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -45,7 +45,7 @@ jobs:
 
       - name: Setup Python for candidate tests
         if: steps.compare.outputs.same == 'false'
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -71,7 +71,7 @@ jobs:
 
       - name: Create PR to update pinned SHA
         if: steps.compare.outputs.same == 'false'
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "ci: bump hermes_state pin to ${{ steps.getsha.outputs.sha }}"

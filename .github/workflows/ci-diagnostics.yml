@@ -7,11 +7,11 @@ permissions:
 
 jobs:
   diagnostics:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install deps
@@ -24,7 +24,7 @@ jobs:
           mkdir -p reports logs
           pytest -q --maxfail=1 --junitxml=reports/junit.xml --log-cli-level=INFO || true
           tar -czf logs.tar.gz reports logs || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: ci-diagnostics-logs
           path: |

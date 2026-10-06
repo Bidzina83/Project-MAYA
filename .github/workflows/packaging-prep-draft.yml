@@ -9,13 +9,13 @@ permissions:
 
 jobs:
   packaging-prep:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Python 3.x
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.x'
 
@@ -43,7 +43,7 @@ jobs:
 
       - name: Archive tests output
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: pytest-log
           path: .pytest_cache || $GITHUB_WORKSPACE/.pytest_tmp

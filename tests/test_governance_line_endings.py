@@ -34,6 +34,10 @@ PROTECTED = (
     "tests/hermes_g2_final_create_native.py",
     "tests/test_governance_g2_final_create.py",
 )
+PROTECTED += ("tests/test_ci_workflows.py",) + tuple(
+    path.relative_to(ROOT).as_posix()
+    for path in sorted((ROOT / ".github/workflows").glob("*.yml"))
+)
 
 
 def git(directory, *args):

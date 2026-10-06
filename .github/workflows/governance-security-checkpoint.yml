@@ -8,22 +8,22 @@ permissions:
 
 jobs:
   checkpoint-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
       - name: Checkout Maya security checkpoint
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           persist-credentials: false
       - name: Checkout pinned Hermes objects
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: Bidzina83/hermes-agent
           ref: b13e2fd6948a59eeb59fe618914147d97a2ee90a
           path: .codex-build/hermes-objects
           persist-credentials: false
       - name: Prepare native Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.13'
       - name: Install pinned preparation tool
@@ -48,7 +48,7 @@ jobs:
           python scripts/run_governance_native_regressions.py --stage .codex-build/security-ordinary --python "$SECURITY_PYTHON" --mode bounded
       - name: Preserve evidence without native source or customer state
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: governance-security-checkpoint-linux
           path: |

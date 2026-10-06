@@ -759,6 +759,10 @@ rollback, accessibility, and recovery objectives.
 
 ## 22. Implementation Roadmap
 
+Hosted CI jobs use explicit Ubuntu 24.04 runners and reviewed Node 24 actions.
+This CI maintenance does not qualify a product platform or alter Hermes pins,
+governance acceptance, credentials, deployment policy or installed artifacts.
+
 On 2026-10-03 the user approved a security checkpoint before G1: verify the 28
 CodeQL review items against the effective runtime, fix or explicitly exclude
 reachable risks, document the 29 metadata false positives, then resume G1 only

@@ -516,6 +516,10 @@ Avoid:
 
 ## Implementation Order
 
+Hosted CI jobs use explicit Ubuntu 24.04 runners and reviewed Node 24 actions.
+This CI maintenance does not qualify a product platform or alter Hermes pins,
+governance acceptance, credentials, deployment policy or installed artifacts.
+
 Before each implementation step, consult the applicable agreed plan and identify
 its current step and acceptance criteria. If inspection requires a different
 sequence, recommend the specific revised order and wait for user approval before

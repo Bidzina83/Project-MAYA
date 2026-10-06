@@ -769,6 +769,10 @@ Avoid:
 
 ## Decision Rule
 
+Hosted CI jobs use explicit Ubuntu 24.04 runners and reviewed Node 24 actions.
+This CI maintenance does not qualify a product platform or alter Hermes pins,
+governance acceptance, credentials, deployment policy or installed artifacts.
+
 When architectural uncertainty remains, choose the option that best maximizes:
 
 1. Local governance and customer control
