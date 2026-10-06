@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "production_qualified": false,
+  "qualification": "source_reset_atomic_only",
+  "acceptance": "pending_review",
+  "expected_native_tests": 22,
+  "parent_sha256": "da21d906b3e155c475ccd4d516e390dbc45723a16041325f7c0740cea82fd33b",
+  "patch_sha256": "f2ff3dc9b0355c6576e0b08fa7ca79dfe8f88457960ae25d103c7483de9eeb66",
+  "test_sha256": "d11c2dfbcfbffc8176e620ee3db279d5d69541129f16ca85713b7d9b58266772",
+  "effective_sha256": {
+    "source/gateway/session.py": "c0f7a494b29fee6a06b8b72fabfd10baeee5337fa858f875addd27fc45e913c8",
+    "host/src/project_maya/hermes_plugins/session_reset.py": "412e7dfa7e1ff9058254fce7ca1c28a05686fe3113c528b3c9697b44e4740af3"
+  }
+}

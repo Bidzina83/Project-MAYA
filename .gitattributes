@@ -57,3 +57,6 @@
 /tests/test_governance_g2_final_create.py text eol=lf
 /docs/architecture/governance_g2_create_acceptance_review.md text eol=lf
 /docs/architecture/governance_g2_reset_transition.md text eol=lf
+/scripts/prepare_governance_g2_reset.py text eol=lf
+/tests/hermes_g2_reset_native.py text eol=lf
+/tests/test_governance_g2_reset.py text eol=lf

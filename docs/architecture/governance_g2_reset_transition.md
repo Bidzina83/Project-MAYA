@@ -2,8 +2,9 @@
 
 ## Current Step
 
-2026-10-06: G2 work package 3, reset Step 1 (contract and implementation
-sequence). Bounded source-level create is accepted; reset is still disabled.
+2026-10-06: G2 work package 3, reset Step 1 was explicitly approved by the user.
+Step 2 (authority and atomic native sink) is the current source-only candidate.
+Bounded source-level create is accepted; ordinary mandatory reset stays disabled.
 This document specializes the existing ownership and consistency designs. It
 does not reorder G0-G7 or authorize frontend composition, production activation,
 runtime pin, wheel or installer changes.
@@ -115,11 +116,11 @@ this explicitly, including cancellation that outlives the initiating task.
 
 ## Ordered Implementation Steps
 
-1. **Contract review (current):** reconcile these reset-specific permissions,
+1. **Contract review (approved):** reconcile these reset-specific permissions,
    lineage, acknowledgement and exclusion rules against the existing design
    and actual pinned source. Record unresolved representation/caller dependencies
    before coding. Gate: explicit review of this sequence and contract.
-2. **Authority and atomic native sink:** add a separate hashed source candidate
+2. **Authority and atomic native sink (current):** add a separate hashed source candidate
    with a reset-specific descriptor, exact native entry and synchronized SQLite
    finalization/allocation/route CAS. Keep ordinary reset and unbound mandatory
    reset unchanged. Gate: actual native allowed/denied and rollback tests;
@@ -163,5 +164,59 @@ the Standard installer or the entire G2 milestone.
 
 The 47 required release/update/setup/closure regression tests pass on 2026-10-06.
 Product-context validation, release-script syntax and whitespace checks pass.
-These checks protect existing behavior; they do not test reset, which remains
-unimplemented and disabled. No accepted input manifest or native source was edited.
+These checks protected existing behavior; reset was unimplemented at Step 1.
+No accepted input manifest or native source was edited.
+
+## Step 2 Source Candidate
+
+Patch 32 adds `SessionStore.reset_owned_session_candidate` and the separately
+staged Maya `session_reset` module. Its input contract is
+`governance-g2-reset.json`; `scripts/prepare_governance_g2_reset.py` reconstructs
+only the two declared effective paths over the verified prepared Patch 31 source.
+The original checkout, accepted baseline and installed artifacts are untouched.
+
+The synchronous, single-use reset descriptor is host-selected, task/thread bound,
+expiring and revocable. It is not create authority or a fixed-session agent lease.
+Independent route-read, reset, source-end and target-create permissions pass through
+the existing local gateway with safe audit events. Native finalization, allocation,
+owner lineage, route CAS and pending receipt/generation commit in one transaction.
+Each lifecycle update must affect exactly one row. Revocation is checked again
+under the authority lock immediately before commit; already committed outcomes
+are not claimed rolled back.
+
+This initial sink accepts the acknowledged parent-free **create** source profile
+only. Recognizing an acknowledged reset target for a subsequent reset requires
+Step 3's exact receipt/lineage composition; a non-null parent or forged operation
+is not adopted. No general metadata, append, model, tool or worker permission is
+granted. Existing cross-process exclusion and native store/database locks are
+reused; there is no parallel session engine or new schema.
+
+A successful sink returns `committed_pending_projection` with
+`dispatch_allowed=false`. The old projection bytes remain untouched and the
+existing reader denies routing. Publication, caller acknowledgement/quarantine,
+new-agent conversation and the combined failure matrix are deliberately absent
+from this Step 2 candidate. Unknown commit outcomes retain blocked native records
+for separately authorized recovery, not blind retry or source reopening.
+
+Native tests use actual SessionStore/SessionDB and explicitly provisioned isolated
+fixtures, not transports or customer credentials. Their scope is atomic sink
+allow/deny/rollback and pending-reader exclusion, not full reset qualification.
+Step 3 and Step 4 remain in order; G2 and production remain unaccepted.
+
+### Step 2 Verification
+
+2026-10-06: 22 native reset cases pass against the exact Patch 32 candidate.
+They cover allowed atomic reset/transcript retention/pending-reader denial, each
+independent permission, SQL rollback, ignored lifecycle updates, foreign/revoked/
+expired/stale/replayed/out-of-scope authority, invalid source state, precommit
+revocation and unknown postcommit outcome. No model, tool or connector transport
+is used. Five preparation-contract tests and 47 required product regressions pass.
+The native ordinary-mode gateway session suite passes all 88 cases against the
+same effective native bytes. Context validation, syntax and whitespace checks pass.
+
+The isolated native run reports one pytest `cache_dir` configuration warning
+because its cache provider is disabled; no cases are skipped. Input hashes and
+full source inventories are verified before execution. This meets Step 2's
+scoped atomic-sink test gate, not bounded reset acceptance or G2 acceptance.
+The next approved step is Step 3 publication, caller and reader composition;
+no implementation of that step or downstream installer change is included here.

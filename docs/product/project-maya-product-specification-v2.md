@@ -844,8 +844,10 @@ The user accepted bounded source-level create on 2026-10-05.
 Next is the reset transition within G2 work package 3; consult its owner-scoped
 design and consistency criteria before implementation. Reset remains blocked.
 Reset Step 1's source-informed contract and ordered Steps 1-4 are in
-`docs/architecture/governance_g2_reset_transition.md`, pending explicit review.
-No reset authority, native sink, reader relaxation or schema change is enabled.
+`docs/architecture/governance_g2_reset_transition.md`, approved on 2026-10-06.
+Reset Step 2 is the source-only Patch 32 authority and atomic SQLite sink candidate.
+Publication, reset acknowledgement and reader composition remain Step 3; no
+schema change, agent-dispatch authority or production activation is enabled.
 Work package 3, G2, production activation, wheels and installers remain unchanged.
 
 Before each implementation step, consult the applicable agreed plan and identify

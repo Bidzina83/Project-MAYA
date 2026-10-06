@@ -1,0 +1,293 @@
+diff --git a/source/gateway/session.py b/source/gateway/session.py
+--- a/source/gateway/session.py
++++ b/source/gateway/session.py
+@@ -795,1 +795,19 @@
++    def reset_owned_session_candidate(self, authority):
++        """Explicit source-only atomic reset; no publication or dispatch."""
++        from hermes_cli.middleware import (
++            mandatory_middleware_enabled, validate_mandatory_middleware,
++            MandatoryMiddlewareError,
++        )
++        try:
++            from project_maya.hermes_plugins.session_reset import CandidateNativeSessionReset
++            host = getattr(self, "_maya_reset_coordinator", None)
++            if (not mandatory_middleware_enabled() or type(host) is not CandidateNativeSessionReset
++                    or validate_mandatory_middleware() is not True):
++                raise MandatoryMiddlewareError("session_reset_unqualified")
++            return host.reset(self, authority)
++        except MandatoryMiddlewareError:
++            raise
++        except Exception:
++            raise MandatoryMiddlewareError("session_reset_failed") from None
++
+     def create_owned_session_candidate(self, authority):
+diff --git a/host/src/project_maya/hermes_plugins/session_reset.py b/host/src/project_maya/hermes_plugins/session_reset.py
+new file mode 100644
+--- /dev/null
++++ b/host/src/project_maya/hermes_plugins/session_reset.py
+@@ -0,0 +1,265 @@
++"""Source-only reset authority and atomic sink; publication remains unqualified."""
++from contextlib import contextmanager
++from dataclasses import asdict, dataclass
++import hashlib
++import json
++from threading import RLock, get_ident
++from time import monotonic, time
++from uuid import uuid4
++
++from ..audit import AuditRecord
++from ..governance import ActionRequest, AuthorizationResult
++from .governance import GovernanceBoundaryError, _current_task, _session_write
++from .session_creation import CandidateNativeSessionCreate, projection_bytes, _digest
++from .session_requests import ACKNOWLEDGEMENT
++
++CONTRACT = "project-maya.native-session-reset.v1"
++
++
++@dataclass(frozen=True)
++class ResetDescriptor:
++    instance_id: str
++    database: str
++    principal: str
++    classification: str
++    binding_version: int
++    route_slot: str
++    source_session: str
++    target_session: str
++    expected_route_version: int
++    request_id: str
++    correlation_id: str
++    contract: str = CONTRACT
++    operation: str = "reset"
++
++    @property
++    def digest(self):
++        return "sha256:" + hashlib.sha256(json.dumps(
++            asdict(self), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
++
++
++class ResetAuthority:
++    """One synchronous host-selected reset; never a conversation lease."""
++
++    def __init__(self, host, descriptor):
++        self.host = host
++        self.descriptor = descriptor
++        self._prepared_descriptor = descriptor
++        self.thread = get_ident()
++        self.task = _current_task()
++        self.deadline = monotonic() + host.binding.timeout
++        self.lock = RLock()
++        self.active = True
++        self.attempted = False
++
++    def revoke(self):
++        with self.lock:
++            self.active = False
++
++    def check(self):
++        d, b = self.descriptor, self.host.binding
++        if (self.descriptor is not self._prepared_descriptor or not self.active or monotonic() >= self.deadline
++                or self.host._active is not self or self.host._limits != self.host.limits()
++                or get_ident() != self.thread or _current_task() is not self.task
++                or (self.task is not None and self.task.cancelling())
++                or _session_write.get() is not None
++                or d.contract != CONTRACT or d.operation != "reset"
++                or d.instance_id != b.instance_id or d.database != str(b.database)
++                or d.principal != b.owner.actor_id or d.classification != b.owner.data_classification
++                or d.binding_version != b.binding_version or d.route_slot != b.route_slot
++                or type(d.expected_route_version) is not int or d.expected_route_version < 1
++                or d.source_session == d.target_session):
++            raise GovernanceBoundaryError("governance.reset_context_invalid")
++
++    def authorize(self):
++        self.check()
++        d = self.descriptor
++        for capability, operation, target in (
++                ("session.read", "route_state", d.route_slot),
++                ("session.transition", "reset", d.route_slot),
++                ("session.write", "end", d.source_session),
++                ("session.write", "create", d.target_session)):
++            self.host.authorize(capability, operation, target, d)
++            self.check()
++
++
++class CandidateNativeSessionReset:
++    """Reuses the actual create coordinator's stores and exclusion, not its authority."""
++
++    contract = CONTRACT
++
++    def __init__(self, coordinator, *, acknowledgement):
++        if (acknowledgement != ACKNOWLEDGEMENT or type(coordinator) is not CandidateNativeSessionCreate
++                or getattr(coordinator.store, "_maya_reset_coordinator", None) is not None):
++            raise GovernanceBoundaryError("governance.reset_binding_invalid")
++        self.coordinator = coordinator
++        self.binding = coordinator.binding
++        self.store = coordinator.store
++        self.database = coordinator.database
++        self._limits = self.limits()
++        self._active = None
++        self.store._maya_reset_coordinator = self
++
++    def limits(self):
++        b = self.binding
++        return b.owner, b.instance_id, b.database, b.route_slot, b.binding_version, b.timeout
++
++    def require(self, store):
++        from hermes_cli.middleware import mandatory_middleware_enabled, validate_mandatory_middleware
++        if (store is not self.store or store._db is not self.database
++                or getattr(store, "_maya_reset_coordinator", None) is not self
++                or getattr(store, "_maya_create_coordinator", None) is not self.coordinator
++                or self._limits != self.limits() or _session_write.get() is not None
++                or not mandatory_middleware_enabled() or validate_mandatory_middleware() is not True):
++            raise GovernanceBoundaryError("governance.reset_binding_invalid")
++        self.coordinator._validate_paths()
++
++    def authorize(self, capability, operation, target, descriptor=None):
++        b = self.binding
++        try:
++            result = b.gateway.authorize(ActionRequest(actor_id=b.owner.actor_id,
++                capability=capability, operation=operation, target=target,
++                data_classification=b.owner.data_classification,
++                metadata={"contract": CONTRACT}))
++            allowed = (isinstance(result, AuthorizationResult) and result.allowed
++                       and not result.constraints and not result.redactions)
++        except Exception:
++            raise GovernanceBoundaryError("governance.authorization_unavailable") from None
++        try:
++            b.audit.write(AuditRecord(event_type="authorization.session_reset",
++                decision="allow" if allowed else "deny", reason_code="governance.reset_" + ("allowed" if allowed else "denied"),
++                actor_id=b.owner.actor_id, capability=capability, operation=operation,
++                target="sha256:" + _digest(target.encode()),
++                data_classification=b.owner.data_classification,
++                metadata={"contract": CONTRACT, "qualification": "source_candidate_only",
++                          **({"descriptor_digest": descriptor.digest} if descriptor else {})}))
++        except Exception:
++            raise GovernanceBoundaryError("governance.audit_unavailable") from None
++        if not allowed:
++            raise GovernanceBoundaryError("governance.reset_denied")
++
++    def source(self, conn, in_transaction=False):
++        state = (self.coordinator._state_in_transaction(conn) if in_transaction
++                 else self.coordinator._state(conn))
++        generation, routes, raw = state
++        if (self.coordinator.index.read_bytes() != raw
++                or conn.execute("SELECT 1 FROM maya_session_transitions_v1 WHERE state<>'caller_acknowledged' LIMIT 1").fetchone()):
++            raise GovernanceBoundaryError("governance.transition_recovery_required")
++        route = routes.get(self.binding.route_slot)
++        if route is None:
++            raise GovernanceBoundaryError("governance.reset_source_invalid")
++        row = conn.execute(
++            "SELECT s.id,r.route_version FROM maya_session_routes_v1 r "
++            "JOIN sessions s ON s.id=r.session_id JOIN maya_session_owners_v1 o ON o.session_id=s.id "
++            "JOIN maya_session_transitions_v1 t ON t.correlation_id=r.correlation_id "
++            "WHERE r.route_slot=? AND r.principal=? AND s.ended_at IS NULL AND s.archived=0 "
++            "AND s.source='maya-governed-candidate' AND o.lifecycle_status='active' "
++            "AND t.state='caller_acknowledged' AND t.target_session=s.id "
++            "AND t.result_route_version=r.route_version AND t.principal=r.principal "
++            "AND t.binding_version=o.binding_version AND t.operation='create' "
++            "AND t.expected_route_version=0 AND t.result_route_version=1 "
++            "AND s.parent_session_id IS NULL AND o.parent_session_id IS NULL AND s.user_id=r.principal",
++            (self.binding.route_slot, self.binding.owner.actor_id)).fetchone()
++        if row is None or route != {"session_id": row[0], "version": row[1]}:
++            raise GovernanceBoundaryError("governance.reset_source_invalid")
++        return generation, routes, raw, row[0], row[1]
++
++    @contextmanager
++    def authenticated_reset(self, identity):
++        from hermes_cli.middleware import MandatoryMiddlewareError
++        try:
++            with self._authenticated_reset(identity) as authority:
++                yield authority
++        except (GovernanceBoundaryError, MandatoryMiddlewareError):
++            raise
++        except Exception:
++            raise GovernanceBoundaryError("governance.reset_store_failed") from None
++
++    @contextmanager
++    def _authenticated_reset(self, identity):
++        self.require(self.store)
++        if identity != self.binding.owner or self._active is not None:
++            raise GovernanceBoundaryError("governance.reset_context_invalid")
++        authority = None
++        with self.coordinator._exclusive(), self.store._lock, self.database._lock:
++            try:
++                self.authorize("session.read", "route_state", self.binding.route_slot)
++                _, _, _, source, version = self.source(self.database._conn)
++                b = self.binding
++                descriptor = ResetDescriptor(b.instance_id, str(b.database), b.owner.actor_id,
++                    b.owner.data_classification, b.binding_version, b.route_slot, source,
++                    uuid4().hex, version, uuid4().hex, uuid4().hex)
++                authority = ResetAuthority(self, descriptor)
++                self._active = authority
++                authority.authorize()
++                yield authority
++            finally:
++                if authority is not None:
++                    authority.revoke()
++                self._active = None
++
++    def _commit(self, conn):
++        conn.commit()
++
++    def reset(self, store, authority):
++        self.require(store)
++        if type(authority) is not ResetAuthority or authority.host is not self:
++            raise GovernanceBoundaryError("governance.reset_context_invalid")
++        attempted_commit = False
++        try:
++            with authority.lock:
++                authority.authorize()
++                if authority.attempted:
++                    raise GovernanceBoundaryError("governance.transition_consumed")
++                authority.attempted = True
++                conn = self.database._conn
++                generation, _, old_raw, source, version = self.source(conn)
++                d = authority.descriptor
++                conn.execute("BEGIN IMMEDIATE")
++                try:
++                    current, routes, raw, actual_source, actual_version = self.source(conn, True)
++                    if (current != generation or raw != old_raw or actual_source != d.source_session
++                            or actual_version != d.expected_route_version or source != actual_source or version != actual_version
++                            or conn.execute("SELECT 1 FROM sessions WHERE id=?", (d.target_session,)).fetchone()
++                            or conn.execute("SELECT 1 FROM maya_session_transitions_v1 WHERE correlation_id=?", (d.correlation_id,)).fetchone()):
++                        raise GovernanceBoundaryError("governance.transition_stale")
++                    routes[d.route_slot] = {"session_id": d.target_session, "version": version + 1}
++                    raw = projection_bytes(d.instance_id, d.database, generation + 1, routes)
++                    changed = conn.execute("UPDATE sessions SET ended_at=?,end_reason='session_reset' WHERE id=? AND ended_at IS NULL",
++                                 (time(), source))
++                    if changed.rowcount != 1:
++                        raise GovernanceBoundaryError("governance.transition_stale")
++                    changed = conn.execute("UPDATE maya_session_owners_v1 SET lifecycle_status='ended' WHERE session_id=? AND lifecycle_status='active'", (source,))
++                    if changed.rowcount != 1:
++                        raise GovernanceBoundaryError("governance.transition_stale")
++                    conn.execute("INSERT INTO sessions(id,source,user_id,started_at,parent_session_id) VALUES (?,?,?,?,?)",
++                                 (d.target_session, "maya-governed-candidate", d.principal, time(), source))
++                    conn.execute("INSERT INTO maya_session_owners_v1 VALUES (?,?,?,?,?,?,'active',?)",
++                                 (d.target_session, d.instance_id, d.database, d.principal, d.classification, d.binding_version, source))
++                    changed = conn.execute("UPDATE maya_session_routes_v1 SET session_id=?,route_version=?,correlation_id=? "
++                        "WHERE route_slot=? AND session_id=? AND route_version=? AND principal=?",
++                        (d.target_session, version + 1, d.correlation_id, d.route_slot, source, version, d.principal))
++                    if changed.rowcount != 1:
++                        raise GovernanceBoundaryError("governance.transition_stale")
++                    conn.execute("INSERT INTO maya_session_transitions_v1 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
++                        (d.correlation_id, d.digest, d.principal, d.binding_version, "reset", d.target_session,
++                         version, version + 1, "committed_pending_projection", generation + 1, _digest(raw),
++                         "sha256:" + _digest(d.correlation_id.encode())))
++                    changed = conn.execute("UPDATE maya_session_projection_v1 SET generation=?,projection_hash=? "
++                        "WHERE singleton=1 AND generation=?", (generation + 1, _digest(raw), generation))
++                    if changed.rowcount != 1:
++                        raise GovernanceBoundaryError("governance.transition_stale")
++                    authority.authorize()
++                    attempted_commit = True
++                    self._commit(conn)
++                except BaseException:
++                    conn.rollback()
++                    raise
++                return {"session_id": d.target_session, "source_session": source,
++                        "state": "committed_pending_projection", "dispatch_allowed": False,
++                        "qualification": "source_reset_atomic_only"}
++        except GovernanceBoundaryError:
++            raise
++        except Exception:
++            raise GovernanceBoundaryError("governance.transition_recovery_required" if attempted_commit
++                                          else "governance.reset_store_failed") from None
