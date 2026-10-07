@@ -71,3 +71,8 @@
 /tests/hermes_g2_reset_gate_atomic_native.py text eol=lf
 /tests/test_governance_g2_reset_gate.py text eol=lf
 /docs/architecture/governance-g2-reset-gate.json text eol=lf
+/docs/architecture/governance_g2_reset_failure_matrix.md text eol=lf
+/docs/architecture/governance-g2-reset-crash.json text eol=lf
+/scripts/verify_governance_g2_reset_crash.py text eol=lf
+/tests/hermes_g2_reset_crash_native.py text eol=lf
+/tests/test_governance_g2_reset_crash.py text eol=lf

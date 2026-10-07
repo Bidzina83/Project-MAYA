@@ -4,7 +4,9 @@
 
 2026-10-06: G2 work package 3, reset Step 1 was explicitly approved by the user.
 Step 2's scoped atomic-sink gate passed; the user authorized Step 3 after committing
-the changes and reporting green CI. Step 3's source candidate is pending review.
+the changes and reporting green CI. The user explicitly closed bounded Step 3
+on 2026-10-07 and authorized Step 4. Patch 34 is the frozen combined source for
+Step 4 qualification; see `governance_g2_reset_failure_matrix.md` for progress.
 Bounded source-level create is accepted; ordinary mandatory reset stays disabled.
 This document specializes the existing ownership and consistency designs. It
 does not reorder G0-G7 or authorize frontend composition, production activation,
@@ -126,12 +128,12 @@ this explicitly, including cancellation that outlives the initiating task.
    finalization/allocation/route CAS. Keep ordinary reset and unbound mandatory
    reset unchanged. Gate: actual native allowed/denied and rollback tests;
    reset permission without end/create must have zero effects.
-3. **Publication, caller and reader composition (current, pending review):** qualify operation-bound
+3. **Publication, caller and reader composition (accepted 2026-10-07):** qualify operation-bound
    acknowledgement/quarantine, strict publication and exact lineage selection,
    fresh request scope and actual empty-history new-agent conversation. Gate:
    caller failure cannot dispatch; old transcript preserved; independent model
    denial still stops transport; no old history/cache/approvals transfer.
-4. **Failure matrix and acceptance review:** qualify the final combined source
+4. **Failure matrix and acceptance review (current):** qualify the final combined source
    profile, not just historical overlays. Gate: actual process crash/restart,
    contention/competing resets, busy old request, late executor, revoke/expiry/
    cancellation, unknown commits, stale/replayed/foreign descriptors, failed

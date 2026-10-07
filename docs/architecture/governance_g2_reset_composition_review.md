@@ -180,3 +180,12 @@ G2 or production acceptance decision. The input manifest keeps `pending_review`.
 Full Step 4 crash/race/combined-fault qualification, repeat reset, frontend
 authentication, general tools/workers, maintenance reconciliation and production
 provisioning remain open in their existing order. No installer is rebuilt.
+
+## Acceptance Decision
+
+On 2026-10-07 the user explicitly stated "Step 3 is closed. Move to Step 4."
+Bounded source-level reset Step 3 is accepted with the approved restart
+restriction and documented ordinary-mode exclusions. This decision is not
+inferred from CI or tests. The frozen input manifest retains `pending_review`;
+the acceptance record is this document. Step 4 uses the unchanged Patch 34
+profile, and reset/G2/production qualification remains open.
