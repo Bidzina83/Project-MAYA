@@ -14,7 +14,7 @@ authorized by these tests. Earlier accepted inputs remain frozen.
 | Actual process crash and fresh-host restart | Initial eight-boundary batch passes; remaining combined-fault qualification is still open. |
 | Process contention, competing reset and busy old request | Four bounded native process cases pass; broader worker and combined-fault coverage remains open. |
 | Late executor and cancellation outliving its caller | Three bounded old/new native caller cases pass; general workers and remaining cancellation/fault combinations stay open. |
-| Revoke, expiry, cancellation and stale/replayed/foreign descriptors | Existing scoped evidence; final combined qualification pending. |
+| Revoke, expiry, cancellation and stale/replayed/foreign descriptors | Eighteen combined-candidate descriptor/revocation/expiry cases pass, with the preceding three late-caller cancellation cases. Scope and remaining combined faults are below. |
 | Unknown commits and combined commit/publication/acknowledgement faults | Existing Step 3 counterexample regression; remaining combinations pending. |
 | Separate write/flush/fsync/replace/acknowledgement/audit failures | Pending final matrix. |
 | Unsafe paths and ordinary-mode parity | Existing controls/exclusions; final qualification pending. |
@@ -180,3 +180,42 @@ publication/acknowledgement/audit, path and ordinary-mode parity cases. These
 three cases do not qualify arbitrary/background workers, live providers, connector
 delivery, general tools, production provisioning or thread termination. Bounded
 reset acceptance, G2, wheels, installers and production activation remain open.
+
+## Descriptor and Authority Batch
+
+2026-10-07: all 18 cases in `tests/hermes_g2_reset_descriptors_native.py` pass
+against unchanged frozen Patch 34, using native SessionStore/SQLite and the
+existing host fixtures. The manifest is `governance-g2-reset-descriptors.json`;
+it remains `pending_review`, with `production_qualified=false`.
+
+- Revocation and expiry before atomic consumption preserve the complete SQL dump
+  and original projection, with the original acknowledged create still readable.
+- Revocation and expiry before publication retain the committed pending reset,
+  original projection and blocked routing; no fake rollback or acknowledgement.
+- Revocation and expiry during the pending caller body quarantine the receipt,
+  retain source metadata/history and the empty target, and deny routing.
+- Changed principal, database, instance, route, binding version, source, target
+  and operation descriptors cannot allocate. These exercise prepared-descriptor
+  identity enforcement, not resistance to arbitrary trusted-host code mutation.
+- A genuinely consumed authority cannot replay; an exited authority cannot borrow
+  a fresh preparation; an unrelated thread cannot inherit reset authority.
+- A separate real process completes and acknowledges a reset while the original
+  descriptor remains live. Its subsequent stale attempt cannot allocate or alter
+  SQL/projection state. Durable acknowledgement alone does not replace the
+  exited process's host confirmation, so the original host still denies routing.
+
+No model or tool execution occurs in this batch. Cancellation evidence remains
+the preceding native caller batch, not newly qualified arbitrary worker behavior.
+The native run has no skips and the existing cache-provider configuration warning.
+Its initial harness run rejected an incorrect manifest reference before executing
+tests; the reference was corrected without changing native sources.
+
+All 59 product/provenance regressions pass (47 product and twelve manifest
+checks). Context validation, syntax checks, whitespace checks and post-run
+frozen native/host inventory checks pass. Earlier evidence inputs are unchanged.
+
+Next in the agreed Step 4 sequence is combined unknown-commit and publication/
+acknowledgement fault qualification, then separate storage/audit failures,
+unsafe paths, ordinary-mode parity and explicit acceptance review. These cases
+do not close reset Step 4, G2 or production qualification. No runtime patch,
+production gate, wheel or installer changed.

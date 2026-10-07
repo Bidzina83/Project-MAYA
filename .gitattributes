@@ -84,3 +84,7 @@
 /scripts/verify_governance_g2_reset_late_executor.py text eol=lf
 /tests/hermes_g2_reset_late_executor_native.py text eol=lf
 /tests/test_governance_g2_reset_late_executor.py text eol=lf
+/docs/architecture/governance-g2-reset-descriptors.json text eol=lf
+/scripts/verify_governance_g2_reset_descriptors.py text eol=lf
+/tests/hermes_g2_reset_descriptors_native.py text eol=lf
+/tests/test_governance_g2_reset_descriptors.py text eol=lf

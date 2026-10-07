@@ -869,10 +869,10 @@ The user explicitly closed bounded reset Step 3 on 2026-10-07 and authorized
 Step 4's failure matrix on the frozen Patch 34 profile. Consult
 `docs/architecture/governance_g2_reset_failure_matrix.md` before continuing;
 its process-crash/restart, four contention and three old/new native caller
-cancellation cases do not complete the remaining descriptor, expiry, combined-fault
-and path matrix. The late old executor cannot borrow a fresh reset-session lease
+cancellation cases and eighteen descriptor/revocation/expiry cases do not complete
+the remaining combined-fault and path matrix. The late old executor cannot borrow a fresh reset-session lease
 in that fixed synthetic-transport profile; general workers remain unqualified.
-Next is final descriptor/revocation/expiry qualification on unchanged Patch 34,
+Next is combined commit/publication/acknowledgement/audit fault qualification on unchanged Patch 34,
 not a new runtime overlay or transition. Reset, G2 and production remain unaccepted.
 Work package 3, G2, production activation, wheels and installers remain unchanged.
 
