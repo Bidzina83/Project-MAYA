@@ -224,6 +224,18 @@ no implementation of that step or downstream installer change is included here.
 
 ## Step 3 Source Composition
 
+The 2026-10-07 criterion review is recorded in
+`governance_g2_reset_composition_review.md`. Step 3 remains pending acceptance;
+approval isolation and uncertain acknowledgement/failed quarantine require
+explicit resolution before advancement. No implementation sequence is changed
+by that review.
+
+The user subsequently approved the bounded host-confirmation restriction and
+exact approval cleanup on 2026-10-07. Patch 34 is a separate source candidate;
+its evidence and acceptance review belong to the linked review document. Reset
+restart routing now denies without fresh host confirmation; durable acknowledged
+rows alone are insufficient and conversation authority cannot reconcile them.
+
 Patch 33 reconstructs four declared paths over the frozen Patch 32 candidate:
 the native SessionStore entry, staged reset authority, existing published reader,
 and a staged `reset_publication` module. `governance-g2-reset-composition.json`

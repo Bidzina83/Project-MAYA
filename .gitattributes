@@ -64,3 +64,10 @@
 /tests/hermes_g2_reset_composition_native.py text eol=lf
 /tests/hermes_g2_reset_step2_regression_native.py text eol=lf
 /tests/test_governance_g2_reset_composition.py text eol=lf
+/docs/architecture/governance_g2_reset_composition_review.md text eol=lf
+/tests/hermes_g2_reset_gate_diagnostic_native.py text eol=lf
+/scripts/prepare_governance_g2_reset_gate.py text eol=lf
+/tests/hermes_g2_reset_gate_native.py text eol=lf
+/tests/hermes_g2_reset_gate_atomic_native.py text eol=lf
+/tests/test_governance_g2_reset_gate.py text eol=lf
+/docs/architecture/governance-g2-reset-gate.json text eol=lf

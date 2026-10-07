@@ -1,0 +1,21 @@
+{
+  "acceptance": "pending_review",
+  "effective_sha256": {
+    "host/src/project_maya/hermes_plugins/reset_publication.py": "ac001c2c587eef1219285661ec63b3221a238703426944631a811db6464bf6a3",
+    "host/src/project_maya/hermes_plugins/session_readers.py": "c37f396946860c325abeb2fc37859fc410dcd4cd3dcd2e9e789cff7256170f72",
+    "source/gateway/run.py": "7570210f92ab9e40faa2e532b22ab9ddcd7ba4c902c8877be8b9a431694b5773",
+    "source/tools/approval.py": "b2eb26297863479f5ab79f466260300b1f07fbbad01bd97d612f2a178bf73c2a",
+    "source/tools/slash_confirm.py": "435ae2a6b1812ac478664df969fec5dbc281a6e8f92242b952ff3606cc8cf080"
+  },
+  "expected_atomic_tests": 22,
+  "expected_gate_tests": 34,
+  "parent_sha256": "9ee94dc1fa6e7984eb1057858160444bf2cd3a47065e1877b506caa29daf6ebf",
+  "patch_sha256": "0e025ebbcc1dfd4164ef58ed933fa5e83094fdee6d58b21df31e7fffa7e7c8bb",
+  "production_qualified": false,
+  "qualification": "source_reset_gate_only",
+  "schema_version": 1,
+  "test_sha256": {
+    "tests/hermes_g2_reset_gate_atomic_native.py": "94ea2da0a37946ab07965a0db731bc71c2561fb4537dea35a45046d920f2cef2",
+    "tests/hermes_g2_reset_gate_native.py": "5454f1df1db9b611b2686ae5779db74446c3c15374fc644502762b60cb95221f"
+  }
+}

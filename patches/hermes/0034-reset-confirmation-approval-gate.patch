@@ -1,0 +1,269 @@
+diff --git a/source/gateway/run.py b/source/gateway/run.py
+--- a/source/gateway/run.py
++++ b/source/gateway/run.py
+@@ -13859,6 +13859,42 @@
+         # _persist_active_agents).
+         self._persist_active_agents()
+         return True
++
++    def _clear_owned_reset_security_candidate(self, preparation) -> None:
++        """Exact source-candidate reset boundary; ordinary cleanup is not a gate."""
++        from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++        from project_maya.hermes_plugins.reset_publication import CandidateResetPreparation
++        from tools import approval, slash_confirm
++        if (not mandatory_middleware_enabled() or type(preparation) is not CandidateResetPreparation
++                or getattr(self, "_maya_reset_preparation", None) is not preparation
++                or preparation._runner is not self or self._session_db is not preparation.reset.database
++                or preparation._phase != "acknowledging" or preparation._current is None
++                or getattr(preparation.store, "_maya_reset_preparation", None) is not preparation):
++            raise MandatoryMiddlewareError("governance.reset_security_invalid")
++        preparation._current.check()
++        key = preparation.reset.binding.route_slot
++        try:
++            # Native APIs cancel blocked waits and remove route-scoped allowances.
++            approval.clear_session(key)
++            approval.unregister_gateway_notify(key)
++            slash_confirm.clear(key)
++            for name in ("_pending_approvals", "_update_prompt_pending", "_pending_skills_reload_notes"):
++                state = getattr(self, name, None)
++                if state is not None:
++                    if type(state) is not dict:
++                        raise ValueError("invalid security state")
++                    state.pop(key, None)
++            with approval._lock, slash_confirm._lock:
++                if (key in approval._session_approved or key in approval._session_yolo
++                        or key in approval._pending or key in approval._gateway_queues
++                        or key in approval._gateway_notify_cbs
++                        or key in slash_confirm._pending):
++                    raise ValueError("uncleared security state")
++            preparation._current.check()
++        except MandatoryMiddlewareError:
++            raise
++        except Exception:
++            raise MandatoryMiddlewareError("governance.reset_security_failed") from None
+ 
+     def _clear_session_boundary_security_state(self, session_key: str) -> None:
+         """Clear per-session control state that must not survive a boundary switch."""
+diff --git a/source/tools/approval.py b/source/tools/approval.py
+--- a/source/tools/approval.py
++++ b/source/tools/approval.py
+@@ -24,6 +24,12 @@
+ from utils import env_var_enabled, is_truthy_value
+ 
+ logger = logging.getLogger(__name__)
++
++
++def _require_ordinary_approval():
++    from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++    if mandatory_middleware_enabled():
++        raise MandatoryMiddlewareError("governance.approval_path_unqualified")
+ 
+ # Freeze YOLO mode at module import time. Reading os.environ on every call
+ # would allow any skill running inside the process to set this variable and
+@@ -737,6 +743,7 @@
+ 
+     Returns the number of approvals resolved (0 means nothing was pending).
+     """
++    _require_ordinary_approval()
+     with _lock:
+         queue = _gateway_queues.get(session_key)
+         if not queue:
+@@ -763,18 +770,21 @@
+ 
+ def submit_pending(session_key: str, approval: dict):
+     """Store a pending approval request for a session."""
++    _require_ordinary_approval()
+     with _lock:
+         _pending[session_key] = approval
+ 
+ 
+ def approve_session(session_key: str, pattern_key: str):
+     """Approve a pattern for this session only."""
++    _require_ordinary_approval()
+     with _lock:
+         _session_approved.setdefault(session_key, set()).add(pattern_key)
+ 
+ 
+ def enable_session_yolo(session_key: str) -> None:
+     """Enable YOLO bypass for a single session key."""
++    _require_ordinary_approval()
+     if not session_key:
+         return
+     with _lock:
+@@ -834,6 +844,7 @@
+ 
+ def approve_permanent(pattern_key: str):
+     """Add a pattern to the permanent allowlist."""
++    _require_ordinary_approval()
+     with _lock:
+         _permanent_approved.add(pattern_key)
+ 
+@@ -1364,6 +1375,7 @@
+     notify callback raised.  Persistence of an approved choice and building
+     the final tool-facing result dict remain the caller's responsibility.
+     """
++    _require_ordinary_approval()
+     command = approval_data.get("command", "")
+     description = approval_data.get("description", "")
+     primary_key = approval_data.get("pattern_key", "")
+diff --git a/source/tools/slash_confirm.py b/source/tools/slash_confirm.py
+--- a/source/tools/slash_confirm.py
++++ b/source/tools/slash_confirm.py
+@@ -31,6 +31,12 @@
+ 
+ logger = logging.getLogger(__name__)
+ 
++
++def _require_ordinary_confirmation():
++    from hermes_cli.middleware import mandatory_middleware_enabled, MandatoryMiddlewareError
++    if mandatory_middleware_enabled():
++        raise MandatoryMiddlewareError("governance.confirmation_path_unqualified")
++
+ # Pending confirmations keyed by gateway session_key.  Each entry:
+ #   {
+ #       "confirm_id": str,
+@@ -59,6 +65,7 @@
+     Overwrites any prior pending confirm for the same ``session_key`` — the
+     user invoking a new confirmable command supersedes the stale one.
+     """
++    _require_ordinary_confirmation()
+     with _lock:
+         _pending[session_key] = {
+             "confirm_id": confirm_id,
+@@ -112,6 +119,7 @@
+     Safe to call from an asyncio callback (button click) or from the
+     gateway's message intercept path.
+     """
++    _require_ordinary_confirmation()
+     with _lock:
+         entry = _pending.get(session_key)
+         if not entry:
+diff --git a/host/src/project_maya/hermes_plugins/reset_publication.py b/host/src/project_maya/hermes_plugins/reset_publication.py
+--- a/host/src/project_maya/hermes_plugins/reset_publication.py
++++ b/host/src/project_maya/hermes_plugins/reset_publication.py
+@@ -1,6 +1,7 @@
+ """Source-only reset publication and normal-exit acknowledgement."""
+ from contextlib import contextmanager
+ from threading import Lock, get_ident
++from os import getpid
+ 
+ from ..audit import AuditRecord
+ from types import MappingProxyType
+@@ -48,9 +49,16 @@
+ class CandidateResetPreparation:
+     contract = CONTRACT
+ 
+-    def __init__(self, reset, *, acknowledgement):
++    def __init__(self, reset, *, acknowledgement, gateway_runner):
++        from gateway.run import GatewayRunner
++        from .session_handoff import CandidateConversationExecutorFactory
+         if (type(reset) is not CandidateNativeSessionReset or acknowledgement != ACKNOWLEDGEMENT
+-                or getattr(reset.store, "_maya_reset_preparation", None) is not None):
++                or getattr(reset.store, "_maya_reset_preparation", None) is not None
++                or type(gateway_runner) is not GatewayRunner
++                or gateway_runner._session_db is not reset.database
++                or type(getattr(gateway_runner, "_maya_conversation_executor_factory", None)) is not CandidateConversationExecutorFactory
++                or gateway_runner._maya_conversation_executor_factory._runner is not gateway_runner
++                or getattr(gateway_runner, "_maya_reset_preparation", None) is not None):
+             raise GovernanceBoundaryError("governance.reset_preparation_invalid")
+         self.reset = reset
+         self.store = reset.store
+@@ -58,7 +66,34 @@
+         self._lock = Lock()
+         self._current = None
+         self._phase = "idle"
++        self._runner = gateway_runner
++        self._pid = getpid()
++        self._confirmed = None
+         self.store._maya_reset_preparation = self
++        gateway_runner._maya_reset_preparation = self
++
++    def _confirmation(self, conn, target):
++        row = conn.execute("SELECT correlation_id,descriptor_digest,principal,binding_version,"
++            "generation,projection_hash FROM maya_session_transitions_v1 "
++            "WHERE target_session=? AND operation='reset' AND state='caller_acknowledged'", (target,)).fetchall()
++        if len(row) != 1:
++            raise GovernanceBoundaryError("governance.reset_confirmation_required")
++        return (target, self.reset.binding.route_slot, self.reset.binding.database,
++                self.reset.binding.instance_id, *tuple(row[0]))
++
++    def require_confirmation(self, reader, target):
++        # Selection may occur inside G1 append authority; it grants no reset mutation.
++        if (self.reset._limits != self.reset.limits() or self.store._db is not self.reset.database
++                or getattr(self.store, "_maya_reset_coordinator", None) is not self.reset
++                or self._pid != getpid() or self._phase != "idle" or self._current is not None
++                or getattr(self.store, "_maya_reset_preparation", None) is not self
++                or getattr(self._runner, "_maya_reset_preparation", None) is not self
++                or self._runner._session_db is not self.reset.database
++                or reader is not getattr(self.store, "_maya_published_reader", None)
++                or reader.coordinator is not self.coordinator
++                or self._confirmed is None
++                or self._confirmed != self._confirmation(self.reset.database._conn, target)):
++            raise GovernanceBoundaryError("governance.reset_confirmation_required")
+ 
+     def _bound(self, authority, expected, *, projection=True):
+         self.reset.require(self.store)
+@@ -139,6 +174,8 @@
+         with self.coordinator._exclusive(), self.store._lock, self.reset.database._lock, authority.lock:
+             authority.check()
+             self._bound(authority, "published_pending_caller")
++            self._runner._clear_owned_reset_security_candidate(self)
++            authority.check()
+             self.reset.authorize("session.transition", "acknowledge_reset",
+                                  authority.descriptor.route_slot, authority.descriptor)
+             authority.check()
+@@ -146,6 +183,7 @@
+             authority.check()
+             self._change(authority, "published_pending_caller", "caller_acknowledged")
+             self._bound(authority, "caller_acknowledged")
++            return self._confirmation(self.reset.database._conn, authority.descriptor.target_session)
+ 
+     def _quarantine(self, authority):
+         # Cleanup reduces this exact failed pending/uncertain receipt only.
+@@ -184,6 +222,7 @@
+                 or _session_write.get() is not None or not self._lock.acquire(blocking=False)):
+             raise GovernanceBoundaryError("governance.reset_preparation_invalid")
+         try:
++            self._confirmed = None
+             with self.reset.authenticated_reset(identity) as authority:
+                 store.reset_owned_session_candidate(authority)
+                 self._publish(authority)
+@@ -194,7 +233,7 @@
+                         "source_session": authority.descriptor.source_session,
+                         "state": "published_pending_caller", "dispatch_allowed": False})
+                     self._phase = "acknowledging"
+-                    self._acknowledge(authority)
++                    confirmation = self._acknowledge(authority)
+                 except BaseException:
+                     self._phase = "failed"
+                     try:
+@@ -202,7 +241,12 @@
+                     except BaseException:
+                         pass  # Original failure wins; unresolved pending remains unqualified.
+                     raise
++        except BaseException:
++            self._confirmed = None
++            raise
+         finally:
+             self._current = None
+             self._phase = "idle"
+             self._lock.release()
++        # Issue eligibility only after authority and preparation cleanup also completed.
++        self._confirmed = confirmation
+diff --git a/host/src/project_maya/hermes_plugins/session_readers.py b/host/src/project_maya/hermes_plugins/session_readers.py
+--- a/host/src/project_maya/hermes_plugins/session_readers.py
++++ b/host/src/project_maya/hermes_plugins/session_readers.py
+@@ -103,8 +103,12 @@
+                 or row[3] != "caller_acknowledged" or row[4] != identity.actor_id or row[5] != self.binding.binding_version):
+             raise GovernanceBoundaryError("governance.session_route_unavailable")
+         if row[7] == "reset":
+-            from .reset_publication import validate_reset_lineage
++            from .reset_publication import CandidateResetPreparation, validate_reset_lineage
+             validate_reset_lineage(conn, self.binding, route["session_id"])
++            preparation = getattr(self.store, "_maya_reset_preparation", None)
++            if type(preparation) is not CandidateResetPreparation:
++                raise GovernanceBoundaryError("governance.reset_confirmation_required")
++            preparation.require_confirmation(self, route["session_id"])
+         elif row[7] != "create" or row[6] is not None or route["version"] != 1:
+             raise GovernanceBoundaryError("governance.session_route_unavailable")
+         stamp = datetime.fromtimestamp(row[0])

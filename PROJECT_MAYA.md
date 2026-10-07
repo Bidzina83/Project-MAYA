@@ -734,6 +734,17 @@ denial use real native callers and synthetic SDK transport. This initial
 create-to-reset profile is pending review; repeat reset, tool-approval transfer,
 uncertain acknowledgement/quarantine combinations and Step 4's crash/race matrix
 remain unqualified. No schema, production activation, wheel or installer change.
+On 2026-10-07 the user approved the bounded reset gate restriction in
+`docs/architecture/governance_g2_reset_composition_review.md`. Source-only Patch 34
+adds exact native approval cleanup before acknowledgement, denies unqualified
+mandatory approval mutation/resolution, and requires host-confirmed completion
+in addition to durable reset lineage. Missing confirmation, reported uncertainty
+and a new host/restart deny reset routing; no automatic reconciliation is granted.
+The final 56-case native suite passes; the two identified review blockers are
+closed for this bounded source profile. Step 3 acceptance remains a separate
+decision recorded in that document. Do not infer
+Step 4, G2, full-fork or production acceptance from this restriction. Earlier
+frozen profiles, runtime pin, wheel and installer remain unchanged.
 Work package 3, G2, production activation, wheels and installers remain unchanged.
 
 Before each implementation step, consult the applicable agreed plan and identify
