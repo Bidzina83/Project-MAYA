@@ -12,7 +12,7 @@ authorized by these tests. Earlier accepted inputs remain frozen.
 | Step 4 gate item | Progress |
 | --- | --- |
 | Actual process crash and fresh-host restart | Initial eight-boundary batch passes; remaining combined-fault qualification is still open. |
-| Process contention, competing reset and busy old request | Pending. |
+| Process contention, competing reset and busy old request | Four bounded native process cases pass; broader worker and combined-fault coverage remains open. |
 | Late executor and cancellation outliving its caller | Pending. |
 | Revoke, expiry, cancellation and stale/replayed/foreign descriptors | Existing scoped evidence; final combined qualification pending. |
 | Unknown commits and combined commit/publication/acknowledgement faults | Existing Step 3 counterexample regression; remaining combinations pending. |
@@ -76,7 +76,43 @@ new manifest checks). Context, syntax and whitespace checks pass. The
 machine-readable evidence is `governance-g2-reset-crash.json`; it preserves
 `pending_review` and does not change Patch 34 or its acceptance record.
 
-Next in the existing Step 4 sequence: process contention, competing resets and
-busy old requests. Late executors, cancellation, remaining combined failures,
-unsafe paths and final parity/acceptance still require qualification. No next
-transition, installer or production activation is authorized by this batch.
+The next batch in the existing Step 4 sequence was process contention, competing
+resets and busy old requests; its evidence is recorded below. No next transition,
+installer or production activation is authorized by the crash/restart batch.
+
+## Contention Batch Evidence
+
+2026-10-07: four cases in `tests/hermes_g2_reset_contention_native.py` pass on
+the unchanged Patch 34 profile. Five separate worker processes reopen explicitly
+provisioned native fixtures. File-based readiness/release barriers synchronize
+actual processes; they do not simulate storage contention with timing assertions.
+Every worker verifies effective source/host and fixture hashes before native use;
+the supervisor also verifies the frozen source ancestry.
+
+| Contention boundary | Observed outcome |
+| --- | --- |
+| Old authenticated G1 request holds projection exclusion | Another process's reset denies without changing the complete database/projection or old cache/lease. The lease revokes on normal exit; the host can then reset and acknowledge. |
+| Native reset paused immediately before real commit, with its transaction and projection lock held | Competing preparation denies; an independent SQLite reader still sees the complete original committed state. The original native transaction then commits and preparation acknowledges. |
+| Two independently prepared descriptors for the same acknowledged create source | Exactly one atomic reset commits; the other denies. One target, receipt, route increment and generation increment exist. Publication stays pending and the original projection remains unchanged; routing is denied. |
+| First reset's caller body remains pending | Competing reset denies even though no SQLite transaction spans the caller body. Database/projection remain unchanged by the contender; the original preparation can subsequently acknowledge. |
+
+Checks include integrity/foreign keys, full retained source metadata except the
+authorized end fields, all original message rows, empty target transcript, same
+owner/parent lineage, receipt/version/generation, and actual host-confirmed reader
+selection after successful acknowledgement. No agents, model requests or tools
+execute. Started workers are reaped; native fixture resources are closed. The
+unchanged cache-provider configuration warning remains; there are no skips.
+
+All 53 required product/provenance regression cases pass (47 product, three new
+contention-manifest checks and three unchanged crash-manifest checks). The final
+contention input contract is `governance-g2-reset-contention.json`, retaining
+`pending_review` and `production_qualified=false`. Context, syntax, whitespace and
+post-run source/host inventory checks pass. Earlier patches, manifests and tests
+remain frozen; no new runtime overlay is introduced.
+
+This is one same-owner, initial create-to-reset profile, not general worker,
+fairness/stress, repeat-reset, cancellation, maintenance or power-loss
+qualification. Next in the existing Step 4 sequence: late executors and
+cancellation outliving their caller. Remaining descriptor/fault/path/parity
+combinations and the explicit acceptance review remain open. Step 4, bounded
+reset, G2 and production are not accepted by this batch.

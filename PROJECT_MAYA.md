@@ -748,8 +748,10 @@ frozen profiles, runtime pin, wheel and installer remain unchanged.
 The user explicitly closed bounded reset Step 3 on 2026-10-07 and authorized
 Step 4's failure matrix on the frozen Patch 34 profile. Consult
 `docs/architecture/governance_g2_reset_failure_matrix.md` before continuing;
-its process-crash/restart evidence does not complete the remaining crash/race,
-late-executor, fault and path matrix. Reset, G2 and production remain unaccepted.
+its process-crash/restart and four bounded contention cases do not complete the
+remaining late-executor, cancellation, combined-fault and path matrix. Next is
+late executor/cancellation qualification on unchanged Patch 34, not a new runtime
+overlay or transition. Reset, G2 and production remain unaccepted.
 Work package 3, G2, production activation, wheels and installers remain unchanged.
 
 Before each implementation step, consult the applicable agreed plan and identify

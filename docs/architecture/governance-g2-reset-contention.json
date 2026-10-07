@@ -1,0 +1,21 @@
+{
+  "acceptance": "pending_review",
+  "expected_native_tests": 4,
+  "fixture_sha256": {
+    "tests/hermes_g2_caller_native.py": "51dda90f933964552f6ac3d64661808e34d6230b30a22595ad653a736d5b4c52",
+    "tests/hermes_g2_create_loop_native.py": "1d50476b322fb0fbafdb4426cf640fcb8071f1ec0fc5524264f3e0bf9668e060",
+    "tests/hermes_g2_create_native.py": "3d204471966de19bf160c73c2b6e1728c2a07196b798d56e91480b33fce81b10",
+    "tests/hermes_g2_prompt_cache_native.py": "23002cc800e03d408782f73269c76a34ca02d52e5168f1f210573ab9c9afb0ea",
+    "tests/hermes_g2_recognition_native.py": "511ff4a32c084bb940641febed5e975e565bd6d052c82065084af2032cb52a99",
+    "tests/hermes_g2_reset_composition_native.py": "25caa78d404da6466bb7e11c3db7e3e44257a4346e2ab1d92404818654c8db07",
+    "tests/hermes_g2_reset_gate_native.py": "5454f1df1db9b611b2686ae5779db74446c3c15374fc644502762b60cb95221f",
+    "tests/hermes_g2_restart_loop_native.py": "e71a64c25aa5b3d9c0cdd541598e58acf6112d55ac7eba090360924e77bfd7a2"
+  },
+  "host_inventory_sha256": "f8240f5b8ca22d21576b7b009fda006fb5057c80fd9cc5983561b5b5ba60407d",
+  "native_inventory_sha256": "4e3d428b8958fad8cdcff7b88529ce42c78d9e197ddb46b3faa6e6f74632cb7c",
+  "parent_inputs_sha256": "1ba45e34da4ef7f79799e5a4041db0a6aade1f356ca54750be829c7c50a1d21a",
+  "production_qualified": false,
+  "qualification": "source_reset_process_contention_only",
+  "schema_version": 1,
+  "test_sha256": "86764dbabb3838e5f0c69ef90a93ea2a466f95a7b331827f9b2a70ef9024be6f"
+}

@@ -76,3 +76,7 @@
 /scripts/verify_governance_g2_reset_crash.py text eol=lf
 /tests/hermes_g2_reset_crash_native.py text eol=lf
 /tests/test_governance_g2_reset_crash.py text eol=lf
+/docs/architecture/governance-g2-reset-contention.json text eol=lf
+/scripts/verify_governance_g2_reset_contention.py text eol=lf
+/tests/hermes_g2_reset_contention_native.py text eol=lf
+/tests/test_governance_g2_reset_contention.py text eol=lf
