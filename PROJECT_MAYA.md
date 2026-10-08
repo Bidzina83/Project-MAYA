@@ -755,9 +755,20 @@ acknowledgement/audit cases pass on 2026-10-08, including four fresh-process pro
 uncertain outcomes stay blocked even when quarantine is unavailable. The late old
 executor cannot borrow a fresh reset-session lease
 in that fixed synthetic-transport profile; general workers remain unqualified.
-Next is separate write/flush/fsync/replace and remaining audit-fault qualification
-on unchanged Patch 34, followed by unsafe paths and ordinary-mode parity,
-not a new runtime overlay or transition. Reset, G2 and production remain unaccepted.
+Separate storage/audit qualification on 2026-10-08 passes eleven of twelve cases.
+The short-write regression fails: the Maya-owned publication helper ignores the
+write count and replaces the projection before verifying complete bytes. Routing
+denies, but the old-or-new complete-file requirement fails. Preserve this failing
+evidence and frozen Patch 34. On 2026-10-08 the user approved a separately
+versioned host-only publisher correction: Patch 35 checks the reported write count
+and completed temporary-file bytes before strict replacement. Requalify affected
+create/reset paths on that candidate before resuming unsafe paths and ordinary-mode
+parity. Hermes source, runtime pin, wheels and installers remain unchanged.
+All 200 bounded native requalification cases pass on the corrected candidate:
+167 create/reset plus 33 process/descriptor/late-caller cases. The original failing
+regression and earlier inputs remain unchanged. Unsafe paths and ordinary-mode
+parity are next; see `docs/architecture/governance_g2_publisher_correction.md`.
+Reset Step 4, G2 and production remain unaccepted.
 Work package 3, G2, production activation, wheels and installers remain unchanged.
 
 Before each implementation step, consult the applicable agreed plan and identify

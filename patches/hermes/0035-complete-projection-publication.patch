@@ -1,0 +1,19 @@
+diff --git a/host/src/project_maya/hermes_plugins/session_creation.py b/host/src/project_maya/hermes_plugins/session_creation.py
+--- a/host/src/project_maya/hermes_plugins/session_creation.py
++++ b/host/src/project_maya/hermes_plugins/session_creation.py
+@@ -132,10 +132,14 @@
+         try:
+             fd, name = tempfile.mkstemp(prefix=".maya-projection-", dir=self.directory)
+             with os.fdopen(fd, "wb") as stream:
+-                stream.write(raw)
++                written = stream.write(raw)
++                if type(written) is not int or written != len(raw):
++                    raise GovernanceBoundaryError("governance.transition_projection_incomplete")
+                 stream.flush()
+                 os.fsync(stream.fileno())
+             self._validate_paths()
++            if _safe_path(Path(name)).read_bytes() != raw:
++                raise GovernanceBoundaryError("governance.transition_projection_invalid")
+             os.replace(name, self.index)  # Strict replacement: never copy on EXDEV/EBUSY.
+             name = None
+             if self.index.read_bytes() != raw:

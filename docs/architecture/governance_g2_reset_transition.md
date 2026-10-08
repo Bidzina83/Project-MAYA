@@ -6,7 +6,11 @@
 Step 2's scoped atomic-sink gate passed; the user authorized Step 3 after committing
 the changes and reporting green CI. The user explicitly closed bounded Step 3
 on 2026-10-07 and authorized Step 4. Patch 34 is the frozen combined source for
-Step 4 qualification; see `governance_g2_reset_failure_matrix.md` for progress.
+the original Step 4 qualification; see `governance_g2_reset_failure_matrix.md`
+for progress. On 2026-10-08 the user approved the host-only Patch 35 publisher
+correction and affected create/reset requalification before remaining path/parity
+checks; see `governance_g2_publisher_correction.md`. Frozen Patch 34 evidence is
+preserved, and native Hermes source is unchanged by this correction.
 Bounded source-level create is accepted; ordinary mandatory reset stays disabled.
 This document specializes the existing ownership and consistency designs. It
 does not reorder G0-G7 or authorize frontend composition, production activation,

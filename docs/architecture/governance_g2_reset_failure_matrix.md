@@ -3,9 +3,11 @@
 ## Current Scope
 
 The user accepted bounded reset Step 3 and authorized Step 4 on 2026-10-07.
-Use the unchanged, inventory-verified Patch 34 source. No new runtime patch,
-installer, production activation, schema provisioning or maintenance identity is
-authorized by these tests. Earlier accepted inputs remain frozen.
+The original batches use the unchanged, inventory-verified Patch 34 source.
+On 2026-10-08 the user approved the bounded host-only Patch 35 publisher correction
+and affected create/reset requalification before remaining path/parity checks.
+Hermes source remains unchanged; no installer, production activation, schema
+provisioning or maintenance identity is authorized. Earlier inputs remain frozen.
 
 ## Agreed Matrix
 
@@ -16,7 +18,7 @@ authorized by these tests. Earlier accepted inputs remain frozen.
 | Late executor and cancellation outliving its caller | Three bounded old/new native caller cases pass; general workers and remaining cancellation/fault combinations stay open. |
 | Revoke, expiry, cancellation and stale/replayed/foreign descriptors | Eighteen combined-candidate descriptor/revocation/expiry cases pass, with the preceding three late-caller cancellation cases. Scope and remaining combined faults are below. |
 | Unknown commits and combined commit/publication/acknowledgement faults | Thirteen bounded combined-failure cases pass, including four fresh-process probes; separate lower-level storage and audit failures remain next. |
-| Separate write/flush/fsync/replace/acknowledgement/audit failures | Pending final matrix. |
+| Separate write/flush/fsync/replace/acknowledgement/audit failures | Frozen Patch 34 passes eleven of twelve; short write corrupts the projection. Approved host-only Patch 35 passes all twelve unchanged storage cases and 200 total affected requalification cases; separate evidence is below. |
 | Unsafe paths and ordinary-mode parity | Existing controls/exclusions; final qualification pending. |
 | Bounded reset acceptance | Pending full criterion review and user decision. |
 
@@ -267,3 +269,79 @@ review. No live provider, arbitrary worker, storage power-loss, durable audit
 reconciliation, production provisioning or maintenance recovery is qualified.
 Reset Step 4, G2 and production remain unaccepted; runtime pin, wheels and
 installers are unchanged.
+
+## Storage Qualification Blocker
+
+2026-10-08: `tests/hermes_g2_reset_storage_native.py` runs all twelve cases against
+unchanged frozen Patch 34: eleven pass and one fails. The evidence input is
+`governance-g2-reset-storage.json`, with `pending_review` and
+`production_qualified=false`. The failing regression is preserved, not skipped,
+xfail-marked or weakened. This is not a passed qualification batch.
+
+All 65 product/provenance regressions pass (47 product and eighteen manifest
+checks); that does not override the failing native gate. Context, syntax,
+whitespace and post-run frozen inventory checks pass. The native run has no
+skips and the existing disabled-cache-provider configuration warning.
+
+Passing cases inject temporary-file creation failure, partial write plus error,
+flush failure, fsync failure, EXDEV/EBUSY replacement failures, actual authorization
+audit-writer failure at route-read/source-end/acknowledgement, and native SQLite
+authorizer denial of acknowledgement or quarantine receipt updates. Precommit
+audit failure preserves the complete original SQL/projection; postcommit failures
+retain one reset, source history and an empty target with blocked routing. Temporary
+files are removed; failed strict replacement does not use a copy fallback.
+
+### Reported Short Write
+
+The real publication helper in staged
+`src/project_maya/hermes_plugins/session_creation.py`, `_publish`, calls
+`stream.write(raw)` without checking its returned byte count. It flushes/fsyncs
+and replaces the old index before checking installed bytes. The injected stream
+writes half the bytes to the real temporary file and reports that short count.
+The candidate replaces the index with those incomplete bytes and only then raises
+the typed failure. The actual caller does not become ready, but the original
+complete projection is lost. An independent read-only SQLite inspection confirms
+two sessions, route version two and `committed_pending_projection`; the published
+projection is truncated. This violates the consistency protocol's old-or-new
+complete-file requirement, not its deny-on-uncertain-readiness rule.
+
+This is fault-injection evidence at the writer contract, not a claim that normal
+blocking buffered file writes routinely return short counts, or evidence of a live
+customer incident. The defect is in the shared Maya-owned candidate helper; no
+change to the upstream Hermes runtime or installed wheel is inferred.
+
+### Approved Correction Order
+
+1. Review a bounded separately versioned correction over frozen Patch 34: require
+   a complete reported write and verify completed temporary-file bytes before
+   strict replacement. Preserve locks, lifecycle records, typed errors, temporary
+   cleanup, no-copy behavior and post-replacement verification. No automatic repair.
+2. Requalify this unchanged failing regression and the affected reset/create
+   publication and failure profiles on the new candidate. Preserve accepted
+   earlier manifests and source bytes; do not retrofit their evidence hashes.
+3. Only then resume the existing unsafe-path and ordinary-mode parity matrix,
+   followed by explicit bounded reset acceptance review.
+
+The user approved this exact order on 2026-10-08. Patch 35 only changes the shared
+Maya-owned publication helper; Hermes execution source remains identical to Patch
+34. See `governance_g2_publisher_correction.md` for the separately versioned
+candidate and requalification results. No new milestone, transition, schema,
+maintenance identity, production gate, runtime pin, wheel or installer is
+authorized. Reset Step 4 remains open.
+
+### Corrected Candidate Requalification
+
+2026-10-08: all 167 create/reset requalification and all 33 earlier Step 4 replay
+cases pass on the separately versioned Patch 35 host-only correction. This
+includes the unchanged short-write regression, six new complete-byte/count
+checks across create and reset, crash/restart, process contention, descriptor
+authority and actual native late-caller cancellation. There are no skips; each
+native run retains the existing disabled-cache-provider configuration warning.
+All 71 product/provenance regression tests, context, syntax and whitespace checks
+pass. Source/host inventories and frozen parent ancestry are verified separately.
+See `governance_g2_publisher_correction.md` and its two hashed input contracts.
+
+The corrected profile does not change Hermes source or installed artifacts.
+Unsafe paths and ordinary-mode parity are the next agreed Step 4 checks;
+explicit bounded reset acceptance review follows them. The correction and replay
+do not accept Step 4, G2, full-fork governance or production support.
