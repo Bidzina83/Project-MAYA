@@ -870,9 +870,13 @@ Step 4's failure matrix on the frozen Patch 34 profile. Consult
 `docs/architecture/governance_g2_reset_failure_matrix.md` before continuing;
 its process-crash/restart, four contention and three old/new native caller
 cancellation cases and eighteen descriptor/revocation/expiry cases do not complete
-the remaining combined-fault and path matrix. The late old executor cannot borrow a fresh reset-session lease
+the remaining storage-fault and path matrix. Thirteen combined commit/publication/
+acknowledgement/audit cases pass on 2026-10-08, including four fresh-process probes;
+uncertain outcomes stay blocked even when quarantine is unavailable. The late old
+executor cannot borrow a fresh reset-session lease
 in that fixed synthetic-transport profile; general workers remain unqualified.
-Next is combined commit/publication/acknowledgement/audit fault qualification on unchanged Patch 34,
+Next is separate write/flush/fsync/replace and remaining audit-fault qualification
+on unchanged Patch 34, followed by unsafe paths and ordinary-mode parity,
 not a new runtime overlay or transition. Reset, G2 and production remain unaccepted.
 Work package 3, G2, production activation, wheels and installers remain unchanged.
 

@@ -15,7 +15,7 @@ authorized by these tests. Earlier accepted inputs remain frozen.
 | Process contention, competing reset and busy old request | Four bounded native process cases pass; broader worker and combined-fault coverage remains open. |
 | Late executor and cancellation outliving its caller | Three bounded old/new native caller cases pass; general workers and remaining cancellation/fault combinations stay open. |
 | Revoke, expiry, cancellation and stale/replayed/foreign descriptors | Eighteen combined-candidate descriptor/revocation/expiry cases pass, with the preceding three late-caller cancellation cases. Scope and remaining combined faults are below. |
-| Unknown commits and combined commit/publication/acknowledgement faults | Existing Step 3 counterexample regression; remaining combinations pending. |
+| Unknown commits and combined commit/publication/acknowledgement faults | Thirteen bounded combined-failure cases pass, including four fresh-process probes; separate lower-level storage and audit failures remain next. |
 | Separate write/flush/fsync/replace/acknowledgement/audit failures | Pending final matrix. |
 | Unsafe paths and ordinary-mode parity | Existing controls/exclusions; final qualification pending. |
 | Bounded reset acceptance | Pending full criterion review and user decision. |
@@ -219,3 +219,51 @@ acknowledgement fault qualification, then separate storage/audit failures,
 unsafe paths, ordinary-mode parity and explicit acceptance review. These cases
 do not close reset Step 4, G2 or production qualification. No runtime patch,
 production gate, wheel or installer changed.
+
+## Combined Outcome Fault Batch
+
+2026-10-08: all 13 cases in `tests/hermes_g2_reset_combined_faults_native.py`
+pass on unchanged frozen Patch 34. Four independent restart processes also deny
+selection without changing SQL/projection state. The input manifest is
+`governance-g2-reset-combined-faults.json`, still `pending_review` and
+`production_qualified=false`.
+
+| Injected failure | Observed durable reset receipt and readiness |
+| --- | --- |
+| Native commit succeeds but reports failure | `committed_pending_projection`, original projection, no publication or retry. |
+| Strict publication helper succeeds but reports failure | `committed_pending_projection`, complete new projection, blocked. |
+| Publication-state commit succeeds but reports failure | `projection_verified` or `published_pending_caller`, no host confirmation. |
+| Acknowledgement commit fails before/after commit, normal cleanup | `caller_quarantined`, retained committed lifecycle state. |
+| Same acknowledgement failures plus unavailable quarantine helper | `published_pending_caller` before commit, or `caller_acknowledged` after commit; both blocked without host confirmation. |
+| Same acknowledgement failures plus failed cleanup audit writer | `caller_quarantined`; reducing readiness is still permitted, without claiming a durable cleanup audit. |
+| Required publication audit fails | `projection_verified`, no pending-caller advancement. |
+| Required acknowledgement audit and cleanup audit both fail | `caller_quarantined`, never ready. |
+| Caller raises and quarantine helper also fails | Original caller exception preserved; `published_pending_caller`, blocked. |
+
+The tests use real native SessionStore/SQLite. They inspect retained source
+metadata/transcript, empty target, owner lineage, single receipt, route/generation
+increments, integrity, no transaction leak, missing confirmation, empty cache
+and zero agent/model dispatch. Both reader entries and a new reset preparation
+deny; complete SQL/projection snapshots remain unchanged during those attempts.
+Fresh processes check the unknown native commit, uncertain publication, and both
+before/after acknowledgement cases with unavailable quarantine. No automatic
+reconciliation, source reopening or blind retry is granted.
+
+Audit faults are injected into the actual audit sink writer, allowing the native
+typed-error handling to execute. Unavailable quarantine is a helper-boundary
+failure, not qualification of every cleanup SQL or storage failure. The first
+diagnostic version injected raw errors at the audit wrapper and produced three
+incorrect quarantine expectations; the final exact-hashed suite corrects that
+injection and passes all cases. No native candidate bytes were changed.
+
+All 62 product/provenance regressions pass (47 product and fifteen manifest
+checks). The final native run has no skips and the existing cache-provider
+configuration warning. Source ancestry, frozen inventories, context, syntax and
+whitespace checks pass; earlier evidence inputs remain unchanged.
+
+Next is the existing separate write/flush/fsync/replace and remaining audit-fault
+matrix, followed by unsafe paths, ordinary-mode parity and explicit acceptance
+review. No live provider, arbitrary worker, storage power-loss, durable audit
+reconciliation, production provisioning or maintenance recovery is qualified.
+Reset Step 4, G2 and production remain unaccepted; runtime pin, wheels and
+installers are unchanged.
