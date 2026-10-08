@@ -19,7 +19,7 @@ provisioning or maintenance identity is authorized. Earlier inputs remain frozen
 | Revoke, expiry, cancellation and stale/replayed/foreign descriptors | Eighteen combined-candidate descriptor/revocation/expiry cases pass, with the preceding three late-caller cancellation cases. Scope and remaining combined faults are below. |
 | Unknown commits and combined commit/publication/acknowledgement faults | Thirteen bounded combined-failure cases pass, including four fresh-process probes; separate lower-level storage and audit failures remain next. |
 | Separate write/flush/fsync/replace/acknowledgement/audit failures | Frozen Patch 34 passes eleven of twelve; short write corrupts the projection. Approved host-only Patch 35 passes all twelve unchanged storage cases and 200 total affected requalification cases; separate evidence is below. |
-| Unsafe paths and ordinary-mode parity | Existing controls/exclusions; final qualification pending. |
+| Unsafe paths and ordinary-mode parity | Twenty-six corrected-profile path cases pass. All 331 ordinary outcomes match pinned unpatched Hermes, including nine unchanged Windows shell-path failures; exclusions and criterion review are documented separately. |
 | Bounded reset acceptance | Pending full criterion review and user decision. |
 
 This is the existing Step 4 gate, not a new milestone or reordered dependency.
@@ -345,3 +345,20 @@ The corrected profile does not change Hermes source or installed artifacts.
 Unsafe paths and ordinary-mode parity are the next agreed Step 4 checks;
 explicit bounded reset acceptance review follows them. The correction and replay
 do not accept Step 4, G2, full-fork governance or production support.
+
+### Final Paths And Ordinary Parity
+
+2026-10-08: the remaining bounded path/parity item is qualified on unchanged
+Patch 35. All 26 path cases pass, including five actual Windows directory-junction
+boundaries and separately labelled attribute probes. The final ordinary runner
+executes 331 cases on each disposable corrected/unpatched source: identical 322
+passes and nine known Windows shell-path failures, no skips/errors, and unchanged
+source inventories. Native tests are the original pinned bytes. Existing shell
+failures are retained, not presented as healthy platform behavior.
+
+All 77 product/provenance regression cases pass. Evidence, reproducible commands
+and limits are in `governance_g2_reset_paths_parity.md`; the immutable input is
+`governance-g2-reset-paths.json`. No runtime patch or installed artifact changes.
+The criterion reconciliation and bounded acceptance recommendation are in
+`governance_g2_reset_acceptance_review.md`. The next action is the user's explicit
+bounded reset acceptance decision, not another transition or installer rebuild.

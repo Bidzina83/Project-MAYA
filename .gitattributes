@@ -113,3 +113,11 @@
 /tests/hermes_g2_publisher_contention_native.py text eol=lf
 /tests/hermes_g2_publisher_descriptors_native.py text eol=lf
 /tests/hermes_g2_publisher_late_native.py text eol=lf
+/docs/architecture/governance-g2-reset-paths.json text eol=lf
+/scripts/verify_governance_g2_reset_paths.py text eol=lf
+/scripts/qualify_governance_g2_reset_parity.py text eol=lf
+/tests/hermes_g2_reset_paths_native.py text eol=lf
+/tests/test_governance_g2_reset_paths.py text eol=lf
+/docs/architecture/governance_g2_publisher_correction.md text eol=lf
+/docs/architecture/governance_g2_reset_paths_parity.md text eol=lf
+/docs/architecture/governance_g2_reset_acceptance_review.md text eol=lf

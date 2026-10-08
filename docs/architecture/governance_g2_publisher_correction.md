@@ -55,9 +55,11 @@ All 71 product/provenance regressions pass (68 in the combined product/manifest
 run plus three replay-manifest checks). Context, syntax and whitespace checks
 pass. Both contracts retain `pending_review` and `production_qualified=false`;
 no acceptance is inferred from portable manifest tests or source diagnostics.
-The next authorized item after successful affected requalification is the
-remaining unsafe-path and ordinary-mode parity matrix, then explicit bounded
-reset acceptance review.
+The next authorized item after affected requalification was the remaining
+unsafe-path and ordinary-mode parity matrix. Its final evidence and the bounded
+reset acceptance recommendation are now in `governance_g2_reset_paths_parity.md`
+and `governance_g2_reset_acceptance_review.md`. Explicit user acceptance is still
+pending; the correction does not itself close reset Step 4.
 
 Live providers/connectors, general tools/workers, repeat reset, maintenance
 reconciliation, production provisioning, power-loss durability and G3 durable

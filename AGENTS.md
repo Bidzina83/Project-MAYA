@@ -330,6 +330,14 @@ All 200 bounded native requalification cases pass on the corrected candidate:
 regression and earlier inputs remain unchanged. Unsafe paths and ordinary-mode
 parity are next; see `docs/architecture/governance_g2_publisher_correction.md`.
 Reset Step 4, G2 and production remain unaccepted.
+On 2026-10-08 all 26 remaining bounded reset path cases pass on unchanged Patch 35.
+The final 331-case ordinary comparison matches pinned unpatched Hermes: 322 pass
+and nine known Windows shell-path assertions fail on each profile, with no skips.
+These failures are retained and remain relevant before shell/platform qualification.
+The criterion review recommends bounded initial-reset acceptance with exclusions;
+explicit user acceptance is still required before another transition. Consult
+`docs/architecture/governance_g2_reset_paths_parity.md` and
+`docs/architecture/governance_g2_reset_acceptance_review.md`.
 Work package 3, G2, production activation, wheels and installers remain unchanged.
 Full-loop qualification, provider-error redaction,
 automatic-route attribution, direct SDK paths, and worker coverage remain open;
