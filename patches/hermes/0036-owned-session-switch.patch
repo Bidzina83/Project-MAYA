@@ -1,0 +1,305 @@
+diff --git a/source/gateway/session.py b/source/gateway/session.py
+--- a/source/gateway/session.py
++++ b/source/gateway/session.py
+@@ -816,6 +816,24 @@
+             except Exception:
+                 raise MandatoryMiddlewareError("reset_preparation_failed") from None
+ 
++    def switch_owned_session_candidate(self, authority):
++        """Explicit source-only atomic switch; no publication or dispatch."""
++        from hermes_cli.middleware import (
++            mandatory_middleware_enabled, validate_mandatory_middleware,
++            MandatoryMiddlewareError,
++        )
++        try:
++            from project_maya.hermes_plugins.session_switch import CandidateNativeSessionSwitch
++            host = getattr(self, "_maya_switch_coordinator", None)
++            if (not mandatory_middleware_enabled() or type(host) is not CandidateNativeSessionSwitch
++                    or validate_mandatory_middleware() is not True):
++                raise MandatoryMiddlewareError("session_switch_unqualified")
++            return host.switch(self, authority)
++        except MandatoryMiddlewareError:
++            raise
++        except Exception:
++            raise MandatoryMiddlewareError("session_switch_failed") from None
++
+     def reset_owned_session_candidate(self, authority):
+         """Explicit source-only atomic reset; no publication or dispatch."""
+         from hermes_cli.middleware import (
+diff --git a/host/src/project_maya/hermes_plugins/session_switch.py b/host/src/project_maya/hermes_plugins/session_switch.py
+new file mode 100644
+--- /dev/null
++++ b/host/src/project_maya/hermes_plugins/session_switch.py
+@@ -0,0 +1,272 @@
++"""Source-only initial switch authority and atomic native sink; no publication."""
++from contextlib import contextmanager
++from dataclasses import asdict, dataclass
++import hashlib
++import json
++from threading import RLock, get_ident
++from time import monotonic, time
++from uuid import uuid4
++
++from ..audit import AuditRecord
++from ..governance import ActionRequest, AuthorizationResult
++from .governance import GovernanceBoundaryError, _current_task, _session_write
++from .reset_publication import CandidateResetPreparation, validate_reset_lineage
++from .session_creation import projection_bytes, _digest
++from .session_requests import ACKNOWLEDGEMENT
++
++CONTRACT = "project-maya.native-session-switch.v1"
++
++
++@dataclass(frozen=True)
++class SwitchDescriptor:
++    instance_id: str
++    database: str
++    principal: str
++    classification: str
++    binding_version: int
++    target_binding_version: int
++    route_slot: str
++    source_session: str
++    target_session: str
++    expected_route_version: int
++    prior_reset_correlation: str
++    request_id: str
++    correlation_id: str
++    contract: str = CONTRACT
++    operation: str = "switch"
++
++    @property
++    def digest(self):
++        return "sha256:" + hashlib.sha256(json.dumps(
++            asdict(self), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
++
++
++class SwitchAuthority:
++    """One host-selected synchronous transition, never a conversation lease."""
++
++    def __init__(self, host, descriptor):
++        self.host = host
++        self.descriptor = descriptor
++        self._prepared_descriptor = descriptor
++        self.thread = get_ident()
++        self.task = _current_task()
++        self.deadline = monotonic() + host.binding.timeout
++        self.lock = RLock()
++        self.active = True
++        self.attempted = False
++
++    def revoke(self):
++        with self.lock:
++            self.active = False
++
++    def check(self):
++        d, b = self.descriptor, self.host.binding
++        if (d is not self._prepared_descriptor or not self.active or monotonic() >= self.deadline
++                or self.host._active is not self or self.host._limits != self.host.limits()
++                or get_ident() != self.thread or _current_task() is not self.task
++                or (self.task is not None and self.task.cancelling())
++                or _session_write.get() is not None
++                or d.contract != CONTRACT or d.operation != "switch"
++                or d.instance_id != b.instance_id or d.database != str(b.database)
++                or d.principal != b.owner.actor_id or d.classification != b.owner.data_classification
++                or d.binding_version != b.binding_version or d.target_binding_version != b.binding_version
++                or d.route_slot != b.route_slot or type(d.expected_route_version) is not int
++                or d.expected_route_version != 2 or d.source_session == d.target_session):
++            raise GovernanceBoundaryError("governance.switch_context_invalid")
++
++    def authorize(self):
++        self.check()
++        d = self.descriptor
++        for capability, operation, target in (
++                ("session.read", "route_state", d.route_slot),
++                ("session.read", "transition_state", d.source_session),
++                ("session.read", "transition_state", d.target_session),
++                ("session.transition", "switch", d.route_slot),
++                ("session.write", "end", d.source_session),
++                ("session.write", "reopen", d.target_session)):
++            self.host.authorize(capability, operation, target, d)
++            self.check()
++
++
++class CandidateNativeSessionSwitch:
++    """Initial reset-child to retained-parent switch using existing native stores."""
++
++    contract = CONTRACT
++
++    def __init__(self, preparation, *, acknowledgement):
++        if (acknowledgement != ACKNOWLEDGEMENT or type(preparation) is not CandidateResetPreparation
++                or getattr(preparation.store, "_maya_switch_coordinator", None) is not None
++                or not callable(getattr(preparation.store, "switch_owned_session_candidate", None))):
++            raise GovernanceBoundaryError("governance.switch_binding_invalid")
++        self.preparation = preparation
++        self.reset = preparation.reset
++        self.coordinator = preparation.coordinator
++        self.binding = self.coordinator.binding
++        self.store = preparation.store
++        self.database = self.coordinator.database
++        self._limits = self.limits()
++        self._active = None
++        self.store._maya_switch_coordinator = self
++
++    def limits(self):
++        b = self.binding
++        return b.owner, b.instance_id, b.database, b.route_slot, b.binding_version, b.timeout
++
++    def require(self, store):
++        from hermes_cli.middleware import mandatory_middleware_enabled, validate_mandatory_middleware
++        if (store is not self.store or store._db is not self.database
++                or getattr(store, "_maya_switch_coordinator", None) is not self
++                or getattr(store, "_maya_create_coordinator", None) is not self.coordinator
++                or getattr(store, "_maya_reset_preparation", None) is not self.preparation
++                or self.preparation.reset is not self.reset or self.reset.coordinator is not self.coordinator
++                or self._limits != self.limits() or _session_write.get() is not None
++                or not mandatory_middleware_enabled() or validate_mandatory_middleware() is not True):
++            raise GovernanceBoundaryError("governance.switch_binding_invalid")
++        self.reset.require(store)
++
++    def authorize(self, capability, operation, target, descriptor=None):
++        b = self.binding
++        try:
++            result = b.gateway.authorize(ActionRequest(actor_id=b.owner.actor_id,
++                capability=capability, operation=operation, target=target,
++                data_classification=b.owner.data_classification, metadata={"contract": CONTRACT}))
++            allowed = (isinstance(result, AuthorizationResult) and result.allowed
++                       and not result.constraints and not result.redactions)
++        except Exception:
++            raise GovernanceBoundaryError("governance.authorization_unavailable") from None
++        try:
++            b.audit.write(AuditRecord(event_type="authorization.session_switch",
++                decision="allow" if allowed else "deny", reason_code="governance.switch_" + ("allowed" if allowed else "denied"),
++                actor_id=b.owner.actor_id, capability=capability, operation=operation,
++                target="sha256:" + _digest(target.encode()), data_classification=b.owner.data_classification,
++                metadata={"contract": CONTRACT, "qualification": "source_candidate_only",
++                          **({"descriptor_digest": descriptor.digest} if descriptor else {})}))
++        except Exception:
++            raise GovernanceBoundaryError("governance.audit_unavailable") from None
++        if not allowed:
++            raise GovernanceBoundaryError("governance.switch_denied")
++
++    def source(self, conn, in_transaction=False):
++        self.require(self.store)
++        generation, routes, raw = (self.coordinator._state_in_transaction(conn) if in_transaction
++                                  else self.coordinator._state(conn))
++        if (self.coordinator.index.read_bytes() != raw
++                or conn.execute("SELECT 1 FROM maya_session_transitions_v1 WHERE state<>'caller_acknowledged' LIMIT 1").fetchone()):
++            raise GovernanceBoundaryError("governance.transition_recovery_required")
++        route = routes.get(self.binding.route_slot)
++        if route is None or route["version"] != 2:
++            raise GovernanceBoundaryError("governance.switch_source_invalid")
++        source = route["session_id"]
++        self.authorize("session.read", "transition_state", source)
++        parent = conn.execute("SELECT parent_session_id FROM sessions WHERE id=?", (source,)).fetchone()
++        if parent is None or not parent[0]:
++            raise GovernanceBoundaryError("governance.switch_source_invalid")
++        self.authorize("session.read", "transition_state", parent[0])
++        target = validate_reset_lineage(conn, self.binding, source)
++        reader = getattr(self.store, "_maya_published_reader", None)
++        self.preparation.require_confirmation(reader, source)
++        row = conn.execute("SELECT correlation_id FROM maya_session_routes_v1 WHERE route_slot=? AND principal=?",
++                           (self.binding.route_slot, self.binding.owner.actor_id)).fetchone()
++        if row is None or target != parent[0]:
++            raise GovernanceBoundaryError("governance.switch_source_invalid")
++        return generation, routes, raw, source, target, row[0]
++
++    @contextmanager
++    def authenticated_switch(self, identity, target_session):
++        from hermes_cli.middleware import MandatoryMiddlewareError
++        entered = False
++        authority = None
++        try:
++            self.require(self.store)
++            if identity != self.binding.owner or self._active is not None:
++                raise GovernanceBoundaryError("governance.switch_context_invalid")
++            with self.coordinator._exclusive(), self.store._lock, self.database._lock:
++                if self._active is not None:
++                    raise GovernanceBoundaryError("governance.switch_context_invalid")
++                self.authorize("session.read", "route_state", self.binding.route_slot)
++                _, _, _, source, target, correlation = self.source(self.database._conn)
++                if target_session != target:
++                    raise GovernanceBoundaryError("governance.switch_target_invalid")
++                b = self.binding
++                descriptor = SwitchDescriptor(b.instance_id, str(b.database), b.owner.actor_id,
++                    b.owner.data_classification, b.binding_version, b.binding_version, b.route_slot,
++                    source, target, 2, correlation, uuid4().hex, uuid4().hex)
++                authority = SwitchAuthority(self, descriptor)
++                self._active = authority
++                authority.authorize()
++            entered = True
++            yield authority
++        except (GovernanceBoundaryError, MandatoryMiddlewareError):
++            raise
++        except Exception:
++            if entered:
++                raise
++            raise GovernanceBoundaryError("governance.switch_store_failed") from None
++        finally:
++            if authority is not None:
++                authority.revoke()
++                if self._active is authority:
++                    self._active = None
++
++    def _commit(self, conn):
++        conn.commit()
++
++    def switch(self, store, authority):
++        self.require(store)
++        if type(authority) is not SwitchAuthority or authority.host is not self:
++            raise GovernanceBoundaryError("governance.switch_context_invalid")
++        attempted_commit = False
++        try:
++            with self.coordinator._exclusive(), store._lock, self.database._lock, authority.lock:
++                authority.authorize()
++                if authority.attempted:
++                    raise GovernanceBoundaryError("governance.transition_consumed")
++                authority.attempted = True
++                conn = self.database._conn
++                generation, _, old_raw, source, target, correlation = self.source(conn)
++                d = authority.descriptor
++                conn.execute("BEGIN IMMEDIATE")
++                try:
++                    current, routes, raw, actual_source, actual_target, actual_correlation = self.source(conn, True)
++                    if (current != generation or raw != old_raw
++                            or (source, target, correlation) != (actual_source, actual_target, actual_correlation)
++                            or (source, target, correlation) != (d.source_session, d.target_session, d.prior_reset_correlation)
++                            or conn.execute("SELECT 1 FROM maya_session_routes_v1 WHERE session_id=?", (target,)).fetchone()
++                            or conn.execute("SELECT 1 FROM maya_session_transitions_v1 WHERE correlation_id=?", (d.correlation_id,)).fetchone()):
++                        raise GovernanceBoundaryError("governance.transition_stale")
++                    routes[d.route_slot] = {"session_id": target, "version": 3}
++                    raw = projection_bytes(d.instance_id, d.database, generation + 1, routes)
++                    statements = (
++                        ("UPDATE sessions SET ended_at=?,end_reason='session_switch' WHERE id=? AND ended_at IS NULL", (time(), source)),
++                        ("UPDATE sessions SET ended_at=NULL,end_reason=NULL WHERE id=? AND ended_at IS NOT NULL AND end_reason='session_reset'", (target,)),
++                        ("UPDATE maya_session_owners_v1 SET lifecycle_status='ended' WHERE session_id=? AND lifecycle_status='active'", (source,)),
++                        ("UPDATE maya_session_owners_v1 SET lifecycle_status='active' WHERE session_id=? AND lifecycle_status='ended'", (target,)),
++                        ("UPDATE maya_session_routes_v1 SET session_id=?,route_version=3,correlation_id=? WHERE route_slot=? AND session_id=? AND route_version=2 AND principal=? AND correlation_id=?",
++                         (target, d.correlation_id, d.route_slot, source, d.principal, correlation)),
++                    )
++                    for sql, args in statements:
++                        if conn.execute(sql, args).rowcount != 1:
++                            raise GovernanceBoundaryError("governance.transition_stale")
++                    conn.execute("INSERT INTO maya_session_transitions_v1 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
++                        (d.correlation_id, d.digest, d.principal, d.binding_version, "switch", target,
++                         2, 3, "committed_pending_projection", generation + 1, _digest(raw),
++                         "sha256:" + _digest(d.correlation_id.encode())))
++                    if conn.execute("UPDATE maya_session_projection_v1 SET generation=?,projection_hash=? WHERE singleton=1 AND generation=?",
++                                    (generation + 1, _digest(raw), generation)).rowcount != 1:
++                        raise GovernanceBoundaryError("governance.transition_stale")
++                    authority.authorize()
++                    self.require(store)
++                    authority.check()
++                    attempted_commit = True
++                    self._commit(conn)
++                except BaseException:
++                    conn.rollback()
++                    raise
++                return {"session_id": target, "source_session": source,
++                        "state": "committed_pending_projection", "dispatch_allowed": False,
++                        "qualification": "source_switch_atomic_only"}
++        except GovernanceBoundaryError:
++            raise
++        except Exception:
++            raise GovernanceBoundaryError("governance.transition_recovery_required" if attempted_commit
++                                          else "governance.switch_store_failed") from None
