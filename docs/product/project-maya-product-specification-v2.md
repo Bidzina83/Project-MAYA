@@ -899,6 +899,12 @@ closed for that profile only; repeat reset remains denied. Consult
 `docs/architecture/governance_g2_reset_paths_parity.md` and
 `docs/architecture/governance_g2_reset_acceptance_review.md`.
 Work package 3, G2, production activation, wheels and installers remain unchanged.
+G2 work package 3 switch Step 1 is now proposed in
+`docs/architecture/governance_g2_switch_transition.md`: one same-owner switch
+from the acknowledged initial-reset child back to its retained parent. Native
+switch remains denied; current versus historical receipt validation and separate
+end/reopen authority require explicit contract review before Step 2. No repeat
+reset, general switch, frontend composition or installer change is authorized.
 
 Before each implementation step, consult the applicable agreed plan and identify
 its current step and acceptance criteria. If inspection requires a different
