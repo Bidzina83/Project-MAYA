@@ -1,6 +1,7 @@
 # G2 Reset Acceptance Review
 
-Review date: 2026-10-08. Decision: pending explicit user acceptance.
+Review date: 2026-10-08. Decision: explicitly accepted by the user on 2026-10-08,
+bounded source-level initial reset only, with all stated exclusions.
 
 ## Scope
 
@@ -48,9 +49,17 @@ shell/tool and product platform qualification. Synthetic transport/native source
 tests do not qualify installed artifacts or claim Windows desktop support.
 
 The bounded criterion evidence is complete on the unchanged corrected profile.
-Recommendation: accept bounded source-level initial reset with the stated
-exclusions. No new runtime defect was identified by the final path/parity batch.
-This is a recommendation, not an acceptance decision or a full-fork qualification.
-Step 4 is not closed merely because CI is green. Explicit user acceptance is
-still required before another transition; work package 3, G2 and production
-remain unaccepted. No installed artifact or capability marker is changed.
+The user explicitly approved acceptance after reviewing the exclusions and their
+coverage in the remaining plan. Bounded reset Step 4 is closed on the unchanged
+Patch 35 profile; reset Steps 1-4 are complete for one initial same-owner reset.
+No new runtime defect was identified by the final path/parity batch. Frozen
+evidence, including historical pending labels and the failed Patch 34 regression,
+is preserved. This decision is not full-fork or installed-product qualification.
+Work package 3, G2 and production remain unaccepted. No installed artifact,
+runtime pin or capability marker is changed.
+
+The remaining work package 3 transitions are switch and rotation, implemented
+and qualified individually before work package 4 frontend composition. Their
+specific contracts and ordered acceptance criteria must be reviewed before
+coding. This acceptance does not authorize a repeat-reset extension, maintenance
+adoption of reset state or a change to the G0-G7 sequence.

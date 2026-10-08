@@ -11,7 +11,10 @@ for progress. On 2026-10-08 the user approved the host-only Patch 35 publisher
 correction and affected create/reset requalification before remaining path/parity
 checks; see `governance_g2_publisher_correction.md`. Frozen Patch 34 evidence is
 preserved, and native Hermes source is unchanged by this correction.
-Bounded source-level create is accepted; ordinary mandatory reset stays disabled.
+On 2026-10-08 the user accepted bounded initial-reset Step 4 with all exclusions
+in `governance_g2_reset_acceptance_review.md`. Reset Steps 1-4 are closed on the
+unchanged Patch 35 profile. Bounded source-level create and initial reset are
+accepted; ordinary mandatory reset and repeat reset stay disabled.
 This document specializes the existing ownership and consistency designs. It
 does not reorder G0-G7 or authorize frontend composition, production activation,
 runtime pin, wheel or installer changes.
@@ -137,7 +140,7 @@ this explicitly, including cancellation that outlives the initiating task.
    fresh request scope and actual empty-history new-agent conversation. Gate:
    caller failure cannot dispatch; old transcript preserved; independent model
    denial still stops transport; no old history/cache/approvals transfer.
-4. **Failure matrix and acceptance review (current):** qualify the final combined source
+4. **Failure matrix and acceptance review (accepted 2026-10-08):** qualify the final combined source
    profile, not just historical overlays. Gate: actual process crash/restart,
    contention/competing resets, busy old request, late executor, revoke/expiry/
    cancellation, unknown commits, stale/replayed/foreign descriptors, failed

@@ -396,6 +396,16 @@ dependencies and exact native test harness are established.
 
 ## Approval And Next Action
 
+Current decision, 2026-10-08: the user explicitly accepted bounded initial-reset
+Step 4 on unchanged Patch 35 with every exclusion in
+`governance_g2_reset_acceptance_review.md`. Create and initial reset are accepted
+source-level transitions, not completion of work package 3 or G2. The remaining
+work package 3 transitions are switch and rotation, each requiring its own
+reviewed contract and ordered native qualification before frontend composition
+in work package 4. Repeat reset remains denied; no scope extension, production
+activation, runtime-pin change, wheel or installer rebuild is authorized.
+The chronological progress notes below retain earlier evidence and decisions.
+
 G0, the pre-G1 security checkpoint and bounded source-level G1 are accepted.
 The G1 decision and immutable evidence references are in the lifecycle runbook.
 G2 work package 1's owner-scoped transition design and effective writer inventory

@@ -893,8 +893,9 @@ On 2026-10-08 all 26 remaining bounded reset path cases pass on unchanged Patch 
 The final 331-case ordinary comparison matches pinned unpatched Hermes: 322 pass
 and nine known Windows shell-path assertions fail on each profile, with no skips.
 These failures are retained and remain relevant before shell/platform qualification.
-The criterion review recommends bounded initial-reset acceptance with exclusions;
-explicit user acceptance is still required before another transition. Consult
+On 2026-10-08 the user explicitly accepted bounded initial-reset Step 4 with all
+stated exclusions on the unchanged Patch 35 source profile. Reset Steps 1-4 are
+closed for that profile only; repeat reset remains denied. Consult
 `docs/architecture/governance_g2_reset_paths_parity.md` and
 `docs/architecture/governance_g2_reset_acceptance_review.md`.
 Work package 3, G2, production activation, wheels and installers remain unchanged.
