@@ -13,7 +13,7 @@ PATCH = ROOT / "patches/hermes/0036-owned-session-switch.patch"
 PARENT_STAGE = ROOT / ".codex-build/governance-g2-publisher-20261008-a"
 PATHS = {"source/gateway/session.py", "host/src/project_maya/hermes_plugins/session_switch.py"}
 TEST = "tests/hermes_g2_switch_native.py"
-EXPECTED = 41
+EXPECTED = 43
 
 
 def contract():
@@ -39,9 +39,8 @@ def contract():
     return data
 
 
-def verify_stage(stage):
+def verify_worker_stage(stage):
     data = contract()
-    verify_parent(PARENT_STAGE)
     if json.loads((stage / "g2-switch-manifest.json").read_text()) != data:
         raise ValueError("g2.switch_manifest_invalid")
     for tree in ("source", "host"):
@@ -54,6 +53,11 @@ def verify_stage(stage):
     return stage / "source", stage / "host/src"
 
 
+def verify_stage(stage):
+    verify_parent(PARENT_STAGE)
+    return verify_worker_stage(stage)
+
+
 def prepare(output):
     data = contract()
     verify_parent(PARENT_STAGE)
@@ -64,7 +68,7 @@ def prepare(output):
     git(output, "apply", "--no-index", "--whitespace=error", str(PATCH))
     (output / "g2-switch-manifest.json").write_text(
         json.dumps(data, sort_keys=True, indent=2) + "\n", encoding="utf-8")
-    verify_stage(output)
+    verify_worker_stage(output)
 
 
 if __name__ == "__main__":

@@ -30,7 +30,7 @@ diff --git a/host/src/project_maya/hermes_plugins/session_switch.py b/host/src/p
 new file mode 100644
 --- /dev/null
 +++ b/host/src/project_maya/hermes_plugins/session_switch.py
-@@ -0,0 +1,272 @@
+@@ -0,0 +1,280 @@
 +"""Source-only initial switch authority and atomic native sink; no publication."""
 +from contextlib import contextmanager
 +from dataclasses import asdict, dataclass
@@ -280,16 +280,24 @@ new file mode 100644
 +                    for sql, args in statements:
 +                        if conn.execute(sql, args).rowcount != 1:
 +                            raise GovernanceBoundaryError("governance.transition_stale")
-+                    conn.execute("INSERT INTO maya_session_transitions_v1 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
++                    inserted = conn.execute("INSERT INTO maya_session_transitions_v1 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
 +                        (d.correlation_id, d.digest, d.principal, d.binding_version, "switch", target,
 +                         2, 3, "committed_pending_projection", generation + 1, _digest(raw),
 +                         "sha256:" + _digest(d.correlation_id.encode())))
++                    if inserted.rowcount != 1:
++                        raise GovernanceBoundaryError("governance.transition_stale")
 +                    if conn.execute("UPDATE maya_session_projection_v1 SET generation=?,projection_hash=? WHERE singleton=1 AND generation=?",
 +                                    (generation + 1, _digest(raw), generation)).rowcount != 1:
 +                        raise GovernanceBoundaryError("governance.transition_stale")
 +                    authority.authorize()
 +                    self.require(store)
 +                    authority.check()
++                    final_generation, final_routes, final_raw = self.coordinator._state_in_transaction(conn)
++                    if (final_generation != generation + 1 or final_raw != raw
++                            or final_routes.get(d.route_slot) != {"session_id": target, "version": 3}
++                            or conn.execute("SELECT end_reason FROM sessions WHERE id=? AND ended_at IS NOT NULL", (source,)).fetchone()[0] != "session_switch"
++                            or conn.execute("SELECT id FROM sessions WHERE id=? AND ended_at IS NULL AND end_reason IS NULL", (target,)).fetchone() is None):
++                        raise GovernanceBoundaryError("governance.transition_stale")
 +                    attempted_commit = True
 +                    self._commit(conn)
 +                except BaseException:

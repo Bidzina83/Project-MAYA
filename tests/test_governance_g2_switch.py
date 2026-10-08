@@ -4,6 +4,7 @@ import importlib.util
 from pathlib import Path
 import sys
 import unittest
+import tempfile
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,6 +13,9 @@ try:
     spec = importlib.util.spec_from_file_location("switch_preparation", ROOT / "scripts/prepare_governance_g2_switch.py")
     preparation = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(preparation)
+    spec = importlib.util.spec_from_file_location("switch_qualification", ROOT / "scripts/qualify_governance_g2_switch.py")
+    qualification = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(qualification)
 finally:
     sys.path.pop(0)
 
@@ -54,7 +58,29 @@ class TestSwitchPreparation(unittest.TestCase):
                 copy_tree.assert_not_called()
 
     def test_changed_manifest_blocks_stage(self):
-        with patch.object(preparation, "verify_parent"), \
+        data = preparation.contract()
+        with patch.object(preparation, "contract", return_value=data), \
+                patch.object(preparation, "verify_parent"), \
                 patch.object(Path, "read_text", return_value="{}"):
             with self.assertRaises(ValueError):
                 preparation.verify_stage(ROOT / ".codex-build/nonexistent-switch")
+
+    def test_reports_reject_skips_errors_failures_wrong_counts_and_duplicates(self):
+        reports = (
+            ('<testsuites><testcase name="one"/></testsuites>', 0, 1, True),
+            ('<testsuites><testcase name="one"><skipped/></testcase></testsuites>', 0, 1, False),
+            ('<testsuites><testcase name="one"><error/></testcase></testsuites>', 0, 1, False),
+            ('<testsuites><testcase name="one"><failure/></testcase></testsuites>', 1, 1, False),
+            ('<testsuites><testcase name="one"/></testsuites>', 0, 2, False),
+            ('<testsuites><testcase name="one"/><testcase name="one"/></testsuites>', 0, 2, False),
+            ('<testsuites><testcase name="one"/></testsuites>', 1, 1, False),
+        )
+        for xml, code, count, valid in reports:
+            with self.subTest(xml=xml, code=code), tempfile.TemporaryDirectory() as directory:
+                report = Path(directory) / "report.xml"
+                report.write_text(xml)
+                if valid:
+                    self.assertEqual(qualification.validate_report(report, code, count), count)
+                else:
+                    with self.assertRaises(ValueError):
+                        qualification.validate_report(report, code, count)

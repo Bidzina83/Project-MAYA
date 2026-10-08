@@ -69,12 +69,17 @@ def execute(h):
 def test_allowed_switch_preserves_both_histories_and_blocks_reader(switch_host):
     h = switch_host
     messages = h.db._conn.execute("SELECT * FROM messages").fetchall()
+    native_rows = h.db._conn.execute("SELECT * FROM sessions ORDER BY id")
+    columns = [item[0] for item in native_rows.description]
+    kept = [i for i, name in enumerate(columns) if name not in {"ended_at", "end_reason"}]
+    retained = [tuple(row[i] for i in kept) for row in native_rows.fetchall()]
     receipts = h.db._conn.execute("SELECT * FROM maya_session_transitions_v1 ORDER BY correlation_id").fetchall()
     before = h.original[3].index.read_bytes()
     result = execute(h)
     assert result["session_id"] == h.source and result["source_session"] == h.child
     assert result["state"] == "committed_pending_projection" and result["dispatch_allowed"] is False
     assert h.db._conn.execute("SELECT * FROM messages").fetchall() == messages
+    assert [tuple(row[i] for i in kept) for row in h.db._conn.execute("SELECT * FROM sessions ORDER BY id")] == retained
     assert h.db._conn.execute("SELECT count(*) FROM sessions").fetchone()[0] == 2
     assert tuple(h.db._conn.execute("SELECT ended_at,end_reason FROM sessions WHERE id=?", (h.source,)).fetchone()) == (None, None)
     assert h.db._conn.execute("SELECT end_reason FROM sessions WHERE id=?", (h.child,)).fetchone()[0] == "session_switch"
@@ -175,7 +180,7 @@ def test_invalid_lineage_not_adopted(switch_host, damage):
     assert snapshot(h) == before and not h.agents and not h.requests
 
 
-@pytest.mark.parametrize("effect", ["end", "reopen", "owner", "route", "receipt"])
+@pytest.mark.parametrize("effect", ["end", "reopen", "owner", "route", "receipt", "receipt_ignore", "projection"])
 def test_native_transaction_failure_rolls_back_every_effect(switch_host, effect):
     h = switch_host
     triggers = {
@@ -184,6 +189,8 @@ def test_native_transaction_failure_rolls_back_every_effect(switch_host, effect)
         "owner": "BEFORE UPDATE ON maya_session_owners_v1",
         "route": "BEFORE UPDATE ON maya_session_routes_v1",
         "receipt": "BEFORE INSERT ON maya_session_transitions_v1",
+        "receipt_ignore": "BEFORE INSERT ON maya_session_transitions_v1",
+        "projection": "BEFORE UPDATE ON maya_session_projection_v1",
     }
     action = "RAISE(ABORT,'SYNTHETIC_PRIVATE_MARKER')" if effect == "receipt" else "RAISE(IGNORE)"
     h.db._conn.execute("CREATE TRIGGER reject_switch " + triggers[effect] + " BEGIN SELECT " + action + "; END")

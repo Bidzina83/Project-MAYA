@@ -1,10 +1,10 @@
 {
   "acceptance": "pending_review",
   "effective_sha256": {
-    "host/src/project_maya/hermes_plugins/session_switch.py": "ca28a08f6c5082178782a2c9af73cd2f0ad095e0f86dc458ddd4b91a98ae5239",
+    "host/src/project_maya/hermes_plugins/session_switch.py": "2b8ec8b00516939cba485b9bd9dcf18a130ad1cdddf41adca652d2f740949271",
     "source/gateway/session.py": "2edd65b83cd0be90f86549400dfca3079976ad0dcf398d3b352f8b17b0ff26f5"
   },
-  "expected_native_tests": 41,
+  "expected_native_tests": 43,
   "fixture_sha256": {
     "tests/hermes_g2_caller_native.py": "51dda90f933964552f6ac3d64661808e34d6230b30a22595ad653a736d5b4c52",
     "tests/hermes_g2_caller_qualification_native.py": "4225b475d7320e4038a293b130c5c442783c59806339faf81e58a701cc25b28f",
@@ -35,9 +35,9 @@
     "tests/hermes_g2_restart_loop_native.py": "e71a64c25aa5b3d9c0cdd541598e58acf6112d55ac7eba090360924e77bfd7a2"
   },
   "parent_sha256": "41d6edb8c98a70007946c0c7deb3cb3fb6ab06c7b4e2bc5c542aa89579dfed1d",
-  "patch_sha256": "01f11104031f24fc4fe0022a94bbcf175121d19646818edab3119e103e904726",
+  "patch_sha256": "b8e51104ecbdd9db8ee19223940984066176ced546d5b942075797869d119f96",
   "production_qualified": false,
   "qualification": "source_switch_atomic_only",
   "schema_version": 1,
-  "test_sha256": "35899c3088717268d500e687f2345777c3417ccd14927ad89fca427901378271"
+  "test_sha256": "cc04d9edcf588a79b040d730af6031a1c1b3e042ebe6dbb06c79a18192837073"
 }

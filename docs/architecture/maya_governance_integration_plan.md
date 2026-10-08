@@ -405,10 +405,12 @@ reviewed contract and ordered native qualification before frontend composition
 in work package 4. Repeat reset remains denied; no scope extension, production
 activation, runtime-pin change, wheel or installer rebuild is authorized.
 The chronological progress notes below retain earlier evidence and decisions.
-Switch Step 1's proposed source-informed contract and ordered Steps 1-4 are in
+Switch Step 1's approved source-informed contract and ordered Steps 1-4 are in
 `governance_g2_switch_transition.md`. It bounds the first switch to the retained
-same-owner parent after an accepted initial reset. Explicit contract approval is
-required before authority/sink implementation; native switch remains denied.
+same-owner parent after an accepted initial reset. The user approved the contract
+on 2026-10-08 and authorized Step 2's separate Patch 36 authority/atomic-sink
+candidate. Ordinary mandatory switch stays denied; publication, caller/reader
+composition and dispatch remain Step 3. No installer or production change follows.
 
 G0, the pre-G1 security checkpoint and bounded source-level G1 are accepted.
 The G1 decision and immutable evidence references are in the lifecycle runbook.

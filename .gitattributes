@@ -121,3 +121,8 @@
 /docs/architecture/governance_g2_publisher_correction.md text eol=lf
 /docs/architecture/governance_g2_reset_paths_parity.md text eol=lf
 /docs/architecture/governance_g2_reset_acceptance_review.md text eol=lf
+/scripts/prepare_governance_g2_switch.py text eol=lf
+/scripts/qualify_governance_g2_switch.py text eol=lf
+/tests/hermes_g2_switch_native.py text eol=lf
+/tests/test_governance_g2_switch.py text eol=lf
+/docs/architecture/governance_g2_switch_transition.md text eol=lf

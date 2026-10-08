@@ -2,9 +2,10 @@
 
 ## Current Step
 
-2026-10-08: G2 work package 3, switch Step 1 contract review, after the user's
-bounded initial-reset acceptance. This is a proposed source-informed contract,
-not an implemented transition. Explicit review is required before Step 2.
+2026-10-08: the user approved the switch contract and ordered steps and authorized
+G2 work package 3 switch Step 2, following bounded initial-reset acceptance.
+Patch 36 is a separate source-only authority/atomic-sink candidate; publication,
+caller acknowledgement and switch-specific reader remain Step 3, not enabled.
 The agreed order remains switch, rotation, then work package 4 frontend
 composition and work package 5 API/CLI/setup/maintenance identities.
 
@@ -125,11 +126,11 @@ Do not loosen create/reset readers or broaden reset permissions to support switc
 
 ## Ordered Steps And Gates
 
-1. **Contract review (current):** review the bounded A-to-B-to-A profile,
+1. **Contract review (approved 2026-10-08):** review the bounded A-to-B-to-A profile,
    independent end/reopen/read permissions, current versus historical receipt
    validation and normal-exit confirmation. Gate: explicit user approval before
    implementing Step 2; unresolved representation dependencies must be reported.
-2. **Authority and atomic native sink:** create a separate hashed source candidate
+2. **Authority and atomic native sink (current):** create a separate hashed source candidate
    over accepted Patch 35. Gate: actual SessionStore/SQLite allowed switch and
    per-permission denial, foreign/forged/stale/replayed/expired/revoked descriptor,
    busy request, invalid target and complete transaction rollback tests. Ordinary
@@ -167,4 +168,5 @@ The initial sandbox run encountered temporary-directory permission errors; the
 authorized outside-sandbox rerun passed without changing tests. Product-context
 validation, release-script syntax and whitespace checks pass. This verifies
 documentation consistency and existing product behavior, not switch operation.
-No native switch tests were added or claimed; Step 2 remains pending approval.
+No native switch tests were added or claimed at Step 1. The user subsequently
+approved the contract and authorized Step 2.
