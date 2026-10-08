@@ -170,3 +170,87 @@ validation, release-script syntax and whitespace checks pass. This verifies
 documentation consistency and existing product behavior, not switch operation.
 No native switch tests were added or claimed at Step 1. The user subsequently
 approved the contract and authorized Step 2.
+
+## Step 2 Source Candidate
+
+Patch 36 adds only `SessionStore.switch_owned_session_candidate` and the staged
+Maya `session_switch` authority/coordinator. `governance-g2-switch.json` pins the
+accepted Patch 35 parent, patch bytes, both effective files, the 43-case native
+matrix and the 27 unchanged inherited fixtures. Full native/host inventories
+are verified; the original checkout and accepted source candidates are untouched.
+
+The synchronous single-use descriptor selects exactly reset child B and retained
+parent A, prior reset correlation, route version two and both owner bindings.
+Preparation requires fresh host identity and the existing live reset confirmation.
+Independent read/switch/end/reopen permissions and available authorization audit
+precede mutation. Classification and native ownership remain exact; stored parent
+fields alone cannot authorize switching or history access.
+
+The native SQLite transaction ends B, reopens A, updates their owner lifecycle
+states, compares-and-swaps the route to version three, inserts a new pending
+switch receipt and advances the complete projection generation/hash. Every
+expected write must affect one row. Existing transcripts and unrelated metadata
+are retained; historical create/reset receipts are not rewritten. Permissions,
+revocation, gate registration, store binding and effective projection are checked
+again before commit under the synchronized authority lock.
+
+The sink neither publishes the projection nor acknowledges a caller, cleans
+approvals, changes a conversation lease or constructs an agent. Its result is
+`committed_pending_projection` with `dispatch_allowed=false`; the old complete
+projection remains on disk and existing readers deny. Unknown commit outcomes
+remain blocked, not blind-retried or reported as rolled back. Native ordinary
+mandatory switch remains denied. Publication, switch-specific receipt/reader
+validation, fresh-agent history restoration and caller cleanup remain Step 3.
+
+Reconstruction and qualification commands (repository root, prepared parent and
+native dependency environment required):
+
+```text
+python scripts/prepare_governance_g2_switch.py --output .codex-build/governance-g2-switch-20261008-b
+python scripts/qualify_governance_g2_switch.py --stage .codex-build/governance-g2-switch-20261008-b --python .codex-build/governance-g1-native-env/Scripts/python.exe --output .codex-build/governance-g2-switch-qualification-20261008-b
+```
+
+Use fresh output directories for a rerun; the tools never overwrite an existing
+stage/report. Generated copies, homes, SQLite fixtures and reports stay ignored
+under `.codex-build`, not in release artifacts. The initial development stage
+was rejected when its captured manifest no longer matched the finalized test
+inputs; the final candidate was reconstructed separately, not adopted as valid.
+
+### Step 2 Verification And Remaining Gate
+
+2026-10-08: all 43 native atomic-switch cases pass on
+`.codex-build/governance-g2-switch-20261008-b`, with zero skips. The final
+qualification report is
+`.codex-build/governance-g2-switch-qualification-20261008-b/qualification.json`;
+its exact-count JUnit evidence is beside it. Full frozen-parent ancestry and
+candidate native/host inventories pass before and after the matrix.
+
+The allowed case proves retained A/B transcripts and unrelated native metadata,
+unchanged historical receipts, exactly two native sessions, the correct end/
+reopen/owner/route states, complete pending receipt and zero agent/model dispatch.
+Five independent permission cases deny without storage effects. Ten authority
+cases cover revocation, expiry, forged/stale descriptors, foreign identity,
+out-of-context use, replay, wrong thread and invalid/same target selectors.
+Ten lineage/storage cases reject foreign/classification/lifecycle/parent/receipt/
+version/projection/confirmation damage. Seven ignored/failed native write cases
+roll back every effect. Ordinary mandatory switch, conversation/projection busy
+states, precommit revocation, broken gates and unavailable policy/audit deny.
+A commit-then-error case retains the correlated pending native state and old
+projection, with no fabricated rollback, dispatch or raw exception marker.
+
+All 88 unchanged ordinary native session tests pass on this candidate, with
+inventory checks before and after their separate run. This is scoped compatibility,
+not remediation of the previously recorded nine Windows shell-path failures.
+All 47 required release/update/setup/closure regressions, six final switch
+provenance/report-parser checks and two line-ending checks pass. Context,
+release/new-script syntax and whitespace checks pass. The native matrix retains
+the known disabled-cache-provider configuration warning; no warning is called
+runtime qualification or suppressed by changing native tests.
+
+Step 2's scoped authority/atomic-sink gate is satisfied. Next is Step 3 in the
+approved sequence: strict publication, operation-bound caller acknowledgement,
+security/cache cleanup, switch-specific reader and independently governed fresh
+native agent loading A's history. Full bounded switch acceptance requires Step 4
+and explicit review; work package 3, G2 and production remain unaccepted. Runtime
+pin, product host, wheels, installers and production capability markers are
+unchanged. No unsupported route is enabled by these source tests.
