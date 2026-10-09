@@ -907,6 +907,14 @@ commit alone grants no dispatch. Publication/caller/reader composition stays
 Step 3; ordinary mandatory switch, repeat reset and general switch stay denied.
 Frontend composition, production activation, runtime pin, wheels and installers
 remain unchanged. Native qualification is recorded in the switch runbook.
+Switch Step 3 is now the separate source-only Patch 37 publication/caller/reader
+candidate over frozen Patch 36. It correlates the current switch receipt, preserves
+historical create/reset receipts, requires normal-exit cleanup and live host
+confirmation, and restores the parent's independently authorized history into a
+fresh native agent. Existing create/reset checks are not relaxed. Title callbacks
+remain inert fixture exclusions; general worker/resource teardown is unqualified.
+Consult the switch runbook for native evidence and review before Step 4. No bounded
+switch acceptance, frontend, production activation, wheel or installer change follows.
 
 Before each implementation step, consult the applicable agreed plan and identify
 its current step and acceptance criteria. If inspection requires a different

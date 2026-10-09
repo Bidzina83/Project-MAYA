@@ -411,6 +411,12 @@ same-owner parent after an accepted initial reset. The user approved the contrac
 on 2026-10-08 and authorized Step 2's separate Patch 36 authority/atomic-sink
 candidate. Ordinary mandatory switch stays denied; publication, caller/reader
 composition and dispatch remain Step 3. No installer or production change follows.
+The subsequent instruction to proceed authorizes switch Step 3. Patch 37 is a
+separate source-only publication/normal-exit acknowledgement/reader candidate;
+its inputs and frozen create/reset/atomic-switch replays are pinned independently.
+The switch runbook records its evidence. Step 4's crash/race qualification and
+bounded switch acceptance require review; production and installed artifacts stay
+unchanged. No general switch, worker or recovery permission is inferred.
 
 G0, the pre-G1 security checkpoint and bounded source-level G1 are accepted.
 The G1 decision and immutable evidence references are in the lifecycle runbook.

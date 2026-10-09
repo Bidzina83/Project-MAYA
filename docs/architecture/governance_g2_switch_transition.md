@@ -4,8 +4,11 @@
 
 2026-10-08: the user approved the switch contract and ordered steps and authorized
 G2 work package 3 switch Step 2, following bounded initial-reset acceptance.
-Patch 36 is a separate source-only authority/atomic-sink candidate; publication,
-caller acknowledgement and switch-specific reader remain Step 3, not enabled.
+Patch 36's scoped authority/atomic-sink gate passed. The subsequent instruction
+to proceed authorizes Step 3: separate source-only Patch 37 publication, guarded
+caller acknowledgement and switch-specific reader composition. Native verification
+and Step 3 review are recorded below; Step 4 and bounded switch acceptance are not
+implied by implementation or a green CI run.
 The agreed order remains switch, rotation, then work package 4 frontend
 composition and work package 5 API/CLI/setup/maintenance identities.
 
@@ -130,12 +133,12 @@ Do not loosen create/reset readers or broaden reset permissions to support switc
    independent end/reopen/read permissions, current versus historical receipt
    validation and normal-exit confirmation. Gate: explicit user approval before
    implementing Step 2; unresolved representation dependencies must be reported.
-2. **Authority and atomic native sink (current):** create a separate hashed source candidate
+2. **Authority and atomic native sink (scoped gate passed):** create a separate hashed source candidate
    over accepted Patch 35. Gate: actual SessionStore/SQLite allowed switch and
    per-permission denial, foreign/forged/stale/replayed/expired/revoked descriptor,
    busy request, invalid target and complete transaction rollback tests. Ordinary
    mandatory switch stays denied; successful commit alone cannot dispatch.
-3. **Publication, caller and reader composition:** qualify exact switch receipt
+3. **Publication, caller and reader composition (current):** qualify exact switch receipt
    acknowledgement, cleanup and fresh actual native AIAgent with controlled real
    SDK transport. Gate: restored A history only, preserved A/B records, no B cache
    or approval transfer, independently denied model egress with zero transport,
@@ -254,3 +257,74 @@ native agent loading A's history. Full bounded switch acceptance requires Step 4
 and explicit review; work package 3, G2 and production remain unaccepted. Runtime
 pin, product host, wheels, installers and production capability markers are
 unchanged. No unsupported route is enabled by these source tests.
+
+## Step 3 Source Candidate
+
+Patch 37 changes the isolated native `gateway/session.py` and `gateway/run.py`,
+adds staged Maya `switch_publication.py`, and adds an explicit switch branch in
+the staged published reader. Frozen Patch 36 and every earlier input remain
+unchanged; the normal product host is not activated. The new preparation wrapper
+is explicit, not an unguarded replacement for native resume or switch commands.
+
+The caller captures the independently approved historical create/reset receipts
+before the atomic switch, then publishes the complete current projection with
+Patch 35's strict helper. Current validation joins through the routing correlation;
+historical validation explicitly selects create A and reset B. Their historical
+projection bytes and old lifecycle states are not replayed or demanded as current
+state. Complete receipt tuples remain immutable and part of live confirmation.
+The original create/reset reader checks are preserved without relaxation.
+
+Publication advances only the exact correlated receipt. Normal caller exit needs
+separate `acknowledge_switch` authorization, fixed outcome audit and exact native
+security/cache cleanup before acknowledgement. Approval waits are denied and
+route-specific confirmations, provider/model/reasoning overrides, queued messages,
+voice state and last-model recovery state are removed. Agent-cache detachment is
+synchronous and verified; it neither borrows the ordinary best-effort eviction
+helper nor launches its background thread. An active running-agent entry, invalid
+cache/dictionary or incomplete cleanup blocks. Unrelated route state is retained;
+the shared last-model fallback is cleared to prevent source-model transfer.
+
+Only after authority and caller cleanup fully exit does the host issue confirmation.
+Caller failure/cancellation, denied acknowledgement, uncertain commit, failed
+cleanup and a fresh host with only durable receipts remain undispatchable. Pending
+or failed outcomes are blocked, never implicitly compensated or falsely reported
+as rolled back. Best-effort quarantine only reduces eligibility of the exact
+failed receipt; failure to quarantine cannot create live confirmation.
+
+After fresh authentication and independent history permission, the reader creates
+new target-bound G1 append authority. The actual native caller constructs a fresh
+AIAgent, recognizes existing A without recreation, rebuilds context without stored
+snapshots, and sends only A's authorized history through independent model gates.
+B's transcript and both stored snapshots remain intact. Neither switching nor
+acknowledgement grants model/tool/append or administrative authority by itself.
+
+### Qualification Boundaries
+
+The controlled real-SDK transport is synthetic: no live provider or connector is
+qualified. The native gateway's post-success automatic-title callback is observed
+as an inert fixture call. Its worker, title persistence and provider selection are
+not qualified or changed here; a source assertion claiming the callback was not
+called failed diagnostically and was corrected to record what actually happened.
+No background/title denial claim follows these results. This retains the prior
+explicit title-worker exclusion rather than silently expanding the patch scope.
+
+Cache detachment proves fresh-agent/state isolation, not general teardown of
+native clients, browsers, terminal sandboxes, providers, children or worker jobs.
+Those resource lifecycles remain outside this bounded caller profile. Process
+restart/crash, contention and combined fault/path matrices remain Step 4. New-host
+confirmation refusal in the same process is not process-restart qualification.
+Known ordinary Windows shell-path failures remain visible and unchanged.
+
+`governance-g2-switch-composition.json` pins all four effective files, the patch,
+parent input, new native matrix and unchanged fixture/replay bodies. Reconstruction
+and qualification verify complete native/host inventories and frozen ancestry;
+JUnit validation rejects skips, duplicate names, partial counts and failed cases.
+All source copies, homes and reports stay ignored under `.codex-build`.
+
+```text
+python scripts/prepare_governance_g2_switch_composition.py --output .codex-build/governance-g2-switch-composition-20261008-a
+python scripts/qualify_governance_g2_switch_composition.py --stage .codex-build/governance-g2-switch-composition-20261008-a --python .codex-build/governance-g1-native-env/Scripts/python.exe --output .codex-build/governance-g2-switch-composition-qualification-20261008-a
+```
+
+Use fresh directories for reruns. The authoring diagnostic tree is not an accepted
+artifact and does not substitute for the reconstructed candidate's qualification.

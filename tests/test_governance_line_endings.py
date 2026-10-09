@@ -38,6 +38,17 @@ PROTECTED += ("tests/test_ci_workflows.py",) + tuple(
     path.relative_to(ROOT).as_posix()
     for path in sorted((ROOT / ".github/workflows").glob("*.yml"))
 )
+PROTECTED += (
+    "docs/architecture/governance-g2-switch-composition.json",
+    "patches/hermes/0037-switch-publication-caller-reader.patch",
+    "scripts/prepare_governance_g2_switch_composition.py",
+    "scripts/qualify_governance_g2_switch_composition.py",
+    "tests/hermes_g2_switch_composition_native.py",
+    "tests/hermes_g2_switch_atomic_replay.py",
+    "tests/hermes_g2_switch_create_replay.py",
+    "tests/hermes_g2_switch_reset_replay.py",
+    "tests/test_governance_g2_switch_composition.py",
+)
 
 
 def git(directory, *args):
