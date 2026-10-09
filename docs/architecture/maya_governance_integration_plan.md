@@ -417,6 +417,14 @@ its inputs and frozen create/reset/atomic-switch replays are pinned independentl
 The switch runbook records its evidence. Step 4's crash/race qualification and
 bounded switch acceptance require review; production and installed artifacts stay
 unchanged. No general switch, worker or recovery permission is inferred.
+On 2026-10-09 the committed Patch 37 candidate's 199-case native matrix, 47
+required product regressions and 14 provenance/checkout checks pass. The switch
+runbook contains the criterion review. Final 331-case ordinary parity matches
+pinned Hermes (322 passes and nine unchanged Windows failures per profile, zero
+skips); inventories are verified. Explicit bounded Step 3 acceptance precedes
+Step 4. No runtime overlay is needed
+merely to start its failure matrix; preserve the frozen Patch 37 inputs and the
+explicit title-worker/resource-lifecycle exclusions.
 
 G0, the pre-G1 security checkpoint and bounded source-level G1 are accepted.
 The G1 decision and immutable evidence references are in the lifecycle runbook.

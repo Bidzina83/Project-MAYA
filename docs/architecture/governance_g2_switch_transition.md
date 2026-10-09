@@ -328,3 +328,76 @@ python scripts/qualify_governance_g2_switch_composition.py --stage .codex-build/
 
 Use fresh directories for reruns. The authoring diagnostic tree is not an accepted
 artifact and does not substitute for the reconstructed candidate's qualification.
+
+### Step 3 Verification And Gate Review
+
+2026-10-09: final verification of committed candidate `7a91930` uses the unchanged
+reconstructed `.codex-build/governance-g2-switch-composition-20261008-a`.
+All 199 native cases pass, with zero skips: 42 switch composition cases, 43 frozen
+atomic-switch cases, 80 frozen final-create cases and 34 frozen reset composition
+cases. The supervisor verified full frozen ancestry and native/host inventories
+before and after the matrices. Exact-count JUnit files and `qualification.json`
+are under `.codex-build/governance-g2-switch-composition-qualification-20261008-a`.
+Earlier native test bodies, source candidates and qualification inputs are intact.
+
+| Step 3 criterion | Observed bounded evidence |
+| --- | --- |
+| Exact publication and caller receipt | Actual SessionStore/SQLite follows pending commit, verified complete projection, pending caller and guarded acknowledgement; current correlation selects the switch receipt rather than the older create receipt for A. |
+| Retained records and provenance | Both native transcripts and historical create/reset receipt tuples survive. Parent A is reopened, child B is ended with the switch reason; damaged historical receipts, lifecycle/owner/route state and projections deny selection. |
+| Fresh agent restores only A | The actual native caller constructs a new AIAgent over target-bound G1 authority; the real SDK's synthetic wire contains A history, not B history or either stored snapshot. A prior actual B agent is not reused; B messages remain unchanged. |
+| Independent model and history decisions | Allowed inference reaches exactly one fixture request with zero SDK retries; denied model egress reaches zero requests. Missing history permission denies before conversation/agent dispatch. Switching itself grants neither permission. |
+| No approval or cache transfer | Native session allowances, YOLO, pending waits/callbacks and slash confirmations are cleared; waits receive denial. Source-route agent/model/reasoning/queue/voice recovery state is detached, while unrelated route state is retained. |
+| Incomplete cleanup denies | Raised/no-op native cleanup, malformed route/cache state, missing cache lock, active-agent state and a no-op whole cleanup entry issue no confirmation and cannot dispatch. |
+| Guarded normal exit only | Caller exception, cancellation, generator close, denied acknowledgement, revocation and expiry quarantine the correlated caller outcome and deny selection. |
+| Reported uncertainty cannot confer eligibility | Commit-then-error plus failed quarantine can leave SQLite honestly acknowledged, but live confirmation is absent and routing denies. Reported final lock-release failure also denies after committed acknowledgement. |
+| Durable state is not authentication | Missing/forged confirmation, wrong process identity, altered runner/registration/phase and a newly registered host deny; prior reset confirmation cannot authenticate the switched route. This is not process-restart qualification. |
+| Accepted readers remain strict | All unchanged create/reset/atomic-switch replays pass on the combined candidate; no old reader predicate or transition permission was relaxed. |
+
+All 47 required release/update/setup/closure tests pass after the interruption was
+resolved by an explicit rerun. All 14 switch/composition provenance, strict report
+parser and real Windows line-ending checkout checks pass. Context, release/new
+script syntax and whitespace checks pass. The retained pytest `cache_dir` warning
+is the known disabled-cache-provider warning, not a qualified runtime capability.
+
+The native evidence and final ordinary-mode comparison satisfy the listed bounded
+Step 3 criteria; explicit acceptance remains the next decision. This does not
+close switch Step 4, work package 3, G2 or production. The
+frozen input and reports retain `pending_review`. Keep the actual title callback
+observation, inert worker exclusion and cache-detachment/resource-lifecycle limits
+above in any acceptance decision; do not relabel them as tested worker denial or
+clean-install behavior. No source contract, runtime pin, wheel, installer or
+production capability marker is changed by this gate review.
+
+Ordinary-mode comparison command (prepared local Hermes Git objects, no downloads):
+
+```text
+python scripts/qualify_governance_g2_switch_composition.py --stage .codex-build/governance-g2-switch-composition-20261008-a --python .codex-build/governance-g1-native-env/Scripts/python.exe --ordinary-source-repo ../hermes-agent --output .codex-build/governance-g2-switch-composition-parity-20261009-a
+```
+
+The comparison runs unchanged native session/approval/slash-confirmation tests and
+the two unchanged ordinary cache controls, in isolated homes against both the
+candidate and pinned unpatched Git-object export. Full inventories and native
+test/conftest bytes are checked; case-for-case outcomes, exact counts and the
+known Windows failure set are enforced. Nine failures are not skipped, repaired
+or renamed as passes. Generated exports, homes and reports remain ignored.
+
+2026-10-09: the final comparison passes bounded parity. Each profile executes all
+331 cases: 88 session, 225 approval, 16 slash-confirmation and two ordinary cache
+controls. Each records 322 passes, nine identical known Windows shell-path
+failures, zero skips and zero collection errors. Case identities/outcomes match,
+native test bytes match pinned Git objects, and complete inventories and frozen
+candidate ancestry pass before/after verification. This is compatibility evidence,
+not an all-passing native suite or shell/platform qualification. The final report
+is `.codex-build/governance-g2-switch-composition-parity-20261009-a/parity-report.json`.
+
+### Next Decision
+
+Approve or reject bounded switch Step 3 using this evidence and the explicit
+title-worker/resource-lifecycle exclusions above. A commit, green CI or generic
+instruction to continue before this criterion review is not recorded as acceptance.
+After acceptance, Step 4 uses unchanged Patch 37 for process crash/restart,
+contention, late old/new caller and cancellation, descriptor/revocation, combined
+commit/publication/ack/audit, storage/path and compatibility qualification. No new
+runtime overlay, general switch/rotation permission or installer rebuild is
+authorized by this review. If a failure requires changing the contract or order,
+report it and seek the specific approval before deviating.

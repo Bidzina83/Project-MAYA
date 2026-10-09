@@ -356,6 +356,14 @@ fresh native agent. Existing create/reset checks are not relaxed. Title callback
 remain inert fixture exclusions; general worker/resource teardown is unqualified.
 Consult the switch runbook for native evidence and review before Step 4. No bounded
 switch acceptance, frontend, production activation, wheel or installer change follows.
+On 2026-10-09 the committed Patch 37 candidate passes 199 native cases (42 new
+composition plus 157 unchanged create/reset/atomic replays), 47 required product
+regressions and 14 provenance/line-ending checks. Its Step 3 criterion review is
+in the switch runbook; the frozen manifest stays pending review. Final ordinary
+parity passes: each profile has 322 passes and nine unchanged Windows failures
+across 331 cases, with zero skips and verified inventories. Record explicit
+bounded Step 3 acceptance before switch Step 4. No title
+worker, general resource lifecycle or production qualification is inferred.
 Full-loop qualification, provider-error redaction,
 automatic-route attribution, direct SDK paths, and worker coverage remain open;
 do not activate the plugin or change the production gate on these patches alone.
