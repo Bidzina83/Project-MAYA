@@ -426,6 +426,20 @@ Step 4. No runtime overlay is needed
 merely to start its failure matrix; preserve the frozen Patch 37 inputs and the
 explicit title-worker/resource-lifecycle exclusions.
 
+On 2026-10-09 the user explicitly accepted bounded switch Step 3 with those
+exclusions on unchanged Patch 37. Step 4 starts with the process crash/fresh-host
+restart batch in `governance_g2_switch_failure_matrix.md`, followed by its ordered
+contention, caller/descriptor, combined uncertainty, storage/path and final review
+batches. Frozen inputs and installed artifacts stay unchanged. Step 4, bounded
+switch, work package 3 and G2 are not accepted by the Step 3 decision.
+
+Step 4's first batch now passes all ten actual process-crash/fresh-host native
+cases on unchanged Patch 37, with twenty worker processes, zero skips and verified
+frozen ancestry/inventories. All 64 portable regressions pass. Fresh reader/scope
+denial is not full restarted gateway/agent lifecycle qualification. Next is
+independent-process contention; remaining failure batches and bounded switch
+acceptance stay open. The switch failure matrix records the exact evidence.
+
 G0, the pre-G1 security checkpoint and bounded source-level G1 are accepted.
 The G1 decision and immutable evidence references are in the lifecycle runbook.
 G2 work package 1's owner-scoped transition design and effective writer inventory

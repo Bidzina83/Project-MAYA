@@ -2,6 +2,11 @@
 
 ## Current Step
 
+2026-10-09: the user explicitly approved bounded Step 3 acceptance after its
+criterion review. Step 4 now starts with actual process crash/fresh-host restart
+on unchanged Patch 37. Consult `governance_g2_switch_failure_matrix.md` for the
+ordered batches; Step 4 and bounded switch acceptance remain open.
+
 2026-10-08: the user approved the switch contract and ordered steps and authorized
 G2 work package 3 switch Step 2, following bounded initial-reset acceptance.
 Patch 36's scoped authority/atomic-sink gate passed. The subsequent instruction
@@ -138,12 +143,12 @@ Do not loosen create/reset readers or broaden reset permissions to support switc
    per-permission denial, foreign/forged/stale/replayed/expired/revoked descriptor,
    busy request, invalid target and complete transaction rollback tests. Ordinary
    mandatory switch stays denied; successful commit alone cannot dispatch.
-3. **Publication, caller and reader composition (current):** qualify exact switch receipt
+3. **Publication, caller and reader composition (accepted 2026-10-09):** qualify exact switch receipt
    acknowledgement, cleanup and fresh actual native AIAgent with controlled real
    SDK transport. Gate: restored A history only, preserved A/B records, no B cache
    or approval transfer, independently denied model egress with zero transport,
    missing confirmation/caller failure/uncertainty blocked. Review before Step 4.
-4. **Failure matrix and acceptance:** exercise the combined candidate with real
+4. **Failure matrix and acceptance (current):** exercise the combined candidate with real
    process crash/restart, contention, late old executors/cancellation, revocation,
    combined commit/publication/ack/audit failures, incomplete writes, unsafe paths,
    stale projection/receipts and exact ordinary-native compatibility controls.
@@ -390,14 +395,26 @@ candidate ancestry pass before/after verification. This is compatibility evidenc
 not an all-passing native suite or shell/platform qualification. The final report
 is `.codex-build/governance-g2-switch-composition-parity-20261009-a/parity-report.json`.
 
-### Next Decision
+### Step 3 Acceptance Decision
 
-Approve or reject bounded switch Step 3 using this evidence and the explicit
-title-worker/resource-lifecycle exclusions above. A commit, green CI or generic
-instruction to continue before this criterion review is not recorded as acceptance.
-After acceptance, Step 4 uses unchanged Patch 37 for process crash/restart,
+On 2026-10-09 the user explicitly said "Acceptance approved" in response to the
+bounded Step 3 gate. Step 3 is closed on unchanged Patch 37 with the explicit
+title-worker/resource-lifecycle exclusions above. Frozen input and report labels
+remain unchanged; this decision does not rewrite their pending-review metadata.
+Step 4 uses unchanged Patch 37 for process crash/restart,
 contention, late old/new caller and cancellation, descriptor/revocation, combined
 commit/publication/ack/audit, storage/path and compatibility qualification. No new
 runtime overlay, general switch/rotation permission or installer rebuild is
 authorized by this review. If a failure requires changing the contract or order,
 report it and seek the specific approval before deviating.
+
+### Step 4 First Batch
+
+2026-10-09: the unchanged Patch 37 process crash/fresh-host restart matrix passes
+all ten native cases, with zero skips, using twenty independent worker processes.
+Full frozen ancestry and native/host inventories pass before and after. All 64
+portable regressions and context/syntax/whitespace checks pass. The detailed scope,
+fixed boundary outcomes, reports and remaining batches are recorded in
+`governance_g2_switch_failure_matrix.md`. Fresh native reader/scope denial is not
+a restarted full gateway/agent lifecycle claim. Next is independent-process
+contention; Step 4, bounded switch, work package 3 and G2 remain open.

@@ -48,6 +48,11 @@ PROTECTED += (
     "tests/hermes_g2_switch_create_replay.py",
     "tests/hermes_g2_switch_reset_replay.py",
     "tests/test_governance_g2_switch_composition.py",
+    "docs/architecture/governance-g2-switch-crash.json",
+    "docs/architecture/governance_g2_switch_failure_matrix.md",
+    "scripts/verify_governance_g2_switch_crash.py",
+    "tests/hermes_g2_switch_crash_native.py",
+    "tests/test_governance_g2_switch_crash.py",
 )
 
 

@@ -133,3 +133,7 @@
 /tests/hermes_g2_switch_create_replay.py text eol=lf
 /tests/hermes_g2_switch_reset_replay.py text eol=lf
 /tests/test_governance_g2_switch_composition.py text eol=lf
+/docs/architecture/governance_g2_switch_failure_matrix.md text eol=lf
+/scripts/verify_governance_g2_switch_crash.py text eol=lf
+/tests/hermes_g2_switch_crash_native.py text eol=lf
+/tests/test_governance_g2_switch_crash.py text eol=lf

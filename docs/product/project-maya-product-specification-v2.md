@@ -924,6 +924,20 @@ across 331 cases, with zero skips and verified inventories. Record explicit
 bounded Step 3 acceptance before switch Step 4. No title
 worker, general resource lifecycle or production qualification is inferred.
 
+On 2026-10-09 the user explicitly accepted bounded switch Step 3 on unchanged
+Patch 37 with those exclusions. Step 4 begins with actual process crash/fresh-host
+restart; consult `docs/architecture/governance_g2_switch_failure_matrix.md` for
+its ordered batches. Frozen inputs retain their original labels. Step 4, bounded
+switch, work package 3 and G2 remain unaccepted; no runtime pin, wheel, installer
+or production activation changes.
+
+Switch Step 4's first batch passes ten actual crash/fresh-host native cases on
+unchanged Patch 37, with zero skips and verified frozen ancestry/inventories.
+All 64 portable regressions pass. Its fresh reader/scope probes do not qualify a
+restarted full gateway/agent lifecycle. Next is independent-process contention;
+consult the switch failure matrix. Remaining Step 4 batches and acceptance are
+open; installed artifacts and production gates stay unchanged.
+
 Before each implementation step, consult the applicable agreed plan and identify
 its current step and acceptance criteria. If inspection requires a different
 sequence, recommend the specific revised order and wait for user approval before
