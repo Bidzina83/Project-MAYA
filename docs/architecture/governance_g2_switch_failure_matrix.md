@@ -7,6 +7,9 @@ Step 4 on unchanged Patch 37. The accepted profile remains one acknowledged
 create A, initial reset A-to-B, then same-owner switch B-to-A. This document
 organizes the existing failure requirements; it adds no runtime authority.
 
+Batches 1-2 now pass on that unchanged profile. Next is batch 3, late callers,
+cancellation and descriptor faults; Step 4 and bounded switch acceptance stay open.
+
 Consult `maya_governance_integration_plan.md`,
 `governance_g2_switch_transition.md`, `governance_g2_session_consistency.md`
 and `governance_g2_reset_failure_matrix.md`. Earlier inputs, patches and reports
@@ -109,3 +112,90 @@ Batch 1 is complete. Next is batch 2, independent-process contention. Remaining
 caller/descriptor, combined uncertainty, storage/path and final compatibility/
 acceptance batches stay open. This result does not close Step 4, bounded switch,
 work package 3 or G2, and authorizes no new runtime overlay or installer rebuild.
+
+## Second Batch Contract
+
+The next instruction to proceed authorizes batch 2 on unchanged Patch 37.
+`governance-g2-switch-contention.json` independently hashes the new eight-case
+matrix, frozen composition input, unchanged fixtures and complete inventories.
+The supervisor verifies frozen ancestry/inventories before and after; native
+workers verify their sources. Exact-count reports cannot accept skips or failures.
+
+| Case | Required observation |
+| --- | --- |
+| Foreign process holds projection lock | Owning host preparation denies with all records/file bytes unchanged; fresh preparation succeeds only after release. |
+| Projection lock acquired after descriptor preparation | Actual native sink denies before effects; descriptor is revoked on scope exit and cannot be reused. Fresh preparation succeeds after release. |
+| Foreign process holds SQLite BEGIN IMMEDIATE | Prepared native sink denies without commit, partial lifecycle writes or projection change; consumed attempt is not retried. Native busy timeout is unchanged. |
+| Active B conversation | Real request lease/projection exclusion blocks a fully registered foreign host; owner lease/cache/records remain intact until normal exit. |
+| Owner native commit / projection publication | Competing host observes actual cross-process busy denial before authority or caller entry; it cannot overwrite the in-flight owner's records or projection. |
+| Pending caller, then acknowledged switch | A registered competing host denies pending recovery state, then denies the no-longer-valid initial-switch source after owner acknowledgement; no second receipt or write. |
+| Two independent unconfirmed hosts | Both fail the live reset-confirmation gate before any descriptor is issued. Their uncontended attempts are deliberately sequenced to distinguish this denial from lock contention. |
+
+The parent fixture performs the real initial reset and keeps its live confirmation.
+Competing hosts reopen existing native records and register native runner/executor,
+reset/switch coordinator, preparations, policy and reader, but do not copy or
+forge `_confirmed`. Observational wrappers record only allowlisted fixed denial
+codes and rethrow unchanged errors; they do not authorize actions or bypass gates.
+Separate storage workers hold a real portalocker 3.2.0 lock or a SQLite transaction
+without DDL/DML. Process barriers prove readiness and held locks, not timing guesses.
+
+Each completed owner transition has one exact switch receipt, route/generation
+three, preserved A/B histories, historical receipts and unrelated metadata,
+complete verified projection and the expected publication/acknowledgement audit.
+Blocked attempts leave authoritative records and projection bytes unchanged.
+No agent/model/tool dispatch or external socket is allowed; fixture output and
+audit are checked for synthetic history/key sentinels. Homes and reports are isolated.
+
+This does not qualify two independently authorized switch hosts, automatic failover
+or maintenance adoption. The accepted process-bound reset confirmation forbids
+that profile; fabricating a second confirmation would invalidate this evidence.
+General multi-host switching needs its own reviewed authority/recovery contract,
+not an exception added to a test. Late callers, descriptor faults and other
+remaining Step 4 batches are unchanged. No new runtime patch is introduced.
+
+```text
+python scripts/verify_governance_g2_switch_contention.py --stage .codex-build/governance-g2-switch-composition-20261008-a --python .codex-build/governance-g1-native-env/Scripts/python.exe --output .codex-build/governance-g2-switch-contention-qualification-20261009-a
+```
+
+Use fresh output directories; generated workers, homes and reports stay ignored.
+
+## Second Batch Evidence
+
+2026-10-09: all eight native contention cases pass, with zero failures, errors or
+skips, using nine independent workers. Actual foreign-process projection locks
+block both preparation and the prepared native sink with zero effects. A real
+SQLite writer blocks the consumed sink attempt without any lifecycle/projection
+mutation; native busy timeout is unchanged, the revoked scope cannot be reused,
+and no automatic retry occurs. Fresh authorized owner preparations succeed only
+after lock release.
+
+An active B conversation retains its original live lease/cache while a registered
+competing host receives actual busy denial. The same cross-process exclusion
+protects native commit and strict publication. At pending caller state a competing
+host is recovery-blocked; after owner acknowledgement it cannot replay the initial
+switch against route version three. Independently registered unconfirmed hosts
+both fail live reset confirmation before any descriptor/caller entry, without
+copying or forging authority. Their two uncontended attempts are not a race of
+two authorized writers, and do not qualify multi-host switching or failover.
+
+Every owner completion has one exact switch receipt, expected lifecycle state,
+route/generation three and complete verified projection. A/B transcripts,
+historical receipts and unrelated native session metadata are preserved. Integrity,
+foreign keys, expected publication/acknowledgement audit, zero agent/model/tool
+dispatch and synthetic secret/history-safe output checks pass. Fresh-host fixture
+registration does not qualify general gateway startup or resource teardown.
+
+Full frozen ancestry and native/host inventories pass before and after; workers
+verify their inputs. Reports are `native.xml` and `qualification.json` under
+`.codex-build/governance-g2-switch-contention-qualification-20261009-a`. They retain
+`source_switch_process_contention_only`, `production_qualified=false` and
+`acceptance=pending_review`; the disabled-cache `cache_dir` warning is retained.
+All 68 portable tests pass: 47 required product regressions, four new contention
+contract/inventory tests, three crash contract tests and 14 switch/composition/
+Windows checkout checks. Context validation, release/new-script syntax and
+whitespace checks pass. Earlier frozen inputs, patches and test bodies are intact.
+
+Batch 2 is complete only for this bounded lock/unconfirmed-host profile. Next is
+batch 3 in the existing order; combined uncertainty, storage/path and final parity/
+acceptance batches remain open. No new source overlay, production activation,
+runtime pin, wheel or installer is authorized by these results.

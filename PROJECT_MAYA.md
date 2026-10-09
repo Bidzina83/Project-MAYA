@@ -818,6 +818,14 @@ restarted full gateway/agent lifecycle. Next is independent-process contention;
 consult the switch failure matrix. Remaining Step 4 batches and acceptance are
 open; installed artifacts and production gates stay unchanged.
 
+Switch Step 4 batch 2 now passes eight native process contention cases on unchanged
+Patch 37, with nine workers, zero skips and verified frozen ancestry/inventories.
+All 68 portable tests pass. Process-bound reset confirmation is preserved: competing
+hosts cannot inherit it, and two authorized switch hosts or automatic failover are
+not qualified. Next is batch 3, late callers, cancellation and descriptor faults.
+Consult the switch failure matrix before continuing. Step 4 acceptance remains
+open; no source overlay, pin, wheel, installer or production activation changes.
+
 Before each implementation step, consult the applicable agreed plan and identify
 its current step and acceptance criteria. If inspection requires a different
 sequence, recommend the specific revised order and wait for user approval before

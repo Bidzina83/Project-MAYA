@@ -378,6 +378,14 @@ All 64 portable regressions pass. Its fresh reader/scope probes do not qualify a
 restarted full gateway/agent lifecycle. Next is independent-process contention;
 consult the switch failure matrix. Remaining Step 4 batches and acceptance are
 open; installed artifacts and production gates stay unchanged.
+
+Switch Step 4 batch 2 now passes eight native process contention cases on unchanged
+Patch 37, with nine workers, zero skips and verified frozen ancestry/inventories.
+All 68 portable tests pass. Process-bound reset confirmation is preserved: competing
+hosts cannot inherit it, and two authorized switch hosts or automatic failover are
+not qualified. Next is batch 3, late callers, cancellation and descriptor faults.
+Consult the switch failure matrix before continuing. Step 4 acceptance remains
+open; no source overlay, pin, wheel, installer or production activation changes.
 Full-loop qualification, provider-error redaction,
 automatic-route attribution, direct SDK paths, and worker coverage remain open;
 do not activate the plugin or change the production gate on these patches alone.

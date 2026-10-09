@@ -53,6 +53,10 @@ PROTECTED += (
     "scripts/verify_governance_g2_switch_crash.py",
     "tests/hermes_g2_switch_crash_native.py",
     "tests/test_governance_g2_switch_crash.py",
+    "docs/architecture/governance-g2-switch-contention.json",
+    "scripts/verify_governance_g2_switch_contention.py",
+    "tests/hermes_g2_switch_contention_native.py",
+    "tests/test_governance_g2_switch_contention.py",
 )
 
 

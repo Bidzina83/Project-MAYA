@@ -137,3 +137,6 @@
 /scripts/verify_governance_g2_switch_crash.py text eol=lf
 /tests/hermes_g2_switch_crash_native.py text eol=lf
 /tests/test_governance_g2_switch_crash.py text eol=lf
+/scripts/verify_governance_g2_switch_contention.py text eol=lf
+/tests/hermes_g2_switch_contention_native.py text eol=lf
+/tests/test_governance_g2_switch_contention.py text eol=lf

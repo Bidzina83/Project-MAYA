@@ -7,6 +7,9 @@ criterion review. Step 4 now starts with actual process crash/fresh-host restart
 on unchanged Patch 37. Consult `governance_g2_switch_failure_matrix.md` for the
 ordered batches; Step 4 and bounded switch acceptance remain open.
 
+Its first two batches now pass. The current next batch is late callers,
+cancellation and descriptor faults, not rotation or frontend composition.
+
 2026-10-08: the user approved the switch contract and ordered steps and authorized
 G2 work package 3 switch Step 2, following bounded initial-reset acceptance.
 Patch 36's scoped authority/atomic-sink gate passed. The subsequent instruction
@@ -418,3 +421,17 @@ fixed boundary outcomes, reports and remaining batches are recorded in
 `governance_g2_switch_failure_matrix.md`. Fresh native reader/scope denial is not
 a restarted full gateway/agent lifecycle claim. Next is independent-process
 contention; Step 4, bounded switch, work package 3 and G2 remain open.
+
+### Step 4 Second Batch
+
+2026-10-09: all eight native process contention cases pass on unchanged Patch 37,
+with nine independent workers, zero skips and verified frozen ancestry/inventories
+before and after. All 68 portable tests and context/syntax/whitespace checks pass.
+The switch failure matrix records actual projection/SQLite lock, active request,
+commit/publication, pending acknowledgement and unconfirmed-host outcomes.
+Blocked attempts preserve records/files; owner completion produces one switch
+receipt and preserves both histories. No confirmation is copied or forged.
+Two independently authorized switch hosts and automatic failover are explicitly
+not qualified. Next is batch 3, late callers, cancellation and descriptor faults;
+Step 4, bounded switch, work package 3 and G2 remain open. Installed artifacts,
+runtime pin and production gates remain unchanged.

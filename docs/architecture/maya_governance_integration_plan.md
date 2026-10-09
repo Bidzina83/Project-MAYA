@@ -440,6 +440,15 @@ denial is not full restarted gateway/agent lifecycle qualification. Next is
 independent-process contention; remaining failure batches and bounded switch
 acceptance stay open. The switch failure matrix records the exact evidence.
 
+The subsequent instruction to proceed started switch Step 4 batch 2 on unchanged
+Patch 37. All eight native cases pass with nine independent workers, zero skips,
+verified frozen ancestry/inventories and 68 passing portable tests. Its actual
+lock, record/file, audit and zero-dispatch outcomes are in the switch failure
+matrix. Process-bound confirmation is preserved; two independently authorized
+switch hosts and automatic failover remain excluded. Next is batch 3, late callers,
+cancellation and descriptor faults. Remaining Step 4 and bounded switch acceptance,
+work package 3/G2 and production stay open; no new overlay or installer follows.
+
 G0, the pre-G1 security checkpoint and bounded source-level G1 are accepted.
 The G1 decision and immutable evidence references are in the lifecycle runbook.
 G2 work package 1's owner-scoped transition design and effective writer inventory
