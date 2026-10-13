@@ -57,6 +57,11 @@ PROTECTED += (
     "scripts/verify_governance_g2_switch_contention.py",
     "tests/hermes_g2_switch_contention_native.py",
     "tests/test_governance_g2_switch_contention.py",
+    "docs/architecture/governance-g2-switch-callers.json",
+    "scripts/verify_governance_g2_switch_callers.py",
+    "tests/hermes_g2_switch_descriptors_native.py",
+    "tests/hermes_g2_switch_late_native.py",
+    "tests/test_governance_g2_switch_callers.py",
 )
 
 

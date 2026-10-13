@@ -7,8 +7,9 @@ Step 4 on unchanged Patch 37. The accepted profile remains one acknowledged
 create A, initial reset A-to-B, then same-owner switch B-to-A. This document
 organizes the existing failure requirements; it adds no runtime authority.
 
-Batches 1-2 now pass on that unchanged profile. Next is batch 3, late callers,
-cancellation and descriptor faults; Step 4 and bounded switch acceptance stay open.
+Batches 1-3 now pass on that unchanged profile. Next is batch 4, combined
+commit/publication/acknowledgement/audit uncertainty; Step 4 and bounded switch
+acceptance stay open.
 
 Consult `maya_governance_integration_plan.md`,
 `governance_g2_switch_transition.md`, `governance_g2_session_consistency.md`
@@ -199,3 +200,106 @@ Batch 2 is complete only for this bounded lock/unconfirmed-host profile. Next is
 batch 3 in the existing order; combined uncertainty, storage/path and final parity/
 acceptance batches remain open. No new source overlay, production activation,
 runtime pin, wheel or installer is authorized by these results.
+
+## Third Batch Contract
+
+2026-10-13: the next instruction to proceed starts batch 3 on unchanged Patch 37.
+`governance-g2-switch-callers.json` hashes 29 new descriptor/authority cases and
+six real native cancellation cases, their unchanged fixtures, frozen composition
+input and complete source inventories. The supervisor verifies frozen ancestry
+before/after and exact-count reports; each native suite verifies its candidate.
+
+Descriptor cases exercise revoked/forced-expired authority before the atomic
+sink, during final in-transaction authorization, before publication and at pending
+caller acknowledgement. Pre-commit loss must preserve the complete prior database
+and projection. Post-commit loss retains the honest pending/quarantined receipt
+and both histories, with no confirmation or dispatch; no rollback after commit is
+claimed. Fifteen sealed descriptor fields are independently replaced; these test
+descriptor-object tampering denial, not independent semantic field branch coverage.
+Consumed/exited authority, foreign thread/task, reuse under fresh target conversation
+and policy withdrawal after preparation must not transfer permission or mutate state.
+
+Cancellation tests use the actual native caller, AIAgent, native SQLite and real
+SDK with synthetic HTTP, zero retries and no external sockets. Three races (normal,
+repeated cancellation and a selected child swallowing cancellation) cover both:
+
+- Cancelled B executor remains pending across the real B-to-A switch while a fresh
+  independently authorized A request runs.
+- After an ordinary approved B turn and the switch, a cancelled A executor remains
+  pending while a different fresh A request runs. Matching session IDs cannot
+  replace the unique request/lease binding.
+
+Late model/tool/output, old/fresh writes, legacy routing and switch preparation
+must deny with zero additional transport/handler calls, no record/projection/cache/
+running-slot mutation and no borrowing of the active reader/root. New A context
+must include A history, not B history. Fresh authorized completion must retain B
+records, historical receipts and route version three. Synthetic private markers
+must not appear in output/audit. Already authorized in-flight model requests are
+not undone; cancellation revokes future use, not past egress.
+
+Transport/async barriers observe actual boundaries; fixture cleanup releases and
+awaits every selected thread/task. Title callbacks stay inert exclusions, not
+qualified workers. General workers, live providers, frontend identity, failover,
+production lifecycle and durable audit reconciliation are unchanged. No second
+authorized switch host or copied confirmation is fabricated. The broader stale
+multi-host descriptor race remains outside the accepted process-bound profile.
+
+```text
+python scripts/verify_governance_g2_switch_callers.py --stage .codex-build/governance-g2-switch-composition-20261008-a --python .codex-build/governance-g1-native-env/Scripts/python.exe --output .codex-build/governance-g2-switch-callers-qualification-20261013-a
+```
+
+Preserve failed evidence and seek specific approval if a failure needs a runtime/
+contract correction. Batch 4 is not started by this diagnostic.
+
+## Third Batch Evidence
+
+2026-10-13: all 35 native cases pass, with zero failures, errors or skips: 29
+descriptor/authority cases and six complete selected-caller cancellation cases.
+Frozen ancestry and complete native/host inventories pass before and after; both
+native suites verify their effective candidate. Patch 37 and earlier inputs,
+source overlays and fixture bodies are unchanged. Reports are `suite-0.xml`,
+`suite-1.xml` and `qualification.json` under
+`.codex-build/governance-g2-switch-callers-qualification-20261013-a`. The report
+retains `source_switch_callers_descriptors_only`, `production_qualified=false` and
+`acceptance=pending_review`; the disabled-cache `cache_dir` warnings are retained.
+
+Revocation/forced expiry before commit preserves the complete prior records and
+projection, including loss during the final in-transaction authorization checks.
+Loss before publication retains one `committed_pending_projection` receipt and
+the old complete file; pending-caller loss leaves `caller_quarantined` and a
+complete new projection. Both histories and historical create/reset receipts
+survive; no confirmation or dispatch is granted. Sealed descriptor replacements,
+consumed/exited reuse, thread/task transfer, old authority under fresh A conversation
+and post-preparation policy withdrawal all deny without unauthorized writes.
+
+The six caller cases use 15 actual native AIAgent constructions and 15 authorized
+real-SDK requests through synthetic HTTP: two per source case, three per target
+case including the prior B turn. Thirty SDK clients comprise 15 idle initialization
+clients and 15 single-attempt request clients, all with zero retries. This is not
+live provider, socket or allowed-tool qualification. Cancellation does not undo
+the already authorized in-flight request.
+
+Normal/repeated cancellation and a selected child swallowing cancellation cannot
+restore either B or A authority. While independently authenticated fresh A runs,
+late model/tool/output, both write targets, legacy routing and switch preparation
+deny. The same-session A case keeps distinct request IDs and lease roots. No
+additional SDK attempt or probe transport/handler call occurs; native records,
+projection, reader/root and fixture cache/running-map state are unchanged during
+the late probes. The fresh caller remains active and completes successfully,
+with A-only history, retained B messages/receipts and route/generation three.
+Supporting delivery/title workers remain disabled/inert profile exclusions;
+unchanged running-map observation is not general active-worker qualification.
+Synthetic private markers are absent from captured output and audit.
+
+All 72 portable tests pass: 47 required product regressions, four new caller-input/
+inventory tests and 21 existing contention/crash/switch/composition/checkout checks.
+Context validation, release/new-script syntax and whitespace checks pass. New
+hashed files preserve LF through actual Windows-style Git checkout. Generated
+homes, sources and reports remain ignored, not committed.
+
+Batch 3 is complete for this bounded profile. Next is batch 4 in the agreed order;
+storage/path and final compatibility/acceptance batches remain open. Broader
+workers, two-authorized-host switching, provider/error paths, provisioning and
+production lifecycle remain unqualified. Step 4, bounded switch, work package 3
+and G2 are not accepted by these results. No runtime pin, wheel, installer or
+production activation change follows.

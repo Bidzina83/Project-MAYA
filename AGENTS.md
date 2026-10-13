@@ -386,6 +386,15 @@ hosts cannot inherit it, and two authorized switch hosts or automatic failover a
 not qualified. Next is batch 3, late callers, cancellation and descriptor faults.
 Consult the switch failure matrix before continuing. Step 4 acceptance remains
 open; no source overlay, pin, wheel, installer or production activation changes.
+
+On 2026-10-13 switch Step 4 batch 3 passes all 35 native cases on unchanged Patch
+37: 29 descriptor/authority faults and six source/target cancellation cases. All
+72 portable tests and full frozen ancestry/inventories pass, with zero native skips.
+Actual caller/AIAgent/SDK paths use 15 authorized synthetic HTTP requests, not a
+live provider; late B/A executors cannot borrow fresh A leases, including matching
+session IDs. No confirmation/worker authority is copied. Consult the switch failure
+matrix. Next is batch 4's combined uncertainty; Step 4/G2 acceptance, runtime pin,
+wheels, installers and production activation remain unchanged.
 Full-loop qualification, provider-error redaction,
 automatic-route attribution, direct SDK paths, and worker coverage remain open;
 do not activate the plugin or change the production gate on these patches alone.

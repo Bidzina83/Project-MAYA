@@ -449,6 +449,14 @@ switch hosts and automatic failover remain excluded. Next is batch 3, late calle
 cancellation and descriptor faults. Remaining Step 4 and bounded switch acceptance,
 work package 3/G2 and production stay open; no new overlay or installer follows.
 
+2026-10-13: switch Step 4 batch 3 passes all 35 native cases (29 descriptor/authority
+faults and six source/target cancellation races) on unchanged Patch 37, with zero
+skips and verified frozen ancestry/inventories. All 72 portable tests pass. Actual
+caller/AIAgent/SDK paths use 15 authorized synthetic requests; matching session
+IDs cannot replace unique request authority. The switch failure matrix records
+exact outcomes and exclusions. Next is batch 4's combined uncertainty; no production
+gate, pin, wheel, installer or remaining acceptance changes.
+
 G0, the pre-G1 security checkpoint and bounded source-level G1 are accepted.
 The G1 decision and immutable evidence references are in the lifecycle runbook.
 G2 work package 1's owner-scoped transition design and effective writer inventory

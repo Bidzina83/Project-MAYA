@@ -7,8 +7,8 @@ criterion review. Step 4 now starts with actual process crash/fresh-host restart
 on unchanged Patch 37. Consult `governance_g2_switch_failure_matrix.md` for the
 ordered batches; Step 4 and bounded switch acceptance remain open.
 
-Its first two batches now pass. The current next batch is late callers,
-cancellation and descriptor faults, not rotation or frontend composition.
+Its first three batches now pass. The current next batch is combined commit/
+publication/acknowledgement/audit uncertainty, not rotation or frontend composition.
 
 2026-10-08: the user approved the switch contract and ordered steps and authorized
 G2 work package 3 switch Step 2, following bounded initial-reset acceptance.
@@ -435,3 +435,16 @@ Two independently authorized switch hosts and automatic failover are explicitly
 not qualified. Next is batch 3, late callers, cancellation and descriptor faults;
 Step 4, bounded switch, work package 3 and G2 remain open. Installed artifacts,
 runtime pin and production gates remain unchanged.
+
+### Step 4 Third Batch
+
+2026-10-13: all 35 native cases pass on unchanged Patch 37: 29 descriptor/authority
+faults and six source/target cancellation cases, with zero skips and full frozen
+ancestry/inventories verified before and after. All 72 portable tests and context/
+syntax/whitespace checks pass. The actual native caller/AIAgent/SDK uses 15
+authorized synthetic HTTP requests, not a live provider. Late cancelled B and A
+executors cannot borrow fresh A roots, including matching session IDs, mutate
+retained records/cache/projection or cause additional transport/handler calls.
+The switch failure matrix records exact outcomes, reports and retained exclusions.
+Next is batch 4's combined uncertainty matrix; Step 4, bounded switch, work package
+3/G2 and production remain open. No source overlay, pin, wheel or installer changes.
