@@ -144,3 +144,6 @@
 /tests/hermes_g2_switch_descriptors_native.py text eol=lf
 /tests/hermes_g2_switch_late_native.py text eol=lf
 /tests/test_governance_g2_switch_callers.py text eol=lf
+/scripts/verify_governance_g2_switch_uncertainty.py text eol=lf
+/tests/hermes_g2_switch_uncertainty_native.py text eol=lf
+/tests/test_governance_g2_switch_uncertainty.py text eol=lf

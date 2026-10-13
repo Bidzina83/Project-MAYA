@@ -7,8 +7,8 @@ criterion review. Step 4 now starts with actual process crash/fresh-host restart
 on unchanged Patch 37. Consult `governance_g2_switch_failure_matrix.md` for the
 ordered batches; Step 4 and bounded switch acceptance remain open.
 
-Its first three batches now pass. The current next batch is combined commit/
-publication/acknowledgement/audit uncertainty, not rotation or frontend composition.
+Its first four batches now pass. The current next batch is lower-level storage/
+audit faults and unsafe paths, not rotation or frontend composition.
 
 2026-10-08: the user approved the switch contract and ordered steps and authorized
 G2 work package 3 switch Step 2, following bounded initial-reset acceptance.
@@ -448,3 +448,16 @@ retained records/cache/projection or cause additional transport/handler calls.
 The switch failure matrix records exact outcomes, reports and retained exclusions.
 Next is batch 4's combined uncertainty matrix; Step 4, bounded switch, work package
 3/G2 and production remain open. No source overlay, pin, wheel or installer changes.
+
+### Step 4 Fourth Batch
+
+2026-10-14: all 18 native combined-outcome cases pass with six fresh-process
+refusal probes on unchanged Patch 37, zero skips and full frozen ancestry/inventories
+verified before and after. All 76 portable tests and context/syntax/whitespace
+checks pass. Pending/quarantined/acknowledged records never supply missing live
+confirmation, even with quarantine or audit failure; restoring audit alone does
+not authorize routing. Both histories survive, original caller failures propagate
+and no replay, dispatch or post-commit rollback is fabricated. The switch failure
+matrix records exact outcomes, reports and exclusions. Next is batch 5's storage/
+audit/path matrix, then final parity/acceptance review. Step 4, bounded switch,
+work package 3/G2, installed artifacts and production gates remain unchanged.

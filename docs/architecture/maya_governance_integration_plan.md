@@ -457,6 +457,15 @@ IDs cannot replace unique request authority. The switch failure matrix records
 exact outcomes and exclusions. Next is batch 4's combined uncertainty; no production
 gate, pin, wheel, installer or remaining acceptance changes.
 
+2026-10-14: switch Step 4 batch 4 passes 18 native combined commit/publication/
+acknowledgement/audit uncertainty cases and six fresh-process refusal probes on
+unchanged Patch 37, with zero skips and verified frozen ancestry/inventories.
+All 76 portable tests pass. Durable records are not live authority; no replay,
+compensation or post-commit rollback is fabricated. The switch failure matrix
+records exact outcomes/exclusions. Next is batch 5's storage/audit/path faults,
+then final parity/acceptance review. Runtime/contract fixes require specific
+approval. Installed artifacts, production and remaining gates stay unchanged.
+
 G0, the pre-G1 security checkpoint and bounded source-level G1 are accepted.
 The G1 decision and immutable evidence references are in the lifecycle runbook.
 G2 work package 1's owner-scoped transition design and effective writer inventory

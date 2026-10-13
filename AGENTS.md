@@ -395,6 +395,15 @@ live provider; late B/A executors cannot borrow fresh A leases, including matchi
 session IDs. No confirmation/worker authority is copied. Consult the switch failure
 matrix. Next is batch 4's combined uncertainty; Step 4/G2 acceptance, runtime pin,
 wheels, installers and production activation remain unchanged.
+
+On 2026-10-14 switch Step 4 batch 4 passes 18 native combined-outcome cases and six
+fresh-process refusal probes on unchanged Patch 37, with zero skips and verified
+frozen ancestry/inventories. All 76 portable tests pass. Pending/acknowledged/
+quarantined records never replace live confirmation, even after audit restoration;
+no rollback after commit, replay or compensation is fabricated. Consult the switch
+failure matrix. Next is batch 5's storage/audit/path faults. Step 4/G2 acceptance,
+pin, wheels, installers and production activation remain unchanged; runtime
+corrections require specific approval.
 Full-loop qualification, provider-error redaction,
 automatic-route attribution, direct SDK paths, and worker coverage remain open;
 do not activate the plugin or change the production gate on these patches alone.

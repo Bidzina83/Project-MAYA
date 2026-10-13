@@ -62,6 +62,10 @@ PROTECTED += (
     "tests/hermes_g2_switch_descriptors_native.py",
     "tests/hermes_g2_switch_late_native.py",
     "tests/test_governance_g2_switch_callers.py",
+    "docs/architecture/governance-g2-switch-uncertainty.json",
+    "scripts/verify_governance_g2_switch_uncertainty.py",
+    "tests/hermes_g2_switch_uncertainty_native.py",
+    "tests/test_governance_g2_switch_uncertainty.py",
 )
 
 

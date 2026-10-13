@@ -7,9 +7,9 @@ Step 4 on unchanged Patch 37. The accepted profile remains one acknowledged
 create A, initial reset A-to-B, then same-owner switch B-to-A. This document
 organizes the existing failure requirements; it adds no runtime authority.
 
-Batches 1-3 now pass on that unchanged profile. Next is batch 4, combined
-commit/publication/acknowledgement/audit uncertainty; Step 4 and bounded switch
-acceptance stay open.
+Batches 1-4 now pass on that unchanged profile. Next is batch 5, lower-level
+storage/audit faults and unsafe paths; Step 4 and bounded switch acceptance
+stay open.
 
 Consult `maya_governance_integration_plan.md`,
 `governance_g2_switch_transition.md`, `governance_g2_session_consistency.md`
@@ -303,3 +303,97 @@ workers, two-authorized-host switching, provider/error paths, provisioning and
 production lifecycle remain unqualified. Step 4, bounded switch, work package 3
 and G2 are not accepted by these results. No runtime pin, wheel, installer or
 production activation change follows.
+
+## Fourth Batch Contract
+
+2026-10-14: the next instruction to proceed starts batch 4 on unchanged Patch 37.
+`governance-g2-switch-uncertainty.json` separately pins 18 native cases and six
+fresh-process probes, unchanged fixtures, the frozen composition input and full
+native/host inventories. The supervisor checks frozen ancestry/inventories before
+and after and rejects partial, skipped or failed reports. Each suite/worker checks
+its effective candidate. No runtime overlay is authored.
+
+| Combined failure | Expected durable result, always blocked |
+| --- | --- |
+| Native atomic commit succeeds then reports error | One pending projection receipt and old complete file; no publication or replay. |
+| Strict publication completes then reports error | One pending projection receipt and complete new file, not false rollback. |
+| Publication receipt commit reports uncertainty | Actual `projection_verified` or `published_pending_caller` row survives, without confirmation. |
+| Acknowledgement fails before/after commit, quarantine available | Exact receipt becomes `caller_quarantined`; histories and lifecycle records survive. |
+| Same acknowledgement faults, quarantine unavailable | Actual pending/acknowledged row remains, never live confirmation. |
+| Same acknowledgement faults, quarantine audit unavailable | Native quarantine can succeed despite unavailable diagnostic audit; no reconciliation claim. |
+| Required publication/acknowledgement audit and quarantine audit fail | Projection-verified or quarantined state remains blocked. |
+| Caller exception/typed cancellation and quarantine failure | Preserve the original caller failure and pending receipt. This is synchronous caller-body injection, not the full-loop cancellation evidence of batch 3. |
+| Quarantine transaction fails before/after its commit | Pending or quarantined row reflects the real SQLite outcome; the original acknowledgement failure remains authoritative. |
+| Final caller-lock release error plus audit outage | Durable acknowledgement cannot dispatch; even restoring audit availability cannot recreate missing confirmation. |
+| Native security cleanup completes then errors, quarantine unavailable | Prior cleanup is not falsely rolled back; pending caller remains blocked. |
+
+Quarantine commit injection wraps the actual native connection and delegates
+every operation except the selected failing commit; no alternate database or
+schema is created. Whole-publisher completion/error injection does not qualify
+lower-level write/flush/fsync/replace behavior; that remains batch 5.
+
+Each case verifies actual A/B lifecycle state, one correlated switch receipt,
+route/generation three, both retained transcripts, historical create/reset
+receipts, unrelated metadata and the complete expected projection. Same-host
+route selection, authenticated caller entry and switch replay must deny without
+further writes or agent/model/tool dispatch. Synthetic private error/history/key
+sentinels must not appear in output or audit. No automatic compensation occurs.
+
+Six fresh processes reopen existing fixture records and register native runner/
+executor, reset/switch coordinators, preparations and reader, with fresh fixture
+identity but no copied confirmation. They must deny reads, caller entry and replay,
+preserving records/projection bytes. Fixture registration is not general product
+startup or maintenance recovery qualification. Broker/connectors and external
+transport remain disabled; customer data and installed artifacts are untouched.
+
+```text
+python scripts/verify_governance_g2_switch_uncertainty.py --stage .codex-build/governance-g2-switch-composition-20261008-a --python .codex-build/governance-g1-native-env/Scripts/python.exe --output .codex-build/governance-g2-switch-uncertainty-qualification-20261014-a
+```
+
+Preserve failing evidence and request specific approval before a runtime/contract
+correction. Step 4/G2 and production remain open.
+
+## Fourth Batch Evidence
+
+2026-10-14: all 18 native cases pass, with zero failures, errors or skips and six
+actual fresh-process refusal probes. Full frozen ancestry and native/host inventories
+pass before and after; suite/worker verification confirms unchanged Patch 37.
+Reports are `native.xml` and `qualification.json` under
+`.codex-build/governance-g2-switch-uncertainty-qualification-20261014-a`. They retain
+`source_switch_combined_uncertainty_only`, `production_qualified=false` and
+`acceptance=pending_review`; the disabled-cache `cache_dir` warning is retained.
+Earlier source overlays, test bodies and qualification inputs remain frozen.
+
+Commit-then-error retains one pending projection receipt and the prior complete
+file, without attempting publication. Whole-publisher completion-then-error retains
+the complete new file, not false rollback. Uncertain receipt commits retain their
+actual projection-verified or pending-caller state. Acknowledgement/quarantine faults
+produce the expected pending, quarantined or acknowledged durable row, with both
+histories, historical receipts and unrelated session metadata preserved.
+
+Every uncertain outcome denies same-host route selection, authenticated caller
+entry and replay without further authoritative writes or dispatch. A committed
+acknowledgement with failed quarantine or final lock release still has no live
+confirmation. Audit restoration alone cannot make it eligible. Required outcome
+and quarantine audit failures do not fabricate reconciliation or successful operation.
+Native cleanup before an error is not reported as undone. Original caller exception/
+typed cancellation survives quarantine failure. Real SQLite quarantine failure
+before/after commit leaves the honest pending/quarantined state.
+
+Six independently registered fresh native fixture hosts refuse selection, caller
+entry and replay without inheriting reset/switch confirmation or changing records/
+projection bytes. No agent, model, tool or external socket executes in this batch.
+Synthetic private failure/history/key output and parent audit sentinel checks pass.
+These are bounded fault/refusal observations, not general startup, maintenance
+repair, durable audit reconciliation, power-loss or worker lifecycle qualification.
+
+All 76 portable tests pass: 47 required product regressions, four new uncertainty
+input/inventory tests and 25 existing caller/contention/crash/switch/composition/
+Windows checkout checks. Context validation, release/new-script syntax and whitespace
+checks pass; hashed inputs retain LF under actual Windows-style checkout. Generated
+homes, source trees and reports remain ignored, not committed.
+
+Batch 4 is complete for this bounded profile. Next is batch 5, separate short-write,
+flush/fsync/replace, storage/audit and unsafe-path cases, then batch 6's final parity
+and acceptance review. Step 4, bounded switch, work package 3/G2 and production remain
+open. No new runtime overlay, pin, wheel, installer or activation change follows.
