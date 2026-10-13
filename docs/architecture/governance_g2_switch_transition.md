@@ -7,8 +7,8 @@ criterion review. Step 4 now starts with actual process crash/fresh-host restart
 on unchanged Patch 37. Consult `governance_g2_switch_failure_matrix.md` for the
 ordered batches; Step 4 and bounded switch acceptance remain open.
 
-Its first four batches now pass. The current next batch is lower-level storage/
-audit faults and unsafe paths, not rotation or frontend composition.
+Its first five batches now pass. The current next batch is final ordinary-mode
+parity and criterion review, not rotation or frontend composition.
 
 2026-10-08: the user approved the switch contract and ordered steps and authorized
 G2 work package 3 switch Step 2, following bounded initial-reset acceptance.
@@ -461,3 +461,17 @@ and no replay, dispatch or post-commit rollback is fabricated. The switch failur
 matrix records exact outcomes, reports and exclusions. Next is batch 5's storage/
 audit/path matrix, then final parity/acceptance review. Step 4, bounded switch,
 work package 3/G2, installed artifacts and production gates remain unchanged.
+
+### Step 4 Fifth Batch
+
+2026-10-14: all 59 native cases pass on unchanged Patch 37 (17 storage/audit,
+42 path/projection), with zero skips and full frozen ancestry/inventories verified
+before and after. All 80 portable tests and context/syntax/whitespace checks pass.
+Independent incomplete-write/flush/fsync/replace faults retain the prior complete
+file; receipt and audit failures retain honest blocked state. Actual fixture
+directory junctions, scoped simulated attributes, missing/nonfile/UNC paths and
+altered projections deny without fallback, repair or dispatch. The failure matrix
+records exact outcomes, immutable inputs and exclusions. No runtime correction
+was needed. Next is batch 6's final ordinary parity and criterion review, with
+known Windows failures retained before explicit acceptance. Step 4, bounded
+switch, work package 3/G2, installed artifacts and production stay unaccepted.

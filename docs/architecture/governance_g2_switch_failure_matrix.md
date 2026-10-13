@@ -7,9 +7,8 @@ Step 4 on unchanged Patch 37. The accepted profile remains one acknowledged
 create A, initial reset A-to-B, then same-owner switch B-to-A. This document
 organizes the existing failure requirements; it adds no runtime authority.
 
-Batches 1-4 now pass on that unchanged profile. Next is batch 5, lower-level
-storage/audit faults and unsafe paths; Step 4 and bounded switch acceptance
-stay open.
+Batches 1-5 now pass on that unchanged profile. Next is batch 6, final ordinary
+parity and criterion review; Step 4 and bounded switch acceptance stay open.
 
 Consult `maya_governance_integration_plan.md`,
 `governance_g2_switch_transition.md`, `governance_g2_session_consistency.md`
@@ -397,3 +396,97 @@ Batch 4 is complete for this bounded profile. Next is batch 5, separate short-wr
 flush/fsync/replace, storage/audit and unsafe-path cases, then batch 6's final parity
 and acceptance review. Step 4, bounded switch, work package 3/G2 and production remain
 open. No new runtime overlay, pin, wheel, installer or activation change follows.
+
+## Fifth Batch Contract
+
+2026-10-14: the instruction to proceed starts batch 5 on unchanged Patch 37.
+`governance-g2-switch-storage-paths.json` pins two native suites (17 storage/audit
+and 42 path/projection cases), their unchanged fixture dependencies, frozen parent
+input and full native/host inventories. The supervisor verifies ancestry before
+and after, and rejects failed, skipped, duplicate or partial JUnit reports. Each
+suite independently verifies the effective source. No runtime overlay is added.
+
+The publisher cases separately inject temporary-file creation, partial write with
+error, flush, fsync, EXDEV/EBUSY replacement failure, reported short write and
+falsely reported full write with truncated completed bytes. The prior complete
+projection must remain byte-identical, temporary files must be cleaned, and no
+replacement/copy fallback may occur for incomplete bytes. The committed native
+switch receipt remains pending and cannot authorize selection, caller entry or
+replay. Required authorization audit failures cover route read, end, reopen,
+switch and acknowledgement; real SQLite authorizer faults cover both publication
+receipt updates, acknowledgement and quarantine. This is not durable external
+audit reconciliation or power-loss durability qualification.
+
+Five actual fixture directory junction/symlink cases cover before switch, after
+commit, completed temporary file, acknowledgement and published reader. Sixteen
+exact-path attribute injections exercise symlink/reparse guards on directory,
+database, index and lock before/after commit; these are simulated file attributes,
+not actual individual-file symlink evidence. Four missing/nonfile cases and one
+UNC-before-access case must refuse dispatch and preserve authoritative records.
+Fixture link moves/deletion stay within verified temporary roots; only the
+verified link is removed, never its target tree or customer files.
+
+Sixteen projection cases alter JSON syntax, contract, instance/database identity,
+generation, route presence, target or route version before switch or at an
+acknowledged reader. The complete canonical-byte/hash comparison must reject
+every altered projection without repair, fallback or SQLite mutation. This is
+byte-integrity rejection, not independent coverage of every JSON parser branch.
+Both histories, historical receipts and unrelated metadata must survive each
+committed failure. Output/audit synthetic-private sentinels and zero agent/model/
+tool/socket dispatch are checked. Continuous hostile filesystem/ACL races,
+individual-file escape behavior and general lifecycle recovery remain excluded.
+
+```text
+python scripts/verify_governance_g2_switch_storage_paths.py --stage .codex-build/governance-g2-switch-composition-20261008-a --python .codex-build/governance-g1-native-env/Scripts/python.exe --output .codex-build/governance-g2-switch-storage-paths-qualification-20261014-a
+```
+
+Retain failing evidence and request approval before any source/contract correction.
+Batch 6 and explicit bounded switch acceptance remain subsequent work.
+
+## Fifth Batch Evidence
+
+2026-10-14: all 59 native cases pass (17 storage/audit, 42 path/projection), with
+zero failures, errors or skips. Full frozen ancestry and native/host inventories
+pass before and after; both suites independently verify unchanged Patch 37.
+Reports are `suite-0.xml`, `suite-1.xml` and `qualification.json` under
+`.codex-build/governance-g2-switch-storage-paths-qualification-20261014-a`.
+They retain `source_switch_storage_audit_paths_only`,
+`production_qualified=false`, `acceptance=pending_review` and the known disabled-
+cache `cache_dir` warning. Input hash is
+`06d9b5e61d896be3c331c6480839106a46e4ce8f3e0d586aa29217edc3f3563e`.
+Earlier tests, inputs, patches and effective source inventories remain unchanged.
+
+All eight independent publisher faults preserve the prior complete projection
+and clean temporary files. Truncated writes, including a false full-length
+report, never reach replacement. EXDEV/EBUSY each attempt one strict replacement
+without copy fallback. The actual switch remains committed pending projection;
+same-host read, caller entry and replay deny without further records or dispatch.
+Authorization audit failures before mutation leave SQLite/projection unchanged;
+acknowledgement audit failure quarantines the caller. SQLite receipt update
+failures retain the exact pending-projection, projection-verified, quarantined or
+pending-caller state. Both transcripts, historical receipts, unrelated metadata,
+route/generation three and integrity/foreign-key checks survive committed faults.
+
+Actual directory junctions deny at all five selected boundaries. Old or new
+complete bytes and a fixture sentinel remain intact; missing/nonfile and UNC
+cases never adopt fallback storage. Simulated individual-file symlink/reparse
+attributes exercise the named guards without being presented as actual file-
+escape qualification. All sixteen malformed-envelope cases deny by canonical
+byte/hash comparison before mutation or disclosure, preserving SQLite and the
+altered bytes without automatic repair. Reader refusals do not mint authority.
+No agent/model/tool/socket dispatch occurs. Captured output remains synthetic-
+secret safe, and committed-fault audit sentinel checks pass.
+
+All 80 portable tests pass: 47 required product regressions, four new input/
+inventory checks and 29 existing switch/failure/Windows checkout checks. Context
+validation, release/new-script syntax and whitespace checks pass. Hash-pinned
+files preserve LF through actual Windows-style checkout. Generated sources,
+homes, junction fixtures and reports remain ignored, not committed.
+
+Batch 5 is complete for this bounded source profile; no runtime correction was
+needed. Next is batch 6's final ordinary-mode parity and criterion review,
+retaining known Windows failures and exclusions before explicit switch acceptance.
+Power-loss durability, continuous hostile filesystem/ACL races, actual individual-
+file escapes, durable audit reconciliation, recovery and general workers remain
+unqualified. Step 4, bounded switch, work package 3/G2 and production remain open.
+Runtime pin, wheel, installer and plugin activation are unchanged.

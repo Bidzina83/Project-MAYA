@@ -964,6 +964,16 @@ failure matrix. Next is batch 5's storage/audit/path faults. Step 4/G2 acceptanc
 pin, wheels, installers and production activation remain unchanged; runtime
 corrections require specific approval.
 
+On 2026-10-14 switch Step 4 batch 5 passes 59 native storage/audit/path cases
+(17 storage/audit and 42 path/projection) on unchanged Patch 37, with zero skips,
+verified frozen ancestry/inventories and 80 passing portable tests. Incomplete
+publisher bytes retain the prior complete file; committed failures remain blocked.
+Actual directory junctions are distinct from simulated individual-file attributes;
+altered projections deny by canonical-byte/hash comparison. Consult the switch
+failure matrix for evidence/exclusions. Next is batch 6's final ordinary parity
+and criterion review, retaining known Windows failures before explicit acceptance.
+Step 4/G2, production activation, pin, wheels and installers remain unchanged.
+
 Before each implementation step, consult the applicable agreed plan and identify
 its current step and acceptance criteria. If inspection requires a different
 sequence, recommend the specific revised order and wait for user approval before

@@ -66,6 +66,11 @@ PROTECTED += (
     "scripts/verify_governance_g2_switch_uncertainty.py",
     "tests/hermes_g2_switch_uncertainty_native.py",
     "tests/test_governance_g2_switch_uncertainty.py",
+    "docs/architecture/governance-g2-switch-storage-paths.json",
+    "scripts/verify_governance_g2_switch_storage_paths.py",
+    "tests/hermes_g2_switch_storage_native.py",
+    "tests/hermes_g2_switch_paths_native.py",
+    "tests/test_governance_g2_switch_storage_paths.py",
 )
 
 

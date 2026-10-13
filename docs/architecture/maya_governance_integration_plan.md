@@ -466,6 +466,17 @@ records exact outcomes/exclusions. Next is batch 5's storage/audit/path faults,
 then final parity/acceptance review. Runtime/contract fixes require specific
 approval. Installed artifacts, production and remaining gates stay unchanged.
 
+2026-10-14: switch Step 4 batch 5 passes all 59 native storage/audit/path cases
+(17 storage/audit and 42 path/projection) on unchanged Patch 37, with zero skips,
+verified full frozen ancestry/inventories and 80 passing portable tests. Actual
+directory junctions and complete-byte publisher failures are distinguished from
+simulated individual-file attributes and canonical-hash projection rejection.
+The switch failure matrix records exact outcomes and exclusions. No runtime
+correction was required. Next is batch 6's final ordinary parity/criterion review,
+retaining known Windows failures before explicit bounded switch acceptance.
+Remaining work packages, G2 and production remain open; no pin, wheel, installer
+or activation change follows.
+
 G0, the pre-G1 security checkpoint and bounded source-level G1 are accepted.
 The G1 decision and immutable evidence references are in the lifecycle runbook.
 G2 work package 1's owner-scoped transition design and effective writer inventory
