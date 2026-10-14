@@ -2,6 +2,7 @@
 
 import json
 import threading
+from http.client import HTTPConnection
 from urllib.error import HTTPError
 from urllib.request import Request, ProxyHandler, build_opener
 import unittest
@@ -251,6 +252,24 @@ class BrokerTests(unittest.TestCase):
             raised.exception.close()
             self.assertEqual(self.effects, ["document"])
         finally:
+            server.shutdown()
+            server.server_close()
+            worker.join(3)
+
+    def test_http_unknown_method_never_reflects_marker(self):
+        server = build_test_broker_server(self.broker)
+        worker = threading.Thread(target=server.serve_forever)
+        worker.start()
+        connection = HTTPConnection("127.0.0.1", server.server_port, timeout=3)
+        try:
+            connection.request("SECRET_MARKER_METHOD", "/")
+            response = connection.getresponse()
+            body = response.read()
+            self.assertEqual(response.status, 501)
+            self.assertNotIn(b"SECRET_MARKER", body)
+            self.assertEqual(json.loads(body), {"error": "broker.invalid_http"})
+        finally:
+            connection.close()
             server.shutdown()
             server.server_close()
             worker.join(3)

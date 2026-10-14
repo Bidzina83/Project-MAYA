@@ -51,6 +51,23 @@ def build_test_broker_server(broker: RestrictedBroker, port: int = 0) -> HTTPSer
                 if len(raw) != size:
                     raise BrokerDenied("broker.invalid_request")
                 result = broker.handle(tokens[0][7:], self.path, raw)
+                if self.path == "/v1/responses" and json.loads(raw).get("stream") is True:
+                    # Buffer and validate the complete host reply before emitting
+                    # fixture SSE. Never relay unvalidated provider deltas.
+                    if not isinstance(result, dict) or result.get("object") != "response":
+                        raise BrokerDenied("broker.invalid_model_result")
+                    event = {"type": "response.completed", "sequence_number": 0,
+                             "response": result}
+                    data = ("event: response.completed\ndata: " + json.dumps(event, allow_nan=False)
+                            + "\n\n").encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/event-stream")
+                    self.send_header("Content-Length", str(len(data)))
+                    self.send_header("Connection", "close")
+                    self.end_headers()
+                    self.wfile.write(data)
+                    self.close_connection = True
+                    return
                 self._reply(200, result)
             except BrokerDenied:
                 self._reply(403, {"error": "broker.denied"})

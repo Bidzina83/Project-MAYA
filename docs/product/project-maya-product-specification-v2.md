@@ -300,6 +300,37 @@ Gate A Step 1 evaluation is accepted; Step 2's LPAC/WFP recommendation in
 proves no execution restriction and does not authorize privileged provisioning
 or product activation.
 
+Step 3's native continuation stopped before child resume on LPAC-status
+verification. Its separately permitted test security resources were cleaned up.
+The bounded AccessCheck method correction in
+`docs/architecture/governance_v2_lpac_verification_review.md` was approved on
+2026-10-14. Suspended-token positive/negative controls must pass before Hermes
+resumes. No ordinary-mode fallback, native-loop acceptance, runtime patch or
+broader grant is authorized by compilation or policy read-back evidence.
+The paired native token controls now pass, but the resumed Python child exits
+with 0xC0000022 without a worker frame. Step 3 remains blocked at diagnosis of the
+exact denied startup resource. No Hermes loop, WFP effect-level containment or
+another permission/correction is qualified by the token comparison.
+Unchanged-input tracing subsequently localizes startup denial to OS registry
+reads, ending at SideBySide, whose read grant is absent from the selected LPAC
+profile. Python DLL mapping succeeded. No broad capability or OS-registry ACL
+change is authorized by that diagnosis; a further bounded experiment needs an
+explicit correction-budget and impact decision. Gate A remains unaccepted.
+The user subsequently approved that specific additional SideBySide-only read
+experiment, with a non-inheriting package-SID grant and exact descriptor rollback.
+It authorizes no broad registry capability, other key, runtime patch or product
+readiness claim; further blockers require a new decision.
+The exact-key comparison changed the exit to 0xC0150002 without a worker frame;
+original-descriptor restoration returned 0xC0000022. This is not useful runtime
+execution or Gate A acceptance. The remaining activation-context cause is not
+localized; no additional key or broad capability is authorized automatically.
+The subsequent approved whole-startup assessment is recorded in
+`docs/architecture/governance_v2_windows_startup_assessment.md`. It distinguishes
+matching artifact/package metadata from blocked restricted DLL activation and
+Maya-owned memory/SSE contract mismatches. Broad customer-registry read channels
+remain unacceptable without protection review. A fixed compatibility contract
+requires review before further grants/corrections; no production claim follows.
+
 ### Historical Native Candidate Evidence
 
 The following implementation chronology retains prior scoped decisions and

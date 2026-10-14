@@ -86,6 +86,35 @@ the user approved its LPAC/WFP architecture on 2026-10-14. Step 3's bounded
 prototype is next. Privileged machine-security provisioning requires separate
 impact disclosure and permission. No containment is proven; Gate A remains open.
 
+Step 3's native helper/slice code is now present, but the suspended child was not
+resumed: class-46 LPAC verification failed. Isolated security resources were cleaned
+up. The user approved the bounded AccessCheck positive/negative-control correction
+on 2026-10-14; consult `docs/architecture/governance_v2_lpac_verification_review.md`.
+Qualify those suspended-token controls before resuming Hermes. No ordinary-mode
+fallback, broader capability or runtime patch is authorized.
+The paired native controls now pass, but the resumed Python child exits with
+0xC0000022 and no worker frame. Step 3 is blocked at startup-resource diagnosis;
+do not infer Hermes execution, containment or approval for another correction.
+The user requested startup diagnosis: unchanged-input tracing localizes denial
+to OS registry reads, with SideBySide the terminal observed denied key. The LPAC
+profile lacks its registryRead/package grant; Python DLL loading succeeded. No
+registry permission correction is approved; consult the verification review and
+obtain an explicit correction-budget/impact decision before another experiment.
+The user subsequently approved one additional reversible SideBySide-only read
+experiment. Capture/restore the original descriptor; no inheriting or broad
+registry capability grant is permitted. This is a specific budget exception,
+not authorization to fix further startup blockers or qualify Gate A.
+The exact-key comparison changed 0xC0000022 to 0xC0150002, but no worker frame
+appeared; restoring the original descriptor restored 0xC0000022. No descendant
+test-SID grants were found. Stop at the unlocalized activation-context failure;
+do not grant additional keys/capabilities or infer native Hermes readiness.
+The user then approved whole-startup assessment, not another correction. Consult
+`docs/architecture/governance_v2_windows_startup_assessment.md`: metadata matches,
+restricted DLL activation remains blocked, broad registryRead exposes unwanted
+read channels, and Maya's memory/SSE fixture wiring has native-contract defects.
+Prepare a fixed compatibility contract for review before further grants/code
+changes; no new runtime patch, product activation or Gate A acceptance follows.
+
 The user approved reduced internal enforcement scope on 2026-10-14 without
 reduced customer protection. The active plan is revision 2, Gate A feasibility,
 in `docs/architecture/maya_governance_integration_plan_v2.md`. Do not resume the

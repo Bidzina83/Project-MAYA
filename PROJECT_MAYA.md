@@ -211,6 +211,34 @@ architecture was approved on 2026-10-14, closing Step 2. Step 3's bounded protot
 is next; privileged provisioning requires separate permission. No machine security
 changes or containment qualification follow from architecture approval.
 
+Step 3 implemented native helper/slice code but stopped before child resume on
+the class-46 LPAC-status query. Test security resources were cleaned up. The
+bounded verification correction in
+`docs/architecture/governance_v2_lpac_verification_review.md` was approved on
+2026-10-14. Qualify the AccessCheck suspended-token positive/negative controls
+before resuming Hermes; no fallback, broader capability or runtime patch is
+authorized. Native execution and containment qualification remain unproven.
+The paired native controls now pass; the resumed LPAC Python child exits with
+0xC0000022 without a worker frame. The exact startup resource denial is not yet
+localized. Step 3 stays blocked; no extra correction or broader grant is approved.
+Subsequent unchanged-input diagnosis identifies OS-registry startup denials,
+ending at SideBySide despite successful Python DLL mapping. The launcher's OS
+read-permission model is incomplete; no registry grant/capability was changed.
+See the verification review for evidence and the required correction-budget
+decision. Neither startup success nor another correction is accepted yet.
+The user subsequently approved one additional reversible, non-inheriting
+package-SID ReadKey experiment on SideBySide only, with exact descriptor rollback.
+No other key/capability, runtime patch or Gate A acceptance is authorized.
+The verified grant changed the exit to 0xC0150002 with no worker frame; exact
+restoration returned 0xC0000022. It corrects the observed access-denial blocker
+but not Windows startup. Further activation-context diagnosis/corrections remain
+unapproved; no new grant or native Hermes qualification follows.
+The user approved whole-startup assessment next. Its evidence and proposal are in
+`docs/architecture/governance_v2_windows_startup_assessment.md`. Prepared package
+metadata matches, but restricted DLL activation and two Maya-owned memory/SSE
+wiring defects remain. Broad registry capability is not the default fix. No
+further permission or code correction is approved; Gate A remains open.
+
 ### Historical Candidate Evidence
 
 The following chronology preserves scoped acceptance and unresolved exclusions.

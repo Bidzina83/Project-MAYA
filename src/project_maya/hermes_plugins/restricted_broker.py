@@ -126,7 +126,9 @@ class RestrictedBroker:
                     effect = lambda: self._search(body["query"])
                 elif route == "/v1/responses":
                     if (set(body) - {"model", "input", "instructions", "tools", "tool_choice",
-                                     "reasoning", "max_output_tokens", "stream", "store"}
+                                     "reasoning", "max_output_tokens", "stream", "store",
+                                     "parallel_tool_calls", "prompt_cache_key", "include",
+                                     "temperature", "service_tier", "text", "truncation"}
                             or body.get("model") != "gpt-6-luna" or "input" not in body
                             or body.get("store", False) is not False):
                         raise BrokerDenied("broker.invalid_request")

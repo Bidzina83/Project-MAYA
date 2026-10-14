@@ -34,6 +34,39 @@ The user commenced Step 3 on 2026-10-14. Its
 and read-only prerequisite evidence from the unimplemented native LPAC/WFP slice.
 Step 3 remains open; no A01-A20 acceptance or security provisioning is inferred.
 
+The subsequent native continuation provisioned and cleaned up isolated test
+security resources with separate permission. The child was not resumed because
+the assumed class-46 LPAC query failed. The user approved the bounded
+[verification-method correction](governance_v2_lpac_verification_review.md) on
+2026-10-14. Qualify its AccessCheck suspended-token positive/negative controls
+before resuming Step 3's native slice. No runtime patch, isolation downgrade,
+broader capability or product acceptance follows compilation or this correction.
+The paired native token controls passed. The subsequent resumed LPAC Python child
+returned 0xC0000022 with no worker frame; its exact denied startup resource remains
+unidentified. Step 3 stops here for review. Do not extend the fixed budget, widen
+grants or introduce another correction without specific approval. No Hermes-loop
+or effect-level containment acceptance follows token behavior verification.
+The user's subsequent diagnostic request produced unchanged-input startup traces:
+OS registry reads deny, ending at SideBySide after Python DLL mapping. The existing
+profile lacks that key's read grant; no registry permission was changed. Consult
+the verification review for the narrow proposed experiment and obtain an explicit
+correction-budget/impact decision before implementing it. Diagnosis is not another
+approved correction, expanded evaluation sequence or Gate A acceptance.
+The user subsequently approved one explicit budget exception: the reversible
+SideBySide-only, non-inheriting package-SID ReadKey experiment, with descriptor
+capture/rollback and unchanged-input comparison. This does not authorize another
+permission sequence, broad registry capability, runtime patch or Gate A acceptance.
+That verified grant changed the child exit to 0xC0150002, still without a worker
+frame; exact descriptor restoration returned 0xC0000022. Stop at the unlocalized
+activation-context failure. Review complete Windows startup requirements before
+proposing another correction; do not automatically resume a key-by-key sequence.
+The user approved that assessment; its completed bounded evidence and proposed
+fixed startup-and-integration contract are in
+`governance_v2_windows_startup_assessment.md`. It is not authorization to apply
+the proposal. No new grant/capability, source correction, runtime pin, wheel,
+installer or Gate A acceptance follows. Keep the unresolved activation root and
+both Maya-owned native-contract mismatches visible before another execution.
+
 Before coding, propose a fixed Windows profile, specific isolation mechanism,
 supported capabilities, trust assumptions, exact allowed/denied tests, evaluation
 budget and stop conditions; obtain user approval. Demonstrate real pinned Hermes
