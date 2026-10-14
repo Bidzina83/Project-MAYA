@@ -17,6 +17,12 @@ No fake runtime, duplicate policy engine or new agent loop is introduced.
 
 ### A. Architecture Feasibility
 
+Step 1's approved profile, acceptance matrix, bounded budget and stop conditions
+are in [the evaluation contract](governance_v2_gate_a_evaluation_contract.md).
+The user accepted Step 1 on 2026-10-14. Step 2 architecture assessment is next;
+its recommendation requires approval before implementation. No isolation
+mechanism or prototype is authorized by Step 1 acceptance.
+
 Before coding, propose a fixed Windows profile, specific isolation mechanism,
 supported capabilities, trust assumptions, exact allowed/denied tests, evaluation
 budget and stop conditions; obtain user approval. Demonstrate real pinned Hermes
