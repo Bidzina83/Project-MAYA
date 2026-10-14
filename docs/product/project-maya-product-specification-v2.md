@@ -974,6 +974,16 @@ failure matrix for evidence/exclusions. Next is batch 6's final ordinary parity
 and criterion review, retaining known Windows failures before explicit acceptance.
 Step 4/G2, production activation, pin, wheels and installers remain unchanged.
 
+On 2026-10-14 switch Step 4 batch 6 execution and review pass on unchanged Patch
+37. Fresh 331-case ordinary parity matches pinned Hermes: 322 passes and nine
+identical known Windows failures per profile, zero skips and verified frozen
+ancestry/inventories. All 80 portable tests pass; 329 retained native case records
+validate against frozen exact-count reports/inputs, not fresh execution today.
+Consult `docs/architecture/governance_g2_switch_acceptance_review.md` for criteria,
+hashes and exclusions. Explicit result acceptance is pending; criteria approval
+is not that decision. Do not start rotation/frontends or alter production gates,
+pins, wheels or installers before the applicable approval.
+
 Before each implementation step, consult the applicable agreed plan and identify
 its current step and acceptance criteria. If inspection requires a different
 sequence, recommend the specific revised order and wait for user approval before

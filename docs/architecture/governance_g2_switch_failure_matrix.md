@@ -7,8 +7,9 @@ Step 4 on unchanged Patch 37. The accepted profile remains one acknowledged
 create A, initial reset A-to-B, then same-owner switch B-to-A. This document
 organizes the existing failure requirements; it adds no runtime authority.
 
-Batches 1-5 now pass on that unchanged profile. Next is batch 6, final ordinary
-parity and criterion review; Step 4 and bounded switch acceptance stay open.
+Batches 1-6 are executed on that unchanged profile. Final ordinary parity and
+criterion review pass; explicit acceptance of the results is next. Step 4 and
+bounded switch acceptance stay open pending that decision.
 
 Consult `maya_governance_integration_plan.md`,
 `governance_g2_switch_transition.md`, `governance_g2_session_consistency.md`
@@ -490,3 +491,68 @@ Power-loss durability, continuous hostile filesystem/ACL races, actual individua
 file escapes, durable audit reconciliation, recovery and general workers remain
 unqualified. Step 4, bounded switch, work package 3/G2 and production remain open.
 Runtime pin, wheel, installer and plugin activation are unchanged.
+
+## Sixth Batch Contract
+
+2026-10-14: the user approved the batch 6 acceptance criteria and subsequently
+explicitly instructed execution. This approves the criteria and execution, not
+the unobserved results or bounded switch acceptance. Work remains on unchanged
+Patch 37; rotation and frontend composition are not started.
+
+Use the existing ordinary-mode qualifier with fresh output and isolated homes.
+Export pinned unpatched Hermes from local Git objects without downloading or
+modifying the user's checkout. Verify frozen candidate ancestry, complete source/
+host inventories and unchanged native test/conftest bytes before/after. Run the
+same 331 cases on both profiles; compare case identities and individual outcomes,
+not only totals. Reject collection errors, missing/duplicate/skipped cases,
+outcome differences or an unexpected failure set. Expected bounded Windows parity
+is 322 passes and the same nine known shell-path failures per profile, not 331
+passes. Retain those failures and their JUnit diagnostics.
+
+```text
+python scripts/qualify_governance_g2_switch_composition.py --stage .codex-build/governance-g2-switch-composition-20261008-a --python .codex-build/governance-g1-native-env/Scripts/python.exe --ordinary-source-repo ../hermes-agent --output .codex-build/governance-g2-switch-final-parity-20261014-a
+```
+
+Review retained exact-count Step 3/batch 1-5 XML and qualification reports against
+current frozen contracts, report/input hashes and matching inventories. Distinguish
+the 199 composition/replay and 130 failure-matrix case records from fresh executions
+in this batch. Reconcile permissions, source/target isolation, normal-exit cleanup,
+confirmation, cancellation, crash/restart, contention, uncertainty and complete
+projection outcomes against the approved switch contract. Preserve denied broader
+paths and every stated exclusion; do not create new grants to close a review row.
+
+Rerun the required product regressions and existing report-parser, provenance and
+Windows checkout checks, context validation and release-script syntax checks.
+Record exact counts, report locations, hashes, warnings/known failures and any
+uncovered criterion in `governance_g2_switch_acceptance_review.md`. Generated
+sources/homes/reports stay ignored; earlier inputs keep their pending-review labels.
+Recommend bounded acceptance only after the evidence passes. Explicit user
+acceptance of the results remains necessary before closing Step 4 or moving to
+rotation. Runtime changes, scope changes or reordered work require specific approval.
+
+## Sixth Batch Evidence And Recommendation
+
+2026-10-14: fresh ordinary comparison executes all 331 cases per profile. Patch 37
+matches pinned unpatched Hermes case-for-case: 322 passes and the same nine known
+Windows absolute shell-path failures on each profile, zero skips/collection errors
+and no missing/duplicate cases. Full frozen ancestry, native/host inventories and
+unchanged native test/conftest bytes verify before and after. Reports are under
+`.codex-build/governance-g2-switch-final-parity-20261014-a`; this is bounded parity,
+not an all-passing Windows suite. Known failures remain visible and relevant.
+
+The retained 199 composition/replay plus 130 failure-matrix records verify against
+their exact-count XML, current frozen test/fixture contracts and input/inventory
+hashes. `.codex-build/governance-g2-switch-final-evidence-20261014-a.json` records
+XML/report checksums and explicitly labels these as historical evidence, not 329
+fresh executions. All 80 portable regressions pass again; context, release-script
+syntax and whitespace checks pass. Final Windows checkout checks include the
+new acceptance-review document. Generated exports/homes/reports remain ignored.
+
+`governance_g2_switch_acceptance_review.md` maps the approved criteria to native
+records, file bytes, transport/handler observations and audit outcomes; it records
+report hashes, the exact nine failures, prior warnings and every bounded exclusion.
+No new runtime correction, authority grant or reordered milestone was needed.
+Batch 6 execution and review are complete. Recommend bounded switch Step 4
+acceptance with those exclusions; explicit user result acceptance is pending.
+Rotation/frontends have not begun. WP3/G2, installed artifacts and production
+remain unaccepted; runtime pin, wheels and activation gates remain unchanged.

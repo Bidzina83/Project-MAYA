@@ -477,6 +477,18 @@ retaining known Windows failures before explicit bounded switch acceptance.
 Remaining work packages, G2 and production remain open; no pin, wheel, installer
 or activation change follows.
 
+2026-10-14: switch Step 4 batch 6 execution and criterion review pass on unchanged
+Patch 37. Fresh 331-case ordinary comparison matches pinned unpatched Hermes:
+322 passes and nine identical known Windows failures per profile, zero skips and
+verified frozen ancestry/inventories. All 80 portable tests pass. The 329 retained
+native case records validate against exact-count reports and frozen inputs/hashes;
+they are historical evidence, not fresh executions today. The bounded criteria,
+exclusions and acceptance recommendation are in
+`governance_g2_switch_acceptance_review.md`. Explicit acceptance of the results
+is next; approved criteria are not result acceptance. Rotation/frontends have not
+started. No runtime correction, pin, wheel, installer or production activation
+change follows; WP3/G2 and remaining gates stay open.
+
 G0, the pre-G1 security checkpoint and bounded source-level G1 are accepted.
 The G1 decision and immutable evidence references are in the lifecycle runbook.
 G2 work package 1's owner-scoped transition design and effective writer inventory

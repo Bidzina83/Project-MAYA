@@ -7,8 +7,8 @@ criterion review. Step 4 now starts with actual process crash/fresh-host restart
 on unchanged Patch 37. Consult `governance_g2_switch_failure_matrix.md` for the
 ordered batches; Step 4 and bounded switch acceptance remain open.
 
-Its first five batches now pass. The current next batch is final ordinary-mode
-parity and criterion review, not rotation or frontend composition.
+All six batches are executed; final ordinary parity and criterion review pass.
+Next is explicit acceptance of the results, not rotation or frontend composition.
 
 2026-10-08: the user approved the switch contract and ordered steps and authorized
 G2 work package 3 switch Step 2, following bounded initial-reset acceptance.
@@ -475,3 +475,22 @@ records exact outcomes, immutable inputs and exclusions. No runtime correction
 was needed. Next is batch 6's final ordinary parity and criterion review, with
 known Windows failures retained before explicit acceptance. Step 4, bounded
 switch, work package 3/G2, installed artifacts and production stay unaccepted.
+
+### Step 4 Sixth Batch And Acceptance Recommendation
+
+2026-10-14: the user approved the batch 6 criteria, then explicitly authorized
+execution. Fresh ordinary parity on unchanged Patch 37 matches pinned unpatched
+Hermes across all 331 cases per profile: 322 passes, the same nine known Windows
+failures, zero skips/collection errors and exact case outcomes. Full frozen
+ancestry/inventories and native test/conftest bytes verify before/after. The 329
+retained native case records (199 composition/replay, 130 failure matrix) pass
+exact-count/input/hash review; they are not claimed as freshly rerun today.
+All 80 portable tests and context/syntax/whitespace checks pass.
+
+The criterion reconciliation, report hashes, known failures and exclusions are
+in `governance_g2_switch_acceptance_review.md`; fresh reports are under
+`.codex-build/governance-g2-switch-final-parity-20261014-a`. No runtime correction
+was required. Recommend bounded source-level switch Step 4 acceptance on unchanged
+Patch 37 with all exclusions. Explicit acceptance of these results is pending;
+criteria approval alone is not that decision. Rotation, frontend composition,
+WP3/G2, production activation, runtime pin, wheels and installers remain unchanged.
