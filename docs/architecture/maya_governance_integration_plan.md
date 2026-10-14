@@ -396,7 +396,15 @@ dependencies and exact native test harness are established.
 
 ## Approval And Next Action
 
-Current decision, 2026-10-08: the user explicitly accepted bounded initial-reset
+Current decision, 2026-10-14: the user explicitly accepted bounded switch Step 4
+on unchanged Patch 37 with all exclusions in
+`governance_g2_switch_acceptance_review.md`. Create, initial reset and the single
+same-owner switch-back are accepted source-level transitions, not WP3/G2 or
+production completion. Next is rotation contract review within WP3, with specific
+approval before implementation. Frontend composition stays WP4 afterward;
+production activation, runtime pin, wheels and installers remain unchanged.
+
+Earlier decision, 2026-10-08: the user explicitly accepted bounded initial-reset
 Step 4 on unchanged Patch 35 with every exclusion in
 `governance_g2_reset_acceptance_review.md`. Create and initial reset are accepted
 source-level transitions, not completion of work package 3 or G2. The remaining
@@ -488,6 +496,15 @@ exclusions and acceptance recommendation are in
 is next; approved criteria are not result acceptance. Rotation/frontends have not
 started. No runtime correction, pin, wheel, installer or production activation
 change follows; WP3/G2 and remaining gates stay open.
+
+On 2026-10-14 the user explicitly accepted the batch 6 results and bounded switch
+Step 4 on unchanged Patch 37 with all exclusions in
+`governance_g2_switch_acceptance_review.md`. Switch Steps 1-4 are closed for one
+same-owner switch-back only. Frozen inputs/reports, known Windows failures and
+warnings remain unchanged. Next is source-informed rotation contract review within
+WP3 and specific contract approval before coding, not frontend composition or
+an installer rebuild. Rotation, WP3/G2 and production remain unqualified; no pin,
+wheel, capability marker or activation change follows.
 
 G0, the pre-G1 security checkpoint and bounded source-level G1 are accepted.
 The G1 decision and immutable evidence references are in the lifecycle runbook.

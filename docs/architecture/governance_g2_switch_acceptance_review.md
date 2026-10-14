@@ -1,8 +1,8 @@
 # G2 Switch Acceptance Review
 
-Review date: 2026-10-14. Recommendation: accept bounded source-level switch
-Step 4 with all exclusions below. Decision: pending explicit user acceptance
-of these results. Approval of the batch 6 criteria was not result acceptance.
+Review date: 2026-10-14. Decision: explicitly accepted by the user on 2026-10-14,
+bounded source-level switch Step 4 on unchanged Patch 37 with all exclusions
+below. The later "I accept" approved the results, not merely the batch 6 criteria.
 
 ## Scope And Candidate
 
@@ -29,7 +29,7 @@ needed. Runtime pin, wheels, installers and production activation are unchanged.
 | Complete criterion-to-evidence review | Retained 199 composition/replay and 130 failure-matrix case records are validated against exact-count XML, frozen test/fixture contracts, input hashes and matching native/host inventory hashes. These are historical evidence records, not 329 fresh executions today. The reconciliation below identifies their coverage and explicit limits. Passed within the approved profile. |
 | Integrity and denial guarantees | Reviewed native records, file bytes, transport/handler counts and audit assertions cover retained A/B history and receipts, complete old-or-new projection, independent per-action authority and denial without live confirmation. Missing or uncertain confirmation never becomes authority through a durable receipt, audit restoration or replay. Passed within the approved profile. |
 | Product/provenance/reporting checks | All 80 portable tests pass, including 47 required product regressions and 33 existing report/provenance/Windows checkout checks. Context, release-script syntax and whitespace checks pass. Earlier disabled-cache-provider warning remains documented; known failure diagnostics and hashes are retained. Passed. |
-| Scope and acceptance decision | All exclusions below remain explicit and denied/unqualified as applicable. Recommend accepting bounded switch Step 4 only. Explicit user acceptance of the results is pending; rotation and frontend composition have not begun. |
+| Scope and acceptance decision | All exclusions below remain explicit and denied/unqualified as applicable. The user explicitly accepted bounded switch Step 4 results on 2026-10-14. Rotation and frontend composition have not begun; WP3/G2 and production remain unaccepted. |
 
 ## Native Evidence Reconciliation
 
@@ -126,12 +126,15 @@ Preserve these boundaries in any acceptance decision:
 - Production activation, model routing, capability markers, runtime pins, Hermes wheels and installers remain unchanged and unqualified by this review.
 
 The bounded execution/evidence criteria pass. No new runtime defect or contract
-dependency was identified in this final batch. Recommend explicit acceptance of
-bounded switch Step 4 on unchanged Patch 37 with all exclusions, not completion
-of work package 3/G2 or production governance. The user's criteria approval and
-instruction to execute are not substituted for acceptance of these results.
+dependency was identified in this final batch. On 2026-10-14 the user replied
+"I accept" to the completed batch 6 results and explicit acceptance recommendation.
+Bounded switch Step 4 is closed on unchanged Patch 37 with all stated exclusions;
+switch Steps 1-4 are complete for this one same-owner switch-back profile only.
+This is not completion of work package 3/G2, full-fork or production governance.
+Frozen evidence, original pending-review labels, known failures and warnings remain
+unchanged; this document records the decision rather than rewriting test inputs.
 
-Next action is the explicit result-acceptance decision. Only after that decision
-may the next WP3 transition begin with source-informed rotation contract review
-and approval, not an automatic implementation or installer rebuild. No transition
-or scope extension is authorized by this document alone.
+Next is source-informed rotation contract review within WP3, followed by approval
+of that specific contract before implementation. Rotation is still denied/
+unqualified; it is not automatically enabled by switch acceptance. No installer
+rebuild, production activation or broader transition grant is authorized here.

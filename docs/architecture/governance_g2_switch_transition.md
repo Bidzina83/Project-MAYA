@@ -2,13 +2,12 @@
 
 ## Current Step
 
-2026-10-09: the user explicitly approved bounded Step 3 acceptance after its
-criterion review. Step 4 now starts with actual process crash/fresh-host restart
-on unchanged Patch 37. Consult `governance_g2_switch_failure_matrix.md` for the
-ordered batches; Step 4 and bounded switch acceptance remain open.
-
-All six batches are executed; final ordinary parity and criterion review pass.
-Next is explicit acceptance of the results, not rotation or frontend composition.
+2026-10-14: the user explicitly accepted bounded switch Step 4 after all six
+batches and the criterion review on unchanged Patch 37. Switch Steps 1-4 are
+closed for one same-owner switch from reset child B to retained parent A, with
+all exclusions in `governance_g2_switch_acceptance_review.md`. WP3/G2 and
+production remain open. Next is rotation contract review, not implementation
+or frontend composition; rotation requires its own approved contract and tests.
 
 2026-10-08: the user approved the switch contract and ordered steps and authorized
 G2 work package 3 switch Step 2, following bounded initial-reset acceptance.
@@ -151,7 +150,7 @@ Do not loosen create/reset readers or broaden reset permissions to support switc
    SDK transport. Gate: restored A history only, preserved A/B records, no B cache
    or approval transfer, independently denied model egress with zero transport,
    missing confirmation/caller failure/uncertainty blocked. Review before Step 4.
-4. **Failure matrix and acceptance (current):** exercise the combined candidate with real
+4. **Failure matrix and acceptance (accepted 2026-10-14):** exercise the combined candidate with real
    process crash/restart, contention, late old executors/cancellation, revocation,
    combined commit/publication/ack/audit failures, incomplete writes, unsafe paths,
    stale projection/receipts and exact ordinary-native compatibility controls.
@@ -494,3 +493,14 @@ was required. Recommend bounded source-level switch Step 4 acceptance on unchang
 Patch 37 with all exclusions. Explicit acceptance of these results is pending;
 criteria approval alone is not that decision. Rotation, frontend composition,
 WP3/G2, production activation, runtime pin, wheels and installers remain unchanged.
+
+### Step 4 Acceptance Decision
+
+On 2026-10-14 the user explicitly said "I accept" after reviewing batch 6 results
+and the acceptance recommendation. Bounded switch Step 4 is closed on unchanged
+Patch 37 with every listed exclusion, completing switch Steps 1-4 for this profile
+only. The decision is recorded in `governance_g2_switch_acceptance_review.md`;
+frozen inputs/reports retain their original labels and hashes. Known nine Windows
+failures remain visible. Next is source-informed rotation contract review and
+specific approval before implementation. No general switch, recovery, frontend,
+production, runtime pin, wheel or installer qualification is inferred.

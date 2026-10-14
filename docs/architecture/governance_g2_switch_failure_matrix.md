@@ -7,9 +7,9 @@ Step 4 on unchanged Patch 37. The accepted profile remains one acknowledged
 create A, initial reset A-to-B, then same-owner switch B-to-A. This document
 organizes the existing failure requirements; it adds no runtime authority.
 
-Batches 1-6 are executed on that unchanged profile. Final ordinary parity and
-criterion review pass; explicit acceptance of the results is next. Step 4 and
-bounded switch acceptance stay open pending that decision.
+Batches 1-6 are executed on that unchanged profile. On 2026-10-14 the user
+explicitly accepted the reviewed results with all exclusions. Bounded switch
+Step 4 is closed on unchanged Patch 37; WP3/G2 and production remain open.
 
 Consult `maya_governance_integration_plan.md`,
 `governance_g2_switch_transition.md`, `governance_g2_session_consistency.md`
@@ -556,3 +556,15 @@ Batch 6 execution and review are complete. Recommend bounded switch Step 4
 acceptance with those exclusions; explicit user result acceptance is pending.
 Rotation/frontends have not begun. WP3/G2, installed artifacts and production
 remain unaccepted; runtime pin, wheels and activation gates remain unchanged.
+
+## Acceptance Decision
+
+2026-10-14: the user replied "I accept" after the completed batch 6 results and
+bounded switch Step 4 recommendation. Step 4 and switch Steps 1-4 are closed for
+the single same-owner B-to-retained-parent-A profile on unchanged Patch 37, with
+every exclusion in `governance_g2_switch_acceptance_review.md`. Earlier pending
+labels, reports, hashes, known Windows failures and warnings remain unchanged.
+This decision does not complete WP3/G2 or qualify installed artifacts/production.
+Next is rotation contract review, not implementation or frontend composition;
+the specific rotation contract requires approval before coding. No runtime pin,
+wheel, installer, capability marker or production activation change follows.

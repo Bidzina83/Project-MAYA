@@ -422,6 +422,14 @@ Consult `docs/architecture/governance_g2_switch_acceptance_review.md` for criter
 hashes and exclusions. Explicit result acceptance is pending; criteria approval
 is not that decision. Do not start rotation/frontends or alter production gates,
 pins, wheels or installers before the applicable approval.
+On 2026-10-14 the user explicitly accepted the completed batch 6 results and
+bounded switch Step 4 on unchanged Patch 37 with all exclusions in
+`docs/architecture/governance_g2_switch_acceptance_review.md`. Switch Steps 1-4
+are closed for one same-owner switch-back only. Frozen labels/reports, known
+Windows failures and warnings remain unchanged. Next is rotation contract review
+within WP3 and specific contract approval before coding; rotation is not enabled.
+WP3/G2, frontend composition, production activation, pins, wheels and installers
+remain unchanged and unqualified by this decision.
 Full-loop qualification, provider-error redaction,
 automatic-route attribution, direct SDK paths, and worker coverage remain open;
 do not activate the plugin or change the production gate on these patches alone.
