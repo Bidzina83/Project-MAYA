@@ -152,3 +152,4 @@
 /tests/hermes_g2_switch_paths_native.py text eol=lf
 /tests/test_governance_g2_switch_storage_paths.py text eol=lf
 /docs/architecture/governance_g2_switch_acceptance_review.md text eol=lf
+/docs/architecture/governance_g2_rotation_transition.md text eol=lf

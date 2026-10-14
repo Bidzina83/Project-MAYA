@@ -430,6 +430,15 @@ Windows failures and warnings remain unchanged. Next is rotation contract review
 within WP3 and specific contract approval before coding; rotation is not enabled.
 WP3/G2, frontend composition, production activation, pins, wheels and installers
 remain unchanged and unqualified by this decision.
+Rotation Step 1's source-informed proposal is in
+`docs/architecture/governance_g2_rotation_transition.md`, pending explicit
+contract approval before Step 2. It recommends one between-turn rotation from
+acknowledged create S to linked child C with pinned test context and sealed seed
+authority. A fixture is not a qualified summary/production context producer.
+Full compression and in-flight child authority remain G3/G4; never retarget a
+fixed-session G1 root or trust a returned agent ID as routing authority. The
+review verifies unchanged Patch 37 ancestry/inventories but adds no source patch,
+runtime grant, native qualification, pin, wheel, installer or production activation.
 Full-loop qualification, provider-error redaction,
 automatic-route attribution, direct SDK paths, and worker coverage remain open;
 do not activate the plugin or change the production gate on these patches alone.

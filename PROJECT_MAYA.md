@@ -873,6 +873,16 @@ within WP3 and specific contract approval before coding; rotation is not enabled
 WP3/G2, frontend composition, production activation, pins, wheels and installers
 remain unchanged and unqualified by this decision.
 
+Rotation Step 1's source-informed proposal is in
+`docs/architecture/governance_g2_rotation_transition.md`, pending explicit
+contract approval before Step 2. It recommends one between-turn rotation from
+acknowledged create S to linked child C with pinned test context and sealed seed
+authority. A fixture is not a qualified summary/production context producer.
+Full compression and in-flight child authority remain G3/G4; never retarget a
+fixed-session G1 root or trust a returned agent ID as routing authority. The
+review verifies unchanged Patch 37 ancestry/inventories but adds no source patch,
+runtime grant, native qualification, pin, wheel, installer or production activation.
+
 Before each implementation step, consult the applicable agreed plan and identify
 its current step and acceptance criteria. If inspection requires a different
 sequence, recommend the specific revised order and wait for user approval before

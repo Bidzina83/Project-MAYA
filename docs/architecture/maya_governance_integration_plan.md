@@ -400,8 +400,11 @@ Current decision, 2026-10-14: the user explicitly accepted bounded switch Step 4
 on unchanged Patch 37 with all exclusions in
 `governance_g2_switch_acceptance_review.md`. Create, initial reset and the single
 same-owner switch-back are accepted source-level transitions, not WP3/G2 or
-production completion. Next is rotation contract review within WP3, with specific
-approval before implementation. Frontend composition stays WP4 afterward;
+production completion. Rotation Step 1's source-informed proposal is now in
+`governance_g2_rotation_transition.md`, pending explicit contract approval before
+Step 2. It recommends one between-turn rotation with a pinned test context; full
+compression and in-flight child authority retain G3. Frontend composition stays
+WP4 afterward;
 production activation, runtime pin, wheels and installers remain unchanged.
 
 Earlier decision, 2026-10-08: the user explicitly accepted bounded initial-reset
@@ -505,6 +508,15 @@ warnings remain unchanged. Next is source-informed rotation contract review with
 WP3 and specific contract approval before coding, not frontend composition or
 an installer rebuild. Rotation, WP3/G2 and production remain unqualified; no pin,
 wheel, capability marker or activation change follows.
+
+The subsequent instruction to proceed authorizes rotation contract review only.
+On 2026-10-14 the unchanged Patch 37 ancestry/inventories were verified and native
+compression producers, ID synchronization and fixed-session authority reviewed.
+`governance_g2_rotation_transition.md` proposes one between-turn, fixture-context
+rotation from acknowledged create S to linked child C, with sealed seed authority
+and ordered Steps 1-4. It does not qualify a real summary or in-flight compression;
+those remain G3/G4. Specific approval is required before Step 2. No source patch,
+runtime grant, accepted-input change, wheel, installer or activation follows.
 
 G0, the pre-G1 security checkpoint and bounded source-level G1 are accepted.
 The G1 decision and immutable evidence references are in the lifecycle runbook.

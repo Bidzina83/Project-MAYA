@@ -72,6 +72,7 @@ PROTECTED += (
     "tests/hermes_g2_switch_paths_native.py",
     "tests/test_governance_g2_switch_storage_paths.py",
     "docs/architecture/governance_g2_switch_acceptance_review.md",
+    "docs/architecture/governance_g2_rotation_transition.md",
 )
 
 
