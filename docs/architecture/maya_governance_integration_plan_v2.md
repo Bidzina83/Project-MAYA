@@ -29,6 +29,11 @@ Maya gateway on the user-created `Maya-Governance-Integration-V2` branch.
 The user approved that architecture and test map on 2026-10-14, closing Step 2.
 No containment tests or privileged provisioning have run; Gate A remains open.
 
+The user commenced Step 3 on 2026-10-14. Its
+[progress record](governance_v2_gate_a_step3_progress.md) distinguishes host-broker
+and read-only prerequisite evidence from the unimplemented native LPAC/WFP slice.
+Step 3 remains open; no A01-A20 acceptance or security provisioning is inferred.
+
 Before coding, propose a fixed Windows profile, specific isolation mechanism,
 supported capabilities, trust assumptions, exact allowed/denied tests, evaluation
 budget and stop conditions; obtain user approval. Demonstrate real pinned Hermes
