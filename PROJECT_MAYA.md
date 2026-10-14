@@ -105,6 +105,12 @@ Governance is a mandatory control boundary. It is not merely a downstream log
 processor. No connector, plugin, skill, broker callback, model adapter, or
 workflow may bypass local authorization.
 
+The diagram represents protected crossings, not permission for direct Hermes
+provider or customer-resource access. The revised topology is restricted local
+Hermes execution connected to the Maya model gateway, authorized Maya services
+and validated delivery. Private Hermes storage is confined to its permitted
+boundary; direct customer-file, credential and alternate egress access is prevented.
+
 ## Canonical Public API
 
 `project_maya` is the canonical product namespace.
@@ -181,13 +187,29 @@ reproducible derivatives.
 
 ## Governance and Action Authorization
 
-Maya owns a native Hermes governance plugin that adapts model and tool
-execution middleware to the existing local gateway, not a second policy engine.
-Observer hooks are not security gates. The current pinned Hermes middleware is
-fail-open and does not cover auxiliary inference; activation and production
-qualification remain blocked until the fail-closed execution contract is
-qualified. Unknown and unbounded tools remain denied. The staged contract and
-remaining acceptance work are in `docs/architecture/hermes_native_governance.md`.
+The existing local gateway remains the policy authority. A restricted Hermes
+execution component may access customer data, models and consequential services
+only through qualified Maya-controlled boundaries. Native plugins convey context
+or improve integration; fail-open callbacks, prompts and observers cannot be the
+sole customer-protection mechanism. Missing enforcement blocks readiness.
+
+Hermes conversations, MEMORY.md, USER.md, caches and compression state stay in
+separate customer-local operational storage. They are sensitive but are not
+authoritative SMB records. Confined housekeeping may proceed without per-mutation
+authorization; storage ownership, retention, isolation, diagnostics protection,
+backup and recovery remain mandatory. Cross-store access and ingestion are governed.
+
+The 2026-10-14 approved direction is defined in
+`docs/architecture/restricted_hermes_execution_contract.md` and revision 2 of
+the integration plan, `docs/architecture/maya_governance_integration_plan_v2.md`.
+Gate A feasibility is next. Windows isolation is not yet demonstrated; no patch
+removal, runtime pin, wheel, installer or production activation change follows.
+
+### Historical Candidate Evidence
+
+The following chronology preserves scoped acceptance and unresolved exclusions.
+Its implementation sequence is superseded by revision 2, not retroactively
+qualified or erased.
 
 Stage 2a/2b adds test-only candidate patches for opt-in mandatory dispatch and
 central synchronous/asynchronous auxiliary inference, with legacy behavior

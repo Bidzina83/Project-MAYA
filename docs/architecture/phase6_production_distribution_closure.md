@@ -2,6 +2,14 @@
 
 ## Status
 
+Governance architecture revision (2026-10-14): installed qualification must also
+satisfy [restricted execution](restricted_hermes_execution_contract.md) and
+[integration plan revision 2](maya_governance_integration_plan_v2.md). Existing
+release/smoke evidence does not qualify those boundaries. Installer provisioning
+must enforce the selected restrictions on a clean Windows machine; development
+configuration is insufficient. Production activation, artifacts and platform
+claims remain unchanged. Signing, provenance and secret-safe requirements remain.
+
 Native governance Stage 1 now ships as Maya-owned plugin code, but the current
 Hermes pin has fail-open middleware and uncovered auxiliary inference. New
 payloads are `local_smoke_blocked` and startup refuses this unsafe contract.

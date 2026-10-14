@@ -70,12 +70,30 @@ release currently requires a compatible Hermes runtime.
 
 The governing principle is:
 
-Maya's native Hermes governance plugin must enforce model and tool execution
-boundaries through the existing local gateway. Observer hooks are not security
-gates. The current pinned Hermes middleware is fail-open and auxiliary inference
-is uncovered; plugin activation and production qualification remain blocked
-until a qualified fail-closed runtime contract covers those paths. Unknown and
-unbounded tools remain denied. See `docs/architecture/hermes_native_governance.md`.
+Maya must enforce customer-protection boundaries independently of model
+instructions and optional runtime hooks. Customer-data access, external inference,
+business actions, authoritative-state mutations and external disclosure require
+local authorization through the existing gateway. Hermes may manage bounded
+internal operational state without per-mutation Maya authorization only when
+qualified execution restrictions prevent effects outside permitted capabilities.
+Missing or failed enforcement blocks startup or the affected operation. Unknown
+and unbounded capabilities remain denied. Production activation remains blocked.
+See `docs/architecture/restricted_hermes_execution_contract.md`.
+
+The user approved reduced internal enforcement scope on 2026-10-14 without
+reduced customer protection. The active plan is revision 2, Gate A feasibility,
+in `docs/architecture/maya_governance_integration_plan_v2.md`. Do not resume the
+historical G0-G7 sequence or rotation proposal. No isolation technology, patch
+removal, runtime upgrade, wheel or installer change is approved by this decision.
+Do not add internal patches without a demonstrated protection gap and specific
+user approval. Tool filtering, observers and prompts are not enforcement; prove
+restrictions against bypass. Historical acceptance does not qualify this design.
+
+### Historical Candidate Evidence (Not Current Implementation Instructions)
+
+The following chronology retains previous decisions and exclusions unchanged.
+Its next-step instructions are superseded by revision 2; consult it as evidence,
+not authorization to implement or activate the prior architecture.
 
 The Stage 2a/2b mandatory-dispatch and central auxiliary-call patches are test-only
 candidates, not a qualified Hermes replacement. Stage 2c adds explicit main-loop
@@ -669,6 +687,10 @@ Avoid:
 - packaging generated caches, tests, or repository artifacts in product wheels.
 
 ## Implementation Order
+
+Governance work follows revision 2 Gate A before further historical G0-G7 work.
+This does not waive the broader product roadmap or customer-protection, release
+and platform acceptance requirements.
 
 Hosted CI jobs use explicit Ubuntu 24.04 runners and reviewed Node 24 actions.
 This CI maintenance does not qualify a product platform or alter Hermes pins,

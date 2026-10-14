@@ -71,8 +71,9 @@ tests.
 
 The architecture has four trust zones:
 
-1. Local trusted runtime: Maya, Hermes, memory, governance, secrets access,
-   connectors, local API, and audit.
+1. Local execution zone: a trusted Maya control plane (governance, authoritative
+   memory, secrets, connectors, local API and audit) and a restricted Hermes
+   execution component. Local placement does not grant customer-data access.
 2. Local managed services: Metabase, document processing, browser automation,
    databases, and local models.
 3. Customer-approved external services: Google, Slack, Telegram, model
@@ -121,6 +122,12 @@ No connector, plugin, skill, workflow, model adapter, or broker callback may
 bypass local action authorization.
 
 ### 5.2 Public API
+
+The flow above describes protected crossings, not per-method authorization of
+Hermes housekeeping. Hermes remains the execution core inside an enforced local
+restriction boundary. Model traffic, customer-data access, business actions and
+response delivery must traverse Maya-controlled interfaces. Direct alternate
+paths must be prevented, not merely absent from the advertised tool menu.
 
 `project_maya` is the canonical product namespace. Its `Agent` is a lifecycle
 facade over a concrete `AgentRuntime`, not a substitute implementation of
@@ -263,13 +270,35 @@ produce audit reports.
 
 ## 8. Governance and Authorization
 
-The Maya-owned native Hermes governance plugin adapts model and tool execution
-middleware to the local gateway. Observer hooks are not security gates. Runtime
-activation requires a qualified fail-closed contract covering main and auxiliary
-inference, mandatory middleware, and trusted identity propagation. The current
-pinned Hermes runtime does not meet that contract; production qualification
-remains blocked. Unknown and unbounded tools are denied. Implementation status
-and acceptance work are tracked in `docs/architecture/hermes_native_governance.md`.
+Customer-protection boundaries must fail closed through a qualified enforcement
+contract, independently of model instructions and optional runtime hooks. The
+existing local gateway is the policy authority; native plugins/adapters may convey
+identity and context but cannot be the sole enforcement through fail-open hooks.
+Every effective model request, including auxiliary calls, retries and fallbacks,
+requires authorization. Tool-service access, results, final responses, streaming,
+errors and logs require the applicable access and disclosure controls.
+
+Per-operation governance is not required for housekeeping confined to approved
+Hermes operational storage. This exemption grants no customer-data access,
+external disclosure, business actions, policy changes or authoritative SMB writes.
+Hermes conversations, MEMORY.md and USER.md remain separate sensitive local state,
+subject to ownership, access isolation, retention, diagnostics protection, backup
+and recovery. Cross-store retrieval and ingestion remain governed.
+
+Hermes must not receive unrestricted provider/connector credentials or direct
+access to customer files and authoritative stores. Model routes, including local
+models, require policy controls. Isolation must prevent alternate SDK, network,
+subprocess, plugin and tool paths; configuration-only filtering is insufficient.
+The mechanism and Windows feasibility remain unqualified. Production activation
+stays blocked; no existing patched wheel or installer satisfies the new contract.
+See `docs/architecture/restricted_hermes_execution_contract.md` and
+`docs/architecture/maya_governance_integration_plan_v2.md`.
+
+### Historical Native Candidate Evidence
+
+The following implementation chronology retains prior scoped decisions and
+exclusions. Its next-step instructions and prescribed per-write architecture are
+superseded by revision 2, not evidence of revised-product qualification.
 
 The Stage 2a/2b mandatory-dispatch and central auxiliary-call patches are test-only
 candidates, not a qualified runtime replacement. They must not unlock activation

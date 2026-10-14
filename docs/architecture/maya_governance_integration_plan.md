@@ -1,5 +1,14 @@
 # Maya Governance Product Integration Plan
 
+## Superseded Strategy Notice (2026-10-14)
+
+The user approved revision 2 in
+[the active plan](maya_governance_integration_plan_v2.md), reducing internal
+enforcement scope without reducing customer protection. This document preserves
+historical G0-G2 decisions, evidence and exclusions. Its remaining sequence is
+not current implementation authorization. Rotation is not approved for coding.
+No accepted evidence is retroactively reclassified as new-contract acceptance.
+
 ## Status And Scope
 
 Approved by the user on 2026-10-03 after the user-authorized

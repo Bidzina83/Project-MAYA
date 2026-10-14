@@ -1,5 +1,14 @@
 # Native Hermes Governance
 
+## Revised Architectural Status (2026-10-14)
+
+The active direction is [restricted execution](restricted_hermes_execution_contract.md)
+under [plan revision 2](maya_governance_integration_plan_v2.md). A native plugin
+may provide integration context but is not the sole customer-protection boundary.
+Any necessary native enforcement hook requires specific approval and qualification.
+The historical stages below are retained evidence, not the current next-step plan.
+No patch removal, artifact replacement or production activation is authorized.
+
 ## Status
 
 Current reassessment: see the [2026-10-03 integration assessment](maya_governance_integration_assessment_20261003.md)

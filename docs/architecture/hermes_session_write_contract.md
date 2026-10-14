@@ -1,5 +1,15 @@
 # Candidate Hermes Session-Write Contract
 
+## Superseded Per-Write Strategy (2026-10-14)
+
+Comprehensive native per-write authorization was the previous candidate strategy.
+The approved [revision 2](maya_governance_integration_plan_v2.md) instead permits
+confined Hermes housekeeping under qualified storage isolation and lifecycle
+controls. The [restricted-execution contract](restricted_hermes_execution_contract.md)
+retains customer protection and separate SMB memory. Historical source tests,
+acceptances and exclusions below remain unchanged; they neither mandate further
+session patches nor qualify a replacement. No existing restrictions are removed.
+
 ## Status
 
 The [2026-10-03 assessment](maya_governance_integration_assessment_20261003.md)

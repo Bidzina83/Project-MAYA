@@ -1,5 +1,14 @@
 # Pre-G1 Security Checkpoint
 
+## Revision 2 Scope Notice (2026-10-14)
+
+Retain historical findings and dispositions unchanged. They are not a security
+review of the new restricted-execution architecture. Use
+[the new contract](restricted_hermes_execution_contract.md) for threat assumptions
+and a separate coverage register before implementation. Qualify actual containment,
+service credentials, alternate egress and installed bypass resistance; passing
+the previous source checkpoint does not qualify these boundaries.
+
 ## Approved Order And Status
 
 The user approved this checkpoint on 2026-10-03 before G1:
