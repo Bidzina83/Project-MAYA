@@ -4,8 +4,9 @@
 
 Approved by the user on 2026-10-14. Step 1 is closed: the evaluation profile,
 unmodified pinned baseline, assumptions, matrix, budget and stop conditions are
-accepted. Step 2 architecture assessment is next; no isolation mechanism,
-prototype, runtime change or production activation is approved. Active
+accepted. The user subsequently approved Step 2's LPAC/WFP architecture on
+2026-10-14; Step 3's bounded prototype is next. Privileged provisioning needs
+separate permission, and production activation remains blocked. Active
 references: [plan revision 2](maya_governance_integration_plan_v2.md) and
 [restricted execution contract](restricted_hermes_execution_contract.md).
 
@@ -19,7 +20,7 @@ Required customer protection is unchanged; only internal enforcement scope chang
 | Item | Proposed fixed choice |
 | --- | --- |
 | Product | Project-MAYA; no separate product or replacement agent loop |
-| Implementation workspace | New `governance-v2-feasibility` branch before Step 3; no merge without review |
+| Implementation workspace | User-created `Maya-Governance-Integration-V2` branch; no merge without review |
 | Primary runtime | Hermes commit `b13e2fd6948a59eeb59fe618914147d97a2ee90a`, without Maya governance patches |
 | Comparison | Preserve existing source-patched candidate and installed wheel separately; neither is the baseline |
 | Host | One supported Windows evaluation machine; record actual OS/build, Python, dependencies and privileges before execution |
@@ -154,7 +155,7 @@ sprint. Stop conditions take precedence over exhausting the matrix.
 ## Sequential Decisions And Outputs
 
 1. Step 1: approved on 2026-10-14; this profile, assumptions, matrix and budget are accepted.
-2. Step 2: approve a concrete architecture and completed boundary/entrypoint map.
+2. Step 2: LPAC/WFP architecture and boundary/entrypoint map approved on 2026-10-14.
 3. Step 3: build only that isolated native slice on the feasibility branch.
 4. Step 4: execute the adversarial matrix with observed allowed controls.
 5. Step 5: execute failure/lifecycle cases on unchanged inputs or the one approved correction.

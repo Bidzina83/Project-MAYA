@@ -294,6 +294,12 @@ stays blocked; no existing patched wheel or installer satisfies the new contract
 See `docs/architecture/restricted_hermes_execution_contract.md` and
 `docs/architecture/maya_governance_integration_plan_v2.md`.
 
+Gate A Step 1 evaluation is accepted; Step 2's LPAC/WFP recommendation in
+`docs/architecture/governance_v2_gate_a_architecture_assessment.md` was approved on
+2026-10-14, closing Step 2. Step 3's bounded prototype is next. Architecture approval
+proves no execution restriction and does not authorize privileged provisioning
+or product activation.
+
 ### Historical Native Candidate Evidence
 
 The following implementation chronology retains prior scoped decisions and

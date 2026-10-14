@@ -80,6 +80,12 @@ Missing or failed enforcement blocks startup or the affected operation. Unknown
 and unbounded capabilities remain denied. Production activation remains blocked.
 See `docs/architecture/restricted_hermes_execution_contract.md`.
 
+Gate A Step 1 evaluation was accepted on 2026-10-14. Step 2's recommendation
+is in `docs/architecture/governance_v2_gate_a_architecture_assessment.md`;
+the user approved its LPAC/WFP architecture on 2026-10-14. Step 3's bounded
+prototype is next. Privileged machine-security provisioning requires separate
+impact disclosure and permission. No containment is proven; Gate A remains open.
+
 The user approved reduced internal enforcement scope on 2026-10-14 without
 reduced customer protection. The active plan is revision 2, Gate A feasibility,
 in `docs/architecture/maya_governance_integration_plan_v2.md`. Do not resume the

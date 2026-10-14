@@ -205,6 +205,12 @@ the integration plan, `docs/architecture/maya_governance_integration_plan_v2.md`
 Gate A feasibility is next. Windows isolation is not yet demonstrated; no patch
 removal, runtime pin, wheel, installer or production activation change follows.
 
+Gate A Step 1 is accepted. Step 2's two-candidate assessment is in
+`docs/architecture/governance_v2_gate_a_architecture_assessment.md`. Its LPAC/WFP
+architecture was approved on 2026-10-14, closing Step 2. Step 3's bounded prototype
+is next; privileged provisioning requires separate permission. No machine security
+changes or containment qualification follow from architecture approval.
+
 ### Historical Candidate Evidence
 
 The following chronology preserves scoped acceptance and unresolved exclusions.
