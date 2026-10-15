@@ -114,6 +114,14 @@ restricted DLL activation remains blocked, broad registryRead exposes unwanted
 read channels, and Maya's memory/SSE fixture wiring has native-contract defects.
 Prepare a fixed compatibility contract for review before further grants/code
 changes; no new runtime patch, product activation or Gate A acceptance follows.
+The user approved bounded loader-level diagnosis on 2026-10-15. Its retained
+setup failure and corrected inert capture are in
+`docs/architecture/governance_v2_loader_diagnosis.md`. Loader snaps reproduce
+0xC0150002 at python313.dll activation during static-import initialization, but
+identify no inner resource or safe correction. Original permissions and test
+resources are restored/removed. This diagnostic allowance is consumed; stop for
+an explicit strategic decision, not another automatic capture or grant. No
+Hermes execution, compatibility profile or Gate A acceptance is established.
 
 The user approved reduced internal enforcement scope on 2026-10-14 without
 reduced customer protection. The active plan is revision 2, Gate A feasibility,

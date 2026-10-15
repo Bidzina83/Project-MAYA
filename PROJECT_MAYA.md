@@ -238,6 +238,14 @@ The user approved whole-startup assessment next. Its evidence and proposal are i
 metadata matches, but restricted DLL activation and two Maya-owned memory/SSE
 wiring defects remain. Broad registry capability is not the default fix. No
 further permission or code correction is approved; Gate A remains open.
+The separately approved 2026-10-15 bounded loader diagnosis is recorded in
+`docs/architecture/governance_v2_loader_diagnosis.md`. After one retained setup
+failure and a separately permissioned corrected inert capture, loader snaps
+confirm python313.dll activation failure during static-import initialization.
+The inner cause and safe grant list remain unknown. Original permissions and
+test resources are restored/removed. The diagnostic allowance is consumed;
+stop for a strategic decision. No further automatic experiment, runtime change,
+Hermes execution, installer qualification or Gate A acceptance follows.
 
 ### Historical Candidate Evidence
 

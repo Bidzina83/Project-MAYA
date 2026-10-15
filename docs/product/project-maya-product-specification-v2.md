@@ -330,6 +330,15 @@ matching artifact/package metadata from blocked restricted DLL activation and
 Maya-owned memory/SSE contract mismatches. Broad customer-registry read channels
 remain unacceptable without protection review. A fixed compatibility contract
 requires review before further grants/corrections; no production claim follows.
+The user then approved bounded loader-level diagnosis on 2026-10-15; see
+`docs/architecture/governance_v2_loader_diagnosis.md`. A retained setup failure
+and separately permissioned corrected inert capture localize 0xC0150002 to
+python313.dll activation during Windows static-import initialization, not an
+identified inner dependency or safe permission correction. Original permissions
+and test resources are restored/removed. The diagnostic allowance is consumed;
+further investigation requires an explicit strategic decision, not automatic
+permission expansion. Gate A, native Hermes execution and production remain
+unqualified; no runtime artifact or installer change follows.
 
 ### Historical Native Candidate Evidence
 

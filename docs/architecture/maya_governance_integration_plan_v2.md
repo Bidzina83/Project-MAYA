@@ -66,6 +66,15 @@ fixed startup-and-integration contract are in
 the proposal. No new grant/capability, source correction, runtime pin, wheel,
 installer or Gate A acceptance follows. Keep the unresolved activation root and
 both Maya-owned native-contract mismatches visible before another execution.
+The user subsequently approved bounded loader-level diagnosis on 2026-10-15.
+Its [result](governance_v2_loader_diagnosis.md) retains the initial diagnostic
+setup failure and one separately permissioned corrected inert capture. Windows
+loader snaps confirm python313.dll activation failure during static-import
+initialization, but no inner failing resource or safe minimum grant. Original
+permissions and test resources are restored/removed. The diagnostic allowance
+is consumed: stop for an explicit strategic decision rather than automatically
+adding captures, capabilities, runtime patches or an alternative architecture.
+No useful Hermes execution or Gate A acceptance follows.
 
 Before coding, propose a fixed Windows profile, specific isolation mechanism,
 supported capabilities, trust assumptions, exact allowed/denied tests, evaluation
