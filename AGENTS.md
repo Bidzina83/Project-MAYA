@@ -128,6 +128,12 @@ and its JSON contract. Preparation never launches the payload; VM provisioning,
 VM-only registryRead/lpacCom experiments and external publication require separate
 approval. Reference-launcher differences are confounders, not proof of a helper
 bug. No comparison run, runtime correction or Gate A acceptance is authorized.
+The user subsequently approved a document-only 26H2 baseline revision on
+2026-10-16; consult `docs/architecture/governance_v2_python_comparison_26h2.md`
+and its successor JSON. Preserve the original 25H2 contracts, failure evidence
+and prepared bundle. This replaces the planned OS baseline, not the four-case
+budget. No downloads, VM/security changes, tool implementation or execution are
+approved; the existing preparation tool still targets the historical contract.
 
 The user approved reduced internal enforcement scope on 2026-10-14 without
 reduced customer protection. The active plan is revision 2, Gate A feasibility,

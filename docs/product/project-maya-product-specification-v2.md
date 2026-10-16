@@ -346,6 +346,12 @@ This produces local-only diagnostic artifacts without executing them. VM
 provisioning, broader VM-only capabilities and external publication each require
 separate approval. Startup evidence would not authorize those capabilities in
 Maya or qualify Hermes, Gate A, a runtime artifact or an installer.
+The user subsequently approved a document-only 26H2 comparison baseline revision
+on 2026-10-16; see `docs/architecture/governance_v2_python_comparison_26h2.md`
+and its successor JSON. Preserve historical 25H2 inputs and failure evidence;
+the revision replaces the planned environment without adding runs. It authorizes
+no downloads, VM/security changes, preparation-tool changes, execution or
+supported-platform claim. Gate A and production activation remain blocked.
 
 ### Historical Native Candidate Evidence
 

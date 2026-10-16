@@ -252,6 +252,12 @@ fixed four-case reference comparison in
 No payload is launched during preparation. VM provisioning, broader VM-only
 diagnostic capabilities and external sharing require separate approval. Native
 startup, Hermes integration, the current LPAC profile and Gate A remain unqualified.
+The user subsequently approved document preparation switching the planned
+comparison baseline to 26H2 on 2026-10-16; see
+`docs/architecture/governance_v2_python_comparison_26h2.md` and its successor JSON.
+The original 25H2 evidence/contracts/bundle remain unchanged. The single four-case
+budget is not expanded; downloads, VM/security changes, preparation-tool changes
+and execution remain unapproved. No compatibility or product qualification follows.
 
 ### Historical Candidate Evidence
 

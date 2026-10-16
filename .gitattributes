@@ -159,3 +159,6 @@
 /tests/test_governance_v2_python_repro.py text eol=lf
 /docs/architecture/governance-v2-python-comparison.json text eol=lf
 /docs/architecture/governance_v2_python_comparison.md text eol=lf
+/docs/architecture/governance-v2-python-comparison-26h2.json text eol=lf
+/docs/architecture/governance_v2_python_comparison_26h2.md text eol=lf
+/docs/architecture/governance_v2_python_vm_proposal.md text eol=lf

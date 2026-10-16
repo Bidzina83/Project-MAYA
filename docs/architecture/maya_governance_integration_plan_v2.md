@@ -83,6 +83,14 @@ run application code. VM impact/provisioning, VM-only capability additions and
 external publication require separate permission; reference build/token-observer
 and execution-manifest evidence remain prerequisites. No comparison run or
 renewed workstation diagnostic allowance follows this preparation approval.
+The user subsequently approved document preparation for a 26H2 baseline revision
+on 2026-10-16. The active environment addendum is
+[the 26H2 comparison contract](governance_v2_python_comparison_26h2.md), with a
+separate successor JSON. Preserve the historical 25H2 inputs/bundle unchanged.
+One four-case matrix remains the entire proposed budget, not one per OS version.
+Guest/media/resource verification and explicit provisioning/security permissions
+remain open. No download, preparation-tool implementation, reference build,
+observer implementation or comparison execution follows this approval.
 
 Before coding, propose a fixed Windows profile, specific isolation mechanism,
 supported capabilities, trust assumptions, exact allowed/denied tests, evaluation
