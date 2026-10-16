@@ -246,6 +246,12 @@ The inner cause and safe grant list remain unknown. Original permissions and
 test resources are restored/removed. The diagnostic allowance is consumed;
 stop for a strategic decision. No further automatic experiment, runtime change,
 Hermes execution, installer qualification or Gate A acceptance follows.
+On 2026-10-16 the user approved preparation of a Python-only reproduction and
+fixed four-case reference comparison in
+`docs/architecture/governance_v2_python_comparison.md` and its JSON contract.
+No payload is launched during preparation. VM provisioning, broader VM-only
+diagnostic capabilities and external sharing require separate approval. Native
+startup, Hermes integration, the current LPAC profile and Gate A remain unqualified.
 
 ### Historical Candidate Evidence
 

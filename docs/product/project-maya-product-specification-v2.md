@@ -339,6 +339,13 @@ and test resources are restored/removed. The diagnostic allowance is consumed;
 further investigation requires an explicit strategic decision, not automatic
 permission expansion. Gate A, native Hermes execution and production remain
 unqualified; no runtime artifact or installer change follows.
+The user approved Python-only reproduction/four-case reference comparison
+preparation on 2026-10-16; see
+`docs/architecture/governance_v2_python_comparison.md` and its JSON contract.
+This produces local-only diagnostic artifacts without executing them. VM
+provisioning, broader VM-only capabilities and external publication each require
+separate approval. Startup evidence would not authorize those capabilities in
+Maya or qualify Hermes, Gate A, a runtime artifact or an installer.
 
 ### Historical Native Candidate Evidence
 

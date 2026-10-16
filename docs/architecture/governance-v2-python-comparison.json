@@ -1,0 +1,55 @@
+{
+  "schema": "maya.python_comparison.v1",
+  "status": "preparation_contract_not_execution_approval",
+  "execution_authorized": false,
+  "production_qualified": false,
+  "reference": {
+    "repository": "https://github.com/microsoft/SandboxSecurityTools",
+    "commit": "8102bfc8dc3e244ec08e8204bd7d989e26a016e4",
+    "source": "LaunchAppContainer/LaunchAppContainer/LaunchAppContainer.cpp",
+    "git_blob": "ac8a02ea41a0d2ee8ab523f5de1b3f819ffc346c",
+    "sha256": "833b26e3ea4524accea712cf2f01f52faf4941ee2feaf8199fcb0bd661484973",
+    "binary_sha256": null,
+    "build_status": "not_built_or_executed"
+  },
+  "source_runtime_manifest_sha256": "0ed977a4f7269ec86d01468e19820d616fc4e74cacd21b2919131d88457a5b32",
+  "source_helper_sha256": "e72f101bea8222d14e908c2f39e7fecdca122b2f13b2abe9d5293490b7856f63",
+  "python_version": "3.13.14",
+  "python_arguments": ["-I", "-S", "<vm-stage>/runtime/worker.py"],
+  "vm": {
+    "edition": "Professional",
+    "version": "25H2",
+    "build": 26200,
+    "ubr": 9457,
+    "architecture": "AMD64",
+    "customer_data": false,
+    "network_adapters_connected_during_runs": false,
+    "host_folder_clipboard_device_or_credential_sharing": false,
+    "snapshot_reset_between_cases": true
+  },
+  "common": {
+    "lpac_required": true,
+    "network_capabilities": ["privateNetworkClientServer"],
+    "wfp": "unchanged eight SID-scoped deny filters, port 18765; no broker listener",
+    "loopback_exemption": "profile-specific, unchanged diagnostic profile only",
+    "filesystem": "prepared runtime RX; empty private state Modify and Low IL",
+    "registry": "exact 64-bit SideBySide package-SID ReadKey, non-inheriting; snapshot/restore",
+    "environment": ["HERMES_HOME", "LOCALAPPDATA", "PATH", "SYSTEMROOT", "TEMP", "TMP", "USERPROFILE", "WINDIR"],
+    "beacon": "state/python-startup.json",
+    "beacon_status": "python_entered",
+    "probe_observation_window_seconds": 5,
+    "require_child_exit_zero_and_fresh_beacon": true,
+    "hermes_or_maya_application_imports": false,
+    "debugger_during_comparison": false
+  },
+  "cases": [
+    {"id": "A", "launcher": "unchanged_maya_helper", "extra_capabilities": []},
+    {"id": "B", "launcher": "pinned_microsoft_reference", "extra_capabilities": []},
+    {"id": "C", "launcher": "pinned_microsoft_reference", "extra_capabilities": ["registryRead"]},
+    {"id": "D", "launcher": "pinned_microsoft_reference", "extra_capabilities": ["registryRead", "lpacCom"]}
+  ],
+  "budget": {"ordered_cases": ["A", "B", "C", "D"], "runs_per_case": 1, "timeout_seconds": 100,
+             "automatic_retries": 0, "automatic_corrections": 0, "findings_reports": 1},
+  "remaining_before_execution": ["explicit_vm_and_capability_permission", "reference_binary_hash_and_build_record",
+    "vm_os_and_patch_inventory", "host_child_token_and_lifecycle_observer", "execution_manifest_hash"]
+}

@@ -122,6 +122,12 @@ identify no inner resource or safe correction. Original permissions and test
 resources are restored/removed. This diagnostic allowance is consumed; stop for
 an explicit strategic decision, not another automatic capture or grant. No
 Hermes execution, compatibility profile or Gate A acceptance is established.
+On 2026-10-16 the user approved Python-only reproduction and four-case reference
+comparison preparation. Consult `docs/architecture/governance_v2_python_comparison.md`
+and its JSON contract. Preparation never launches the payload; VM provisioning,
+VM-only registryRead/lpacCom experiments and external publication require separate
+approval. Reference-launcher differences are confounders, not proof of a helper
+bug. No comparison run, runtime correction or Gate A acceptance is authorized.
 
 The user approved reduced internal enforcement scope on 2026-10-14 without
 reduced customer protection. The active plan is revision 2, Gate A feasibility,

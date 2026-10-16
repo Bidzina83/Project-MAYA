@@ -153,3 +153,9 @@
 /tests/test_governance_g2_switch_storage_paths.py text eol=lf
 /docs/architecture/governance_g2_switch_acceptance_review.md text eol=lf
 /docs/architecture/governance_g2_rotation_transition.md text eol=lf
+# Keep the Python-only diagnostic probe and frozen comparison inputs portable.
+/scripts/governance_v2_python_probe.py text eol=lf
+/scripts/prepare_governance_v2_python_repro.py text eol=lf
+/tests/test_governance_v2_python_repro.py text eol=lf
+/docs/architecture/governance-v2-python-comparison.json text eol=lf
+/docs/architecture/governance_v2_python_comparison.md text eol=lf

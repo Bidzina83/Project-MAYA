@@ -75,6 +75,14 @@ permissions and test resources are restored/removed. The diagnostic allowance
 is consumed: stop for an explicit strategic decision rather than automatically
 adding captures, capabilities, runtime patches or an alternative architecture.
 No useful Hermes execution or Gate A acceptance follows.
+On 2026-10-16 the user approved the immediate next deliverable: a Python-only
+reproduction and exact four-case comparison contract. Preparation is in
+[the reference comparison runbook](governance_v2_python_comparison.md) and its
+JSON contract. The derived bundle does not change the original stage/helper or
+run application code. VM impact/provisioning, VM-only capability additions and
+external publication require separate permission; reference build/token-observer
+and execution-manifest evidence remain prerequisites. No comparison run or
+renewed workstation diagnostic allowance follows this preparation approval.
 
 Before coding, propose a fixed Windows profile, specific isolation mechanism,
 supported capabilities, trust assumptions, exact allowed/denied tests, evaluation
