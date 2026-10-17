@@ -75,6 +75,94 @@ class PreparationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "output_must_be_new"):
             self.prepare()
 
+    def test_default_retains_historical_contract_and_layout(self):
+        report = self.prepare()
+        self.assertNotIn("profile", report)
+        self.assertEqual((self.output / "comparison-contract.json").read_bytes(), prep.CONTRACT.read_bytes())
+        self.assertEqual((self.output / "COMPARISON.md").read_bytes(), prep.RUNBOOK.read_bytes())
+        self.assertEqual(json.loads((self.output / "comparison-contract.json").read_bytes())["vm"]["version"], "25H2")
+        self.assertFalse((self.output / prep.CONTRACT_26H2.name).exists())
+
+    def test_26h2_explicit_binding_is_self_contained_and_nonexecuting(self):
+        report = prep.prepare(self.stage, self.helper, self.output, profile="26h2")
+        self.assertEqual(report["profile"], "26h2")
+        self.assertFalse(report["execution_authorized"])
+        self.assertFalse(report["external_sharing_authorized"])
+        self.assertFalse(report["production_qualified"])
+        self.assertFalse(report["gate_a_accepted"])
+        self.assertIsNone(report["reference"]["binary_sha256"])
+        contract = json.loads((self.output / report["contract_input"]["path"]).read_bytes())
+        self.assertEqual((contract["vm"]["version"], contract["vm"]["build"], contract["vm"]["ubr"]),
+                         ("26H2", 26300, 9711))
+        self.assertFalse(contract["vm"]["guest_verified"])
+        original = json.loads((self.output / prep.CONTRACT.name).read_bytes())
+        for field in ("common", "cases", "budget", "reference", "python_arguments"):
+            self.assertEqual(contract[field], original[field])
+        for item in [report["contract_input"], report["runbook_input"], *report["predecessor_inputs"]]:
+            self.assertEqual(prep.digest((self.output / item["path"]).read_bytes()), item["sha256"])
+        actual = {path.relative_to(self.output).as_posix() for path in self.output.rglob("*") if path.is_file()}
+        self.assertEqual(actual, {item["path"] for item in report["files"]} | {"reproduction-manifest.json"})
+        for item in report["files"]:
+            self.assertEqual(prep.digest((self.output / item["path"]).read_bytes()), item["sha256"])
+        self.assertEqual((self.stage / "runtime/worker.py").read_bytes(), b"original worker must not change")
+        self.assertNotIn(str(self.root), (self.output / "reproduction-manifest.json").read_text())
+        self.assertEqual(list((self.output / prep.STAGE_NAME / "state").iterdir()), [])
+
+    def test_26h2_does_not_retarget_or_overwrite_historical_bundle(self):
+        self.prepare()
+        original = {path.relative_to(self.output): path.read_bytes()
+                    for path in self.output.rglob("*") if path.is_file()}
+        successor = self.root / "successor"
+        prep.prepare(self.stage, self.helper, successor, profile="26h2")
+        self.assertEqual(original, {path.relative_to(self.output): path.read_bytes()
+                                   for path in self.output.rglob("*") if path.is_file()})
+        with self.assertRaisesRegex(ValueError, "output_must_be_new"):
+            prep.prepare(self.stage, self.helper, self.output, profile="26h2")
+
+    def test_unknown_profile_refused_without_output(self):
+        with self.assertRaisesRegex(ValueError, "unknown_profile"):
+            prep.prepare(self.stage, self.helper, self.output, profile="latest")
+        self.assertFalse(self.output.exists())
+
+    def test_26h2_predecessor_drift_refused_without_output(self):
+        changed = self.root / "changed.json"
+        changed.write_bytes(prep.CONTRACT.read_bytes() + b" ")
+        with patch.object(prep, "CONTRACT", changed), self.assertRaisesRegex(ValueError, "comparison_input_changed"):
+            prep.prepare(self.stage, self.helper, self.output, profile="26h2")
+        self.assertFalse(self.output.exists())
+
+    def test_26h2_input_drift_refused_without_output(self):
+        for attribute in ("CONTRACT_26H2", "RUNBOOK_26H2", "RUNBOOK"):
+            with self.subTest(attribute=attribute):
+                changed = self.root / "changed-input"
+                changed.write_bytes(getattr(prep, attribute).read_bytes() + b" ")
+                with patch.object(prep, attribute, changed), self.assertRaisesRegex(ValueError, "comparison_input_changed"):
+                    prep.prepare(self.stage, self.helper, self.output, profile="26h2")
+                self.assertFalse(self.output.exists())
+
+    def test_26h2_altered_permissions_or_budget_refused(self):
+        for field, key, value in (("common", "lpac_required", False),
+                                  ("vm", "host_folder_clipboard_device_or_credential_sharing", True),
+                                  ("budget", "automatic_retries", 1),
+                                  ("reference", "binary_sha256", "unreviewed")):
+            with self.subTest(field=field, key=key):
+                contract = json.loads(prep.CONTRACT_26H2.read_bytes())
+                contract[field][key] = value
+                changed = self.root / "changed-contract.json"
+                changed.write_text(json.dumps(contract))
+                with patch.object(prep, "CONTRACT_26H2", changed), self.assertRaisesRegex(ValueError, "comparison_input_changed"):
+                    prep.prepare(self.stage, self.helper, self.output, profile="26h2")
+                self.assertFalse(self.output.exists())
+
+    def test_cli_passes_only_explicit_profile(self):
+        output = prep.ROOT / ".codex-build" / "inert-cli-profile-fixture"
+        for options, profile in (([], "25h2"), (["--profile", "26h2"], "26h2")):
+            with self.subTest(profile=profile), patch("sys.argv", ["prepare", "--output", str(output), *options]), \
+                    patch.object(prep, "prepare", return_value={"status": "prepared_not_executed", "files": []}) as prepare, \
+                    redirect_stdout(io.StringIO()):
+                self.assertEqual(prep.main(), 0)
+                self.assertEqual(prepare.call_args.kwargs, {"profile": profile})
+
     def test_overlapping_output_refused(self):
         with self.assertRaisesRegex(ValueError, "overlapping_output"):
             prep.prepare(self.stage, self.helper, self.stage / "new")

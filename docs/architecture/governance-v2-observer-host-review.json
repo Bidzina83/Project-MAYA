@@ -1,0 +1,47 @@
+{
+  "schema": "maya.observer_host_review.v1",
+  "date": "2026-10-17",
+  "status": "compiled_fixture_tested_entrypoint_candidate_not_execution_approval",
+  "execution_authorized": false,
+  "external_sharing_authorized": false,
+  "native_qualified": false,
+  "production_qualified": false,
+  "predecessor": {
+    "path": "docs/architecture/governance-v2-observer-review-package.json",
+    "sha256": "eeb0e435457b6219db6582706530dd6f8c07e0d95a76c90f222a5e1fb0a0e75b",
+    "preserved": true
+  },
+  "sources": [
+    {"path": "scripts/native/governance_v2_observer_host.cs", "sha256": "fd08441ab575917a7135dc895e2f164c0bb40f3895c0f2e40ce93e5eb26e2a99"},
+    {"path": "scripts/native/governance_v2_observer_host_windows.cs", "sha256": "5f2d874fb059de21d41cb61c45d473671b48acf8256d9ac30d280b4442c2a339"},
+    {"path": "tests/governance_v2_observer_host_fixtures.cs", "sha256": "c628feb431aaeaef9a3e32b0953eefdacf9e4a7efc525d66b50b3dafcdf377f3"}
+  ],
+  "artifacts": {
+    "host": {"local_path": ".codex-build/governance-v2-observer-host-20261017/Maya.GateA.ObserverHost.exe", "sha256": "80544d3a608f8ca5b876fd42b80138ff5709add4ca0346e0c95eba7ed4e44bd7", "proposed_vm_path": "C:\\MayaGateA\\observer\\Maya.GateA.ObserverHost.exe", "executed": false},
+    "library": {"sha256": "1a07c156ddd55b5e18066d747344721b71100083c1e9a29ad0011d6344aafcdc", "unchanged": true},
+    "inert_fixture": {"sha256": "ef7d624a21430de3695f9ec581b0c1f59f7b8ac60a39f74a2c9c37e6bef525c4", "checks_passed": 97, "native_dispatch": false, "vm_checks_executed": false, "include_in_vm_payload": false}
+  },
+  "proposed_invocation": {
+    "cwd": "C:\\MayaGateA",
+    "executable": "C:\\MayaGateA\\observer\\Maya.GateA.ObserverHost.exe",
+    "arguments": ["--case", "<A_or_B_or_C_or_D>", "--manifest", "C:\\MayaGateA\\observer\\authorization\\<case>\\execution.json", "--manifest-sha256", "<reviewed_exact_manifest_sha256>"],
+    "interactive_confirmation": "AUTHORIZE CASE <case> <reviewed_exact_manifest_sha256>",
+    "redirected_input_allowed": false,
+    "ready_to_run": false
+  },
+  "attempt_record": {
+    "directory": "C:\\MayaGateA\\observer\\attempts",
+    "claim": "attempt.claim",
+    "outcome": "outcome.json",
+    "claim_before_dispatch": true,
+    "exclusive_create_and_flush_readback": true,
+    "automatic_reset_delete_or_resume": false,
+    "survives_host_process_restart": true,
+    "survives_baseline_disk_restore": false,
+    "external_attempt_journal_required": true
+  },
+  "remaining": ["user_review_of_candidate", "exact_VM_preparation_impact_and_permission", "verified_guest_console_baseline_and_security_records", "private_per_case_canonical_manifest_and_external_attempt_reservation", "final_execution_manifest_and_explicit_A_D_permission"],
+  "vm_modified": false,
+  "launchers_executed": false,
+  "managed_python_executed": false
+}

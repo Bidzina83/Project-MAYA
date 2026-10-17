@@ -258,6 +258,55 @@ comparison baseline to 26H2 on 2026-10-16; see
 The original 25H2 evidence/contracts/bundle remain unchanged. The single four-case
 budget is not expanded; downloads, VM/security changes, preparation-tool changes
 and execution remain unapproved. No compatibility or product qualification follows.
+On 2026-10-17 the user reported a deployed Azure guest at build 26300.9711 and
+visible credit and requested continuation. The proposed Azure control/restore/
+transfer sequence is `docs/architecture/governance_v2_python_azure_procedure.md`.
+It preserves the single four-case budget and historical inputs; local tooling,
+cloud transfer, guest security/boot/NIC changes, snapshot/restore rehearsal and
+execution still require their explicit approvals. The proposal is not Gate A,
+Hermes, installer or production qualification.
+The user subsequently approved the Azure procedure and Step 1 local preparation.
+The explicit 26H2 bundle binding passes 30 inert fixture/probe tests and a fresh
+ignored bundle is hash-verified, with the historical default/bundle unchanged.
+The pinned Microsoft source is verified but its build fails at MSB4019: C++ build
+targets are missing. Toolchain installation needs explicit impact approval; source
+retargeting and step reordering are not authorized. Observer implementation remains
+pending; no VM changes, startup execution or qualification has occurred.
+The user subsequently approved suitable local build-tool download/installation.
+The selected Microsoft Build Tools 2022 v143/Windows SDK must retain native package
+verification and disable automatic restart. Record outcomes in the Azure procedure;
+this approval does not extend to VM/security changes, launcher runs or Gate A.
+Installation completed with exit 0/no reboot required. The unchanged pinned Microsoft
+reference passed a clean Release/x64 build, zero warnings/errors; hashes/versions
+are in the Azure procedure. Step 1 observer preparation remains next, with no
+launcher execution, VM/security change or Gate A acceptance.
+The user approved observer implementation and the common outer-job design.
+The unarmed evidence library passes 57 inert checks; its fixed sequence is in
+`docs/architecture/governance_v2_observer_review.md`. Step 1 launcher adapters/joint
+review remain incomplete; native behavior, VM execution and Gate A are unqualified.
+The subsequent continuation implements the observer's A-D adapters/supervisor as
+unarmed source candidates with inert coverage and joint review. Its stage 3
+freeze/manifest/invocation review remains next; Step 1 is not complete. Native
+behavior, exact VM/security preconditions and execution permission remain open.
+The subsequent local review package records unarmed source/artifact hashes and
+the proposed `C:\MayaGateA\observer` library location in
+`docs/architecture/governance-v2-observer-review-package.json`. No executable host
+or approved launch command is supplied; exact guest bindings, durable attempt
+tracking and host/invocation review remain stage 3 obligations. Step 1 remains
+incomplete; this record authorizes no deployment, VM change or native execution.
+The subsequent host implementation is a separate compiled/fixture-tested candidate
+in `docs/architecture/governance_v2_observer_host_review.md`, with an exact proposed
+command format and disabled template. The actual host never ran. Review it before
+the existing VM preparation-impact decision; final guest/security/execution
+permissions remain open. Local claims do not survive baseline-disk restoration;
+the ordered external attempt journal remains required. No Gate A/product claim,
+frozen-input change, ready-to-run manifest or VM action follows this preparation.
+On 2026-10-17 the user explicitly reviewed and approved the host candidate; the
+dated decision is in its review and the frozen records retain their labels/hashes.
+Azure procedure Step 1 local preparation, including observer Stage 3 candidate
+review, is accepted for the source/fixture scope only. Next is Step 2 actual VM
+inventory and exact impact disclosure for separate preparation permission. No
+deployment, guest/security change, native qualification or Gate A acceptance follows.
 
 ### Historical Candidate Evidence
 

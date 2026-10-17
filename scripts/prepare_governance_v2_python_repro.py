@@ -17,6 +17,14 @@ STAGE_NAME = ".codex-build/governance-v2-lpac-stage"
 HELPER_NAME = ".codex-build/governance-v2-native-tools/GateANative.exe"
 CONTRACT = ROOT / "docs/architecture/governance-v2-python-comparison.json"
 RUNBOOK = ROOT / "docs/architecture/governance_v2_python_comparison.md"
+CONTRACT_26H2 = ROOT / "docs/architecture/governance-v2-python-comparison-26h2.json"
+RUNBOOK_26H2 = ROOT / "docs/architecture/governance_v2_python_comparison_26h2.md"
+FROZEN_COMPARISON_INPUTS = {
+    "25h2_contract": "1c8b6075b9cf55358e5af3d0f49490532af15bd940d3c070b0300b0108b07072",
+    "25h2_runbook": "9ad2d4050183a62f9b4b343719058afc21023848f33e559191caeab4519db33b",
+    "26h2_contract": "07b04c4577277780a2352e970185f949e7f3cdf755bc3f1c5a6312cd29f29a27",
+    "26h2_runbook": "4009eef072a7c1e2b160ac72aa07d9b488342ffa8138d2f01ae3c599f7f242f3",
+}
 PROBE = ROOT / "scripts/governance_v2_python_probe.py"
 
 
@@ -45,7 +53,37 @@ def inventory_name(value: str) -> PurePosixPath:
     return name
 
 
-def prepare(stage: Path, helper: Path, output: Path) -> dict:
+def comparison_inputs(profile: str) -> tuple[bytes, list[tuple[str, bytes]], dict]:
+    if profile not in {"25h2", "26h2"}:
+        raise ValueError("repro.unknown_profile")
+    historical = [(CONTRACT, CONTRACT.read_bytes()), (RUNBOOK, RUNBOOK.read_bytes())]
+    if profile == "25h2":
+        return historical[0][1], [("comparison-contract.json", historical[0][1]),
+                                  ("COMPARISON.md", historical[1][1])], {}
+
+    # The successor carries its frozen predecessors; neither old bundle nor default is retargeted.
+    inputs = historical + [(CONTRACT_26H2, CONTRACT_26H2.read_bytes()),
+                           (RUNBOOK_26H2, RUNBOOK_26H2.read_bytes())]
+    keys = ("25h2_contract", "25h2_runbook", "26h2_contract", "26h2_runbook")
+    for (path, raw), key in zip(inputs, keys):
+        plain_path(path.absolute())
+        if digest(raw) != FROZEN_COMPARISON_INPUTS[key]:
+            raise ValueError("repro.comparison_input_changed")
+    contract = json.loads(inputs[2][1])
+    predecessor = contract["predecessor"]
+    if (predecessor["sha256"] != digest(historical[0][1]) or
+            predecessor["runbook_sha256"] != digest(historical[1][1])):
+        raise ValueError("repro.predecessor_mismatch")
+    records = [{"path": path.name, "sha256": digest(raw)} for path, raw in inputs]
+    return inputs[2][1], [(path.name, raw) for path, raw in inputs], {
+        "profile": "26h2",
+        "contract_input": records[2],
+        "runbook_input": records[3],
+        "predecessor_inputs": records[:2],
+    }
+
+
+def prepare(stage: Path, helper: Path, output: Path, *, profile: str = "25h2") -> dict:
     for path in (stage, helper, output):
         plain_path(path.absolute())
     stage, helper, output = stage.resolve(), helper.resolve(), output.resolve()
@@ -87,13 +125,13 @@ def prepare(stage: Path, helper: Path, output: Path) -> dict:
     if actual != expected or not {"python.exe", "python313.dll", "python3.dll",
                                  "vcruntime140.dll", "vcruntime140_1.dll"} <= actual:
         raise ValueError("repro.python_inventory_changed")
-    contract_bytes, runbook_bytes, probe_bytes = CONTRACT.read_bytes(), RUNBOOK.read_bytes(), PROBE.read_bytes()
+    contract_bytes, documents, binding = comparison_inputs(profile)
+    probe_bytes = PROBE.read_bytes()
     contract = json.loads(contract_bytes)
     if contract["execution_authorized"] is not False or [c["id"] for c in contract["cases"]] != list("ABCD"):
         raise ValueError("repro.invalid_contract")
     # Do not place operator-specific source paths, prior state or raw logs in the bundle.
-    extra = [(HELPER_NAME, helper_bytes), (f"{STAGE_NAME}/runtime/worker.py", probe_bytes),
-             ("comparison-contract.json", contract_bytes), ("COMPARISON.md", runbook_bytes)]
+    extra = [(HELPER_NAME, helper_bytes), (f"{STAGE_NAME}/runtime/worker.py", probe_bytes), *documents]
     output.mkdir(parents=True)
     files = []
     for source, name, expected_hash in records:
@@ -125,6 +163,7 @@ def prepare(stage: Path, helper: Path, output: Path) -> dict:
                             "execution_manifest_and_token_observer", "capability_permission",
                             "python_license_review_before_external_sharing", "four_case_execution"],
               "files": sorted(files, key=lambda item: item["path"])}
+    report.update(binding)
     with (output / "reproduction-manifest.json").open("x", encoding="utf-8", newline="\n") as stream:
         stream.write(json.dumps(report, sort_keys=True, indent=2) + "\n")
     return report
@@ -135,12 +174,14 @@ def main() -> int:
     parser.add_argument("--stage", type=Path, default=ROOT / STAGE_NAME)
     parser.add_argument("--helper", type=Path, default=ROOT / HELPER_NAME)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--profile", choices=("25h2", "26h2"), default="25h2",
+                        help="Explicit comparison binding; historical 25H2 remains the default.")
     args = parser.parse_args()
     try:
         plain_path(args.output.absolute())
         if not args.output.resolve().is_relative_to((ROOT / ".codex-build").resolve()):
             raise ValueError("repro.output_must_be_ignored")
-        report = prepare(args.stage, args.helper, args.output)
+        report = prepare(args.stage, args.helper, args.output, profile=args.profile)
     except (OSError, ValueError, KeyError, TypeError):
         print(json.dumps({"status": "blocked", "reason_code": "repro.preparation_failed",
                           "production_qualified": False}))

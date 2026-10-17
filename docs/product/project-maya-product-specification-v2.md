@@ -352,6 +352,58 @@ and its successor JSON. Preserve historical 25H2 inputs and failure evidence;
 the revision replaces the planned environment without adding runs. It authorizes
 no downloads, VM/security changes, preparation-tool changes, execution or
 supported-platform claim. Gate A and production activation remain blocked.
+On 2026-10-17 the user reported a deployed Azure guest at build 26300.9711 and
+visible credit and requested continuation. The Azure-only laboratory proposal is
+`docs/architecture/governance_v2_python_azure_procedure.md`, not a change to
+customer-local product authority or the single four-case budget. Local tooling,
+cloud uploads, guest boot/security/NIC changes, snapshot/restore rehearsal and
+execution retain explicit approval gates. Frozen evidence, runtime artifacts,
+installers and production activation remain unchanged and unqualified.
+The user subsequently approved the Azure procedure and Step 1 local preparation.
+The explicit 26H2 preparer binding passes 30 inert fixture/probe tests and produces
+a hash-verified ignored bundle while preserving the historical default/evidence.
+The pinned reference source is verified; its build stops at MSB4019 for missing
+C++ build targets. Installing system build tools requires specific permission,
+not a Hermes/source shortcut. The observer remains pending; no VM/security change,
+native startup, external transfer or production acceptance follows partial preparation.
+The user subsequently approved suitable local build-tool download/installation:
+verified Microsoft Build Tools 2022 v143/Windows SDK and required dependencies, with
+native package verification and no automatic restart. These are build-machine tools,
+not customer-payload additions. Record outcomes in the Azure procedure; no VM/security
+change, launcher execution or product/Gate A acceptance is authorized by this approval.
+The approved local installation completed with exit 0/no reboot required and the
+unchanged pinned reference passed a clean Release/x64 build, zero warnings/errors.
+The Azure procedure records its hash/tool versions. Step 1 observer preparation
+remains pending; no launcher execution or Gate A/product qualification follows.
+The user approved diagnostic observer implementation and a common outer job for
+A-D. The unarmed evidence library passes 57 inert checks; consult
+`docs/architecture/governance_v2_observer_review.md`. Step 1 launcher supervision
+adapters/joint review remain incomplete. The job is a declared lab launch-context
+change, not a customer-product boundary or qualified containment mechanism.
+The subsequent observer stage implements fixed A-D adapters and supervision as
+an unarmed diagnostic library, with inert tests and joint source review. The
+existing stage 3 freeze/manifest/invocation review is next, not VM execution.
+Native behavior and the exact VM/security approvals remain unqualified/open;
+Step 1 and product qualification are not completed by source-level coverage.
+The subsequent unarmed review package records candidate source/artifact hashes
+and proposed guest library placement in
+`docs/architecture/governance-v2-observer-review-package.json`. This is not an
+execution manifest or installed test host. Exact guest binding, durable attempt
+tracking and executable-host/invocation review remain open within stage 3/Step 1.
+No VM deployment, security change, native run or product activation follows.
+The subsequent entry-point candidate is compiled and fixture-tested separately
+against the unchanged library; see
+`docs/architecture/governance_v2_observer_host_review.md`. The actual host was not
+executed. Review its command format/disabled template before the existing VM
+preparation-impact gate. Guest evidence and explicit execution permission remain
+required; local attempt claims are not snapshot-rollback-proof and do not replace
+the external ordered journal. No guest change or product qualification follows.
+On 2026-10-17 the user explicitly accepted the reviewed host candidate, closing
+Azure procedure Step 1 local preparation and observer Stage 3 candidate review
+for that source/fixture scope. The dated decision is in the host review; frozen
+evidence retains its labels and hashes. Step 2 actual VM inventory and exact
+preparation-impact disclosure are next, with separate permission before changes.
+No deployment, native qualification, Gate A or production acceptance follows.
 
 ### Historical Native Candidate Evidence
 

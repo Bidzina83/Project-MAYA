@@ -91,6 +91,59 @@ One four-case matrix remains the entire proposed budget, not one per OS version.
 Guest/media/resource verification and explicit provisioning/security permissions
 remain open. No download, preparation-tool implementation, reference build,
 observer implementation or comparison execution follows this approval.
+On 2026-10-17 the user reported visible credit and an Azure guest whose winver
+matches 26300.9711, then requested continuation. The proposed bounded Azure
+procedure is [the Azure preparation/execution proposal](governance_v2_python_azure_procedure.md).
+It defines serial control while guest adapters are disabled, baseline restoration,
+minimal transfer and the existing local-tool prerequisites. It does not authorize
+them: approve the procedure/local preparation before implementation and disclose
+exact VM impacts before separate cloud/security/rehearsal/execution permission.
+No input relabelling, additional A-D attempt or product qualification follows.
+The user subsequently approved the Azure procedure and Step 1 local preparation.
+Its explicit 26H2 binding and 30 inert fixture/probe tests pass; the new ignored
+bundle is hash-verified and the historical bundle remains unchanged. The pinned
+Microsoft reference source is verified but Release/x64 build stops at MSB4019,
+missing C++ build targets. Resolve the specific toolchain prerequisite with impact
+approval before installing system tools. Do not retarget upstream source or reorder
+past the build; observer implementation remains pending. No guest/security changes,
+external upload or A-D execution has occurred. Step 1 remains incomplete.
+The user subsequently authorized suitable local build-tool download/installation.
+Use verified Microsoft Build Tools 2022 v143/Windows SDK with required dependencies,
+native package verification and automatic restart disabled. Record installation and
+unmodified reference-build outcomes in the Azure procedure. This does not authorize
+VM/security changes, reference execution or another A-D attempt; Step 1 stays ordered.
+Installation completed with exit 0/no reboot required; the unchanged pinned reference
+passed a clean Release/x64 build with zero warnings/errors. Hashes/tool versions are
+recorded in the Azure procedure. Next is the approved Step 1 observer preparation;
+no launcher execution, VM/security change or Gate A acceptance occurred.
+The user approved observer implementation and the common outer-job design for A-D.
+The unarmed evidence library passes 57 inert checks; its fixed sequence and limits
+are in [the observer preparation review](governance_v2_observer_review.md). Step 1
+launcher supervision adapters/joint review remain next. No native token/job test,
+launcher/managed-Python execution, VM/security action or Gate A acceptance follows.
+The next observer stage now has source-candidate A-D adapters, supervision and a
+native backend, with inert coverage and the documented joint review. Stage 3's
+freeze/manifest/invocation review is next, still inside Step 1 local preparation.
+No native backend was executed; VM/security read-backs, execution permission and
+Gate A acceptance remain open. Follow the same observer review before advancing.
+The subsequent local review package records unarmed candidate fingerprints and
+proposed guest library placement in `governance-v2-observer-review-package.json`.
+It is not the final execution manifest: the trusted executable host, exact guest
+binding, durable attempt tracking and approved invocation remain stage 3/Step 1
+obligations. Do not close Step 1, begin VM changes or run native tests from it.
+The subsequent user-authorized host continuation is recorded in
+`governance_v2_observer_host_review.md`: a compiled, fixture-tested candidate and
+proposed invocation against the frozen library, not an executed host or a ready
+manifest. Review it before the existing VM preparation-impact gate. Its local
+claim covers process restarts, not snapshot rollback; preserve the external
+ordered attempt reservation. No extra startup matrix, VM action, Gate A acceptance
+or product activation follows this preparation; final execution approval stays open.
+On 2026-10-17 the user explicitly accepted the host candidate. The dated decision
+in its review closes Azure procedure Step 1 local preparation and observer Stage 3
+candidate review for the source/fixture scope, not Gate A or native operation.
+Frozen records are unchanged. Next is the existing Step 2 actual VM inventory and
+exact preparation-impact disclosure for separate permission; no deployment,
+guest/security change or startup follows this candidate acceptance.
 
 Before coding, propose a fixed Windows profile, specific isolation mechanism,
 supported capabilities, trust assumptions, exact allowed/denied tests, evaluation

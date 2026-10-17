@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "prepared_on": "2026-10-17",
+  "scope": "Python-only Gate A comparison notice sidecar; not the Maya installer",
+  "execution_authorized": false,
+  "external_sharing_authorized": false,
+  "production_qualified": false,
+  "redistribution_clearance_claimed": false,
+  "byte_preservation": "Vendor notices are copied verbatim; Git text conversion is disabled.",
+  "runtime_binding": {
+    "python_version": "3.13.14",
+    "verification": "Read-only hashes of all 796 frozen Python files match the installed Windows distribution; no bundled Python execution.",
+    "python313_dll_sha256": "3a7a6170ea840bf2a2a76d05b687b946fcdc8d0cfedfe159012b38f1e8959a7c",
+    "reproduction_manifest_sha256": "17ad01535d3a70da86cc264b011cbb22528fdee5bf4b29203d9e7ed4daaeda60",
+    "reference_commit": "8102bfc8dc3e244ec08e8204bd7d989e26a016e4",
+    "reference_binary_sha256": "812ab69ebcc45a241131b79b3c6c26319aaec802377d10ea733c5f70fcb36606",
+    "version_evidence": {
+      "windows_file_metadata": {
+        "cpython": "3.13.14",
+        "openssl": "3.0.21",
+        "sqlite": "3.50.4.0",
+        "tcl_tk": "8.6.15",
+        "zlib": "1.3.1",
+        "vcruntime140_and_vcruntime140_1": "14.42.34438.0"
+      },
+      "pyexpat_embedded_version_string": "expat_2.8.1",
+      "upstream_build_properties_url": "https://raw.githubusercontent.com/python/cpython/v3.13.14/PCbuild/python.props",
+      "upstream_build_property_pins_not_executed_version_probes": {
+        "libffi": "3.4.4",
+        "xz_liblzma": "5.2.5",
+        "libmpdec": "4.0.0",
+        "bzip2": "1.0.8"
+      }
+    }
+  },
+  "files": [
+    {
+      "path": "PYTHON-WINDOWS-LICENSE.txt",
+      "size_bytes": 33861,
+      "sha256": "62bec384df47b0328307db41455ff6ea2559e5546b394ac69148561b21703120",
+      "source_kind": "original_installed_distribution_file",
+      "source_path": "C:/Program Files/Python313/LICENSE.txt",
+      "component": "CPython 3.13.14 Windows build and its included notices/conditions"
+    },
+    {
+      "path": "PYTHON-INCORPORATED-NOTICES.rst",
+      "size_bytes": 55737,
+      "sha256": "62f2c9c2c75d511170eb464ad5f83b78cc1f37eb2eb49c2846c9aa6c4557ee99",
+      "source_kind": "upstream_versioned_text",
+      "source_url": "https://raw.githubusercontent.com/python/cpython/v3.13.14/Doc/license.rst",
+      "component": "CPython 3.13.14 incorporated-code notices"
+    },
+    {
+      "path": "MICROSOFT-SANDBOX-SECURITY-TOOLS-LICENSE.txt",
+      "size_bytes": 1162,
+      "sha256": "9906940f61b1f0b533fa7d99baf55178b2808fbe113ea51dfbfad8572ccd5f2b",
+      "source_kind": "original_pinned_checkout_file",
+      "source_url": "https://github.com/microsoft/SandboxSecurityTools/blob/8102bfc8dc3e244ec08e8204bd7d989e26a016e4/LICENSE",
+      "component": "Unmodified LaunchAppContainer reference launcher; MIT notice does not replace CRT redistribution conditions"
+    },
+    {
+      "path": "OPENSSL-LICENSE.txt",
+      "size_bytes": 10175,
+      "sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a",
+      "source_kind": "upstream_versioned_text",
+      "source_url": "https://raw.githubusercontent.com/openssl/openssl/openssl-3.0.21/LICENSE.txt",
+      "component": "OpenSSL 3.0.21"
+    },
+    {
+      "path": "EXPAT-COPYING.txt",
+      "size_bytes": 1144,
+      "sha256": "31b15de82aa19a845156169a17a5488bf597e561b2c318d159ed583139b25e87",
+      "source_kind": "upstream_versioned_text",
+      "source_url": "https://raw.githubusercontent.com/python/cpython/v3.13.14/Modules/expat/COPYING",
+      "component": "Expat in CPython 3.13.14"
+    },
+    {
+      "path": "ZLIB-LICENSE.txt",
+      "size_bytes": 1002,
+      "sha256": "845efc77857d485d91fb3e0b884aaa929368c717ae8186b66fe1ed2495753243",
+      "source_kind": "upstream_versioned_text",
+      "source_url": "https://raw.githubusercontent.com/python/cpython-source-deps/zlib-1.3.1/LICENSE",
+      "component": "zlib 1.3.1"
+    },
+    {
+      "path": "LIBMPDEC-COPYRIGHT.txt",
+      "size_bytes": 1285,
+      "sha256": "2713324211652ce4a60e6e21e54f9dc3004299e591b0933a352f1a89c5fb53c2",
+      "source_kind": "upstream_versioned_text",
+      "source_url": "https://raw.githubusercontent.com/python/cpython-source-deps/mpdecimal-4.0.0/COPYRIGHT.txt",
+      "component": "libmpdec 4.0.0"
+    },
+    {
+      "path": "XZ-COPYING.txt",
+      "size_bytes": 2775,
+      "sha256": "bcb02973ef6e87ea73d331b3a80df7748407f17efdb784b61b47e0e610d3bb5c",
+      "source_kind": "upstream_versioned_text",
+      "source_url": "https://raw.githubusercontent.com/python/cpython-source-deps/xz-5.2.5/COPYING",
+      "component": "XZ/liblzma 5.2.5; no XZ command-line tools included"
+    },
+    {
+      "path": "TK-LICENSE.txt",
+      "size_bytes": 2307,
+      "sha256": "0d1e4405f6273f091732764ed89b57066be63ce64869be6c71ea337dc4f2f9b5",
+      "source_kind": "original_installed_distribution_file",
+      "source_path": "C:/Program Files/Python313/tcl/tk8.6/license.terms",
+      "component": "Tk 8.6.15; Tcl/Tk notices also retained in Python Windows licence"
+    }
+  ],
+  "remaining_review": [
+    "Exact transfer archive inventory, destination, access, retention and approval",
+    "Applicable toolchain/runtime and end-user redistribution conditions",
+    "Windows client and Azure licensing are separate; no entitlement is certified"
+  ]
+}

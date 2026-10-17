@@ -1,0 +1,82 @@
+{
+  "schema": "maya.observer_review_package.v1",
+  "date": "2026-10-17",
+  "status": "unarmed_candidate_frozen_for_review_not_execution_manifest",
+  "execution_authorized": false,
+  "external_sharing_authorized": false,
+  "native_qualified": false,
+  "production_qualified": false,
+  "sources": [
+    {"path": "scripts/native/governance_v2_observer.cs", "sha256": "9f292605b7600fbb8a4efa8ca38ace2d59b13e1e28cf7657b38a588158197ce1"},
+    {"path": "scripts/native/governance_v2_observer_supervision.cs", "sha256": "8169a04e815877f96ca2490613ada42f6822a14fc2eb5f95ff03e923a422daef"},
+    {"path": "scripts/native/governance_v2_observer_launch.cs", "sha256": "c6bdb594e33e1d098c985b957b067a9008ed05d0bf58c717642f00b56dedf48c"},
+    {"path": "tests/governance_v2_observer_fixtures.cs", "sha256": "439e2b496d4e1a50ae3e37955832d1eb5264355444947419023608be38db80a0"}
+  ],
+  "artifacts": {
+    "library": {
+      "local_path": ".codex-build/governance-v2-observer-supervision-20261017/Maya.GateA.Supervision.dll",
+      "sha256": "1a07c156ddd55b5e18066d747344721b71100083c1e9a29ad0011d6344aafcdc",
+      "proposed_vm_path": "C:\\MayaGateA\\observer\\Maya.GateA.Supervision.dll",
+      "entry_point": null
+    },
+    "fixture": {
+      "local_path": ".codex-build/governance-v2-observer-supervision-20261017/ObserverSupervisionFixtures.exe",
+      "sha256": "4d38ea3aa65bd1c7aac73bd58e9956e921a971d8afda85b078553e0fd5265047",
+      "inert_checks_passed": 200,
+      "native_calls": false,
+      "include_in_vm_payload": false
+    },
+    "compiler": "Windows .NET Framework64 v4.0.30319 csc.exe",
+    "library_flags": ["/nologo", "/warnaserror+", "/platform:x64", "/target:library", "/r:System.Management.dll", "/r:System.Web.Extensions.dll"],
+    "hashes_bind_existing_bytes_not_deterministic_rebuilds": true
+  },
+  "frozen_inputs": {
+    "contract_path": "docs/architecture/governance-v2-python-comparison-26h2.json",
+    "contract_sha256": "07b04c4577277780a2352e970185f949e7f3cdf755bc3f1c5a6312cd29f29a27",
+    "base_manifest_sha256": "17ad01535d3a70da86cc264b011cbb22528fdee5bf4b29203d9e7ed4daaeda60",
+    "maya_helper_sha256": "e72f101bea8222d14e908c2f39e7fecdca122b2f13b2abe9d5293490b7856f63",
+    "microsoft_reference_sha256": "812ab69ebcc45a241131b79b3c6c26319aaec802377d10ea733c5f70fcb36606",
+    "reference_commit": "8102bfc8dc3e244ec08e8204bd7d989e26a016e4"
+  },
+  "proposed_vm_layout": {
+    "root": "C:\\MayaGateA",
+    "base_manifest": "reproduction-manifest.json",
+    "observer_directory": "observer",
+    "helper": ".codex-build/governance-v2-native-tools/GateANative.exe",
+    "reference": ".codex-build/governance-v2-reference-tools/LaunchAppContainer.exe",
+    "python": ".codex-build/governance-v2-lpac-stage/runtime/python/python.exe",
+    "worker": ".codex-build/governance-v2-lpac-stage/runtime/worker.py",
+    "private_empty_state": ".codex-build/governance-v2-lpac-stage/state",
+    "security_authorization_files_inside_private_state": false,
+    "observer_access_granted_to_payload": false,
+    "deployed": false
+  },
+  "invocation_review": {
+    "current_form": "library_API_only_not_a_runnable_command",
+    "api_sequence": ["new LaunchPlan(case_id, root, verified_operator_sid, verified_package_sid, windows_directory)", "new NativeSupervisionBackend(reviewed_vm_execution_permission_callback)", "Supervision.Run(plan, backend)"],
+    "host_entry_point": null,
+    "approved_run_command": null,
+    "trusted_host_review_complete": false,
+    "callback_is_not_VM_or_security_attestation": true,
+    "durable_single_attempt_record_required_in_future_host": true,
+    "ordinary_fallback_or_automatic_resume": false,
+    "case_commands_source": "scripts/native/governance_v2_observer_supervision.cs:LaunchPlan",
+    "selected_child_arguments": ["-I", "-S", "C:\\MayaGateA\\.codex-build\\governance-v2-lpac-stage\\runtime\\worker.py"],
+    "reference_switches": ["-m", "<derived_moniker>", "-i", "<quoted_python_child_command>", "-c", "<case_capabilities_semicolon_joined>", "-l", "-w"],
+    "forbidden_reference_switches": ["-r", "-k"],
+    "maya_launcher_cwd": "C:\\MayaGateA",
+    "reference_launcher_cwd": "C:\\MayaGateA\\.codex-build\\governance-v2-lpac-stage\\state",
+    "environment_names": ["HERMES_HOME", "LOCALAPPDATA", "PATH", "SYSTEMROOT", "TEMP", "TMP", "USERPROFILE", "WINDIR"],
+    "environment_evidence_basis": "explicit_creation_inputs_and_frozen_launcher_source_not_child_memory_readback",
+    "common_outer_job": "kill_on_close_no_breakaway_declared_context_change"
+  },
+  "cases": [
+    {"id": "A", "launcher": "maya", "capabilities": ["privateNetworkClientServer"], "ordinary_control_required": true},
+    {"id": "B", "launcher": "microsoft", "capabilities": ["privateNetworkClientServer"], "ordinary_control_required": false},
+    {"id": "C", "launcher": "microsoft", "capabilities": ["privateNetworkClientServer", "registryRead"], "ordinary_control_required": false},
+    {"id": "D", "launcher": "microsoft", "capabilities": ["privateNetworkClientServer", "registryRead", "lpacCom"], "ordinary_control_required": false}
+  ],
+  "budget": {"ordered_cases": ["A", "B", "C", "D"], "runs_per_case": 1, "timeout_seconds": 100, "termination_requested_at_seconds": 95, "automatic_retries": 0, "automatic_corrections": 0},
+  "unresolved_bindings": ["exact_Azure_VM_and_disk_inventory", "verified_guest_operator_and_package_SIDs", "verified_console_access_and_offline_adapter_readback", "baseline_snapshot_and_restore_rehearsal", "security_descriptor_capture_and_cleanup_readback", "transfer_licensing_cost_and_retention_permission", "trusted_host_entrypoint_and_durable_attempt_record", "final_execution_manifest_and_explicit_A_D_permission"],
+  "on_uncertain_cleanup": "keep_guest_network_disabled_deallocate_via_control_plane_preserve_evidence_stop"
+}
