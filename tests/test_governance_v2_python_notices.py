@@ -35,6 +35,24 @@ class NoticeTests(unittest.TestCase):
         for suffix in ("*.txt -text", "*.rst -text"):
             self.assertIn(prefix + suffix, attributes.splitlines())
 
+    def test_embedded_bootstrap_notices_are_not_misreported_as_installed_pip(self):
+        embedded, = self.manifest["embedded_notices"]
+        self.assertEqual(embedded["container_sha256"],
+                         "382ff9f685ee3bc25864f820aa50505825f10f5458ffff07e30a6d96e5715cab")
+        self.assertTrue(embedded["container_path_in_frozen_base"].endswith(
+            "/Lib/ensurepip/_bundled/pip-26.1.2-py3-none-any.whl"))
+        self.assertIs(embedded["installed_or_executed"], False)
+        self.assertEqual(embedded["licence_copyright_authors_file_count"], 42)
+        entries = embedded["selected_entries"]
+        self.assertEqual(len(entries), 3)
+        self.assertEqual(len({entry["path"] for entry in entries}), 3)
+        for entry in entries:
+            self.assertRegex(entry["sha256"], r"^[0-9a-f]{64}$")
+            self.assertGreater(entry["size_bytes"], 0)
+        readme = (NOTICES / "README.md").read_text()
+        self.assertIn("unopened bootstrap wheel", readme)
+        self.assertNotIn("Hermes, pip,", readme)
+
     def test_notice_collection_grants_no_operational_authority(self):
         for field in ("execution_authorized", "external_sharing_authorized",
                       "production_qualified", "redistribution_clearance_claimed"):

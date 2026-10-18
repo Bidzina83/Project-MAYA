@@ -7,6 +7,21 @@ Windows isolation mechanism and feasibility are unqualified. Follow
 [plan revision 2](maya_governance_integration_plan_v2.md), starting at Gate A.
 This does not activate governance or authorize patch removal or installer changes.
 
+## Product-Owned Windows Setup
+
+The clarified 2026-10-18 testing decision is
+[customer-like Windows testing](governance_v2_customer_windows_testing.md).
+Permission prerequisites must be established by the actual Maya setup/runtime
+component after informed user consent, not manually applied by test operators.
+Start from the declared Windows baseline and use the normal RDP installation/run
+path. Do not disable protections or pre-grant access to make startup succeed.
+Missing setup, refused permission or failed enforcement blocks the affected
+operation; it does not authorize an unrestricted Hermes fallback. A user may
+consent to product-required changes, but the product must own their disclosed
+scope, validation, failure reporting and supported cleanup/recovery. This is a
+requirement, not proof that the current prototype implements that lifecycle.
+Customer-protection boundaries below and all qualification gates are unchanged.
+
 ## Trust And Authority
 
 The trusted Maya control plane owns identity, local policy decisions, credentials,

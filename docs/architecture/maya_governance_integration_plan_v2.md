@@ -145,6 +145,34 @@ Frozen records are unchanged. Next is the existing Step 2 actual VM inventory an
 exact preparation-impact disclosure for separate permission; no deployment,
 guest/security change or startup follows this candidate acceptance.
 
+### Current Test Method - Customer-Like Windows, 2026-10-18
+
+After the earlier manual diagnostic preparation and successful restoration/NIC
+rehearsal, the user directed and clarified
+[customer-like Windows testing](governance_v2_customer_windows_testing.md).
+This is the active test workflow: preserve the existing representative Windows
+11 Pro configuration, copy/install the selected component, run through Remote
+Desktop and analyze the result. Do not prepare special file/registry permissions,
+integrity labels, WFP rules or loopback exemptions manually for test success.
+Maya must request consent and provision required permissions through its actual
+setup/runtime component. Missing product setup must be addressed as a product
+gap, not implemented as more test infrastructure. Refusal or failed enforcement
+still blocks the affected operation; ordinary-mode bypass is not authorized.
+
+The pending A-D security/execution request was not approved. Its offline/SAC
+requirements and per-case disk resets are superseded, not silently converted into
+new runs. Preserve frozen contracts, artifacts, reviews, baseline and rehearsal
+evidence; none is relabelled as installed-product qualification. No additional
+matrix, observer, transfer tool or automatic recovery loop is introduced.
+
+Follow this order within Gate A: identify the bounded product artifact and its
+real setup/start entry; prepare that product component within approved scope;
+copy/install and run it through RDP with product-owned consent; collect and
+analyze the result against its declared criteria. Report gaps before proposing
+an implementation change or additional sequence. A particular security change,
+artifact rebuild or startup retains its applicable approval. Gates A-E and the
+customer-protection requirements remain unchanged; production stays blocked.
+
 Before coding, propose a fixed Windows profile, specific isolation mechanism,
 supported capabilities, trust assumptions, exact allowed/denied tests, evaluation
 budget and stop conditions; obtain user approval. Demonstrate real pinned Hermes

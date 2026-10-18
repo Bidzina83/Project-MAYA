@@ -37,6 +37,7 @@
 /docs/product/project-maya-product-specification-v2.md text eol=lf
 /docs/architecture/maya_governance_integration_plan.md text eol=lf
 /docs/architecture/maya_governance_integration_plan_v2.md text eol=lf
+/docs/architecture/restricted_hermes_execution_contract.md text eol=lf
 /docs/architecture/governance_g2_caller_qualification.md text eol=lf
 /docs/architecture/governance_g2_create_transition.md text eol=lf
 /docs/architecture/governance_g2_create_loop.md text eol=lf
@@ -164,6 +165,8 @@
 /docs/architecture/governance_v2_python_comparison_26h2.md text eol=lf
 /docs/architecture/governance_v2_python_vm_proposal.md text eol=lf
 /docs/architecture/governance_v2_python_azure_procedure.md text eol=lf
+/docs/architecture/governance_v2_python_manual_diagnostics.md text eol=lf
+/docs/architecture/governance_v2_customer_windows_testing.md text eol=lf
 /scripts/native/governance_v2_observer.cs text eol=lf
 /scripts/native/governance_v2_observer_supervision.cs text eol=lf
 /scripts/native/governance_v2_observer_launch.cs text eol=lf

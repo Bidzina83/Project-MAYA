@@ -405,6 +405,27 @@ evidence retains its labels and hashes. Step 2 actual VM inventory and exact
 preparation-impact disclosure are next, with separate permission before changes.
 No deployment, native qualification, Gate A or production acceptance follows.
 
+Earlier on 2026-10-18 the user approved manual Python startup diagnostics under
+`docs/architecture/governance_v2_python_manual_diagnostics.md`. Its completed
+snapshot/restoration rehearsal remains evidence. The subsequent clarified
+customer-like Windows testing direction supersedes that operational procedure;
+see `docs/architecture/governance_v2_customer_windows_testing.md`.
+
+Product tests must start from the VM's existing representative Windows 11 Pro
+configuration, with ordinary permissions and network/security policies intact.
+Copy/install the identified component, run it through Remote Desktop and analyze
+the result. Operators must not precondition Windows with test-only ACL, registry,
+integrity-label, WFP or loopback changes to make tests pass. Maya's actual
+setup/runtime component must explain, request consent for and provision its own
+required permissions. Consent refusal, provisioning failure or missing required
+enforcement must fail closed; manual laboratory workarounds cannot satisfy product
+acceptance. No new test automation, mandatory offline/SAC workflow or per-case
+disk-reset sequence follows. Preserve frozen evidence and rollback resources.
+The pending A-D security/execution request was not approved and must not be
+resumed or relabelled. Customer-protection requirements, Gate A and production
+activation remain unchanged; this direction is not permission for a particular
+security change, installer rebuild or startup, nor proof of an existing setup path.
+
 ### Historical Native Candidate Evidence
 
 The following implementation chronology retains prior scoped decisions and

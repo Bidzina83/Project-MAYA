@@ -187,6 +187,27 @@ are closed for that source/fixture scope only. Next is Step 2 actual VM inventor
 and exact preparation-impact disclosure for separate permission. No cloud access,
 deployment, guest/security change, native execution or Gate A acceptance follows.
 
+Earlier on 2026-10-18 the user approved manual Python startup diagnostics in
+`docs/architecture/governance_v2_python_manual_diagnostics.md`. Its completed
+snapshot/restoration rehearsal remains historical evidence; the subsequent
+customer-like Windows testing decision supersedes its operational instructions.
+
+The active testing contract is
+`docs/architecture/governance_v2_customer_windows_testing.md`, approved and
+clarified by the user on 2026-10-18. Preserve the VM's existing customer-like
+Windows 11 Pro configuration; copy/install the identified component and run it
+through Remote Desktop, then analyze its results. Do not manually preconfigure
+ACLs, integrity labels, WFP filters, loopback exemptions or registry permissions
+to make a test pass. Required permissions must be requested and provisioned by
+Maya's actual setup/runtime component, with explicit informed user consent and
+fail-closed behavior on refusal/failure. Do not substitute test helpers for a
+missing product setup path. No extra test automation, mandatory offline/SAC
+workflow or per-case disk-reset sequence is authorized by this direction.
+Preserve frozen inputs, reviews and rollback resources. The pending A-D request
+was not approved; do not resume or relabel it. Product protection, Gate A and
+production-activation requirements remain unchanged. This workflow decision does
+not itself authorize a particular security change, installer rebuild or startup.
+
 The user approved reduced internal enforcement scope on 2026-10-14 without
 reduced customer protection. The active plan is revision 2, Gate A feasibility,
 in `docs/architecture/maya_governance_integration_plan_v2.md`. Do not resume the

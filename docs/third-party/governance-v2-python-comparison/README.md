@@ -47,8 +47,16 @@ relabel the DLL as Maya-owned. Python's own incorporated-code document is retain
 in full rather than claiming that its illustrative list is exhaustive. Embedded
 source notices in copied standard-library modules remain in those original files.
 
+The frozen Python distribution also contains the unopened bootstrap wheel
+`Lib/ensurepip/_bundled/pip-26.1.2-py3-none-any.whl`. It retains 42 embedded
+licence/copyright/authors files, including pip's licence and its vendored-library
+notices. Its wheel hash and selected notice hashes are recorded separately under
+`embedded_notices` in the manifest. The wheel is not an installed pip environment
+or permission to bootstrap packages. Preserve it verbatim inside the frozen base;
+do not remove it to make the inventory match an earlier description.
+
 The .NET Framework and Windows system components used by the observer already
-belong to the guest and are not redistributed in this sidecar. Hermes, pip,
+belong to the guest and are not redistributed in this sidecar. Hermes, installed
 site-packages, LibreOffice, Metabase, embeddings and other Maya installer
 dependencies are not part of this Python-only kit and are not covered here.
 

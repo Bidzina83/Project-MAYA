@@ -308,6 +308,24 @@ review, is accepted for the source/fixture scope only. Next is Step 2 actual VM
 inventory and exact impact disclosure for separate preparation permission. No
 deployment, guest/security change, native qualification or Gate A acceptance follows.
 
+Earlier on 2026-10-18 the user approved manual Python startup diagnostics in
+`docs/architecture/governance_v2_python_manual_diagnostics.md`. The snapshot and
+passed restoration/NIC rehearsal remain evidence, not the current test workflow.
+The subsequent clarified decision is the active contract in
+`docs/architecture/governance_v2_customer_windows_testing.md`: retain the VM's
+existing customer-like Windows 11 Pro settings, copy/install the selected
+component, run it through Remote Desktop and analyze its results. Test operators
+must not preconfigure file/registry permissions, integrity labels, WFP filters or
+loopback exemptions to make the product work. Maya itself must request consent
+and provision its required permissions through its real setup/runtime path;
+refusal or failed enforcement blocks the affected startup/operation. Missing
+product setup is a product gap, not permission for manual test-only substitutes.
+No additional test automation, mandatory offline/SAC workflow or per-case reset
+sequence follows. Preserve frozen inputs and rollback resources; the pending A-D
+request was not approved and must not be resumed or relabelled. This changes test
+operation, not customer-protection requirements, Gate A acceptance, specific
+security-change consent, installer rebuild authority or production activation.
+
 ### Historical Candidate Evidence
 
 The following chronology preserves scoped acceptance and unresolved exclusions.

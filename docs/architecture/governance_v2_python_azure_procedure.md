@@ -1,5 +1,22 @@
 # Python Comparison - Azure Preparation And Execution Proposal
 
+## Current Procedure - Customer-Like Windows Successor
+
+The user first approved manual diagnostics on 2026-10-18, then directed and
+clarified [customer-like Windows testing](governance_v2_customer_windows_testing.md).
+The latter is now the active workflow: existing representative Windows settings,
+product-owned permission requests/setup and installation/run through RDP, followed
+by result analysis. Do not manually apply test-only ACL/WFP/registry, integrity
+or loopback changes, require an offline/SAC workflow or resume the proposed A-D
+matrix. Its execution request was not approved. No extra downloader, packager,
+observer or test-running software is a prerequisite.
+
+The rest of this document retains the historical proposals, inventory and reviews,
+not current operational instructions. The completed baseline/restoration rehearsal
+is recorded in [the manual diagnostic record](governance_v2_python_manual_diagnostics.md).
+Preserve frozen comparison inputs, artifacts, reviews and rollback resources.
+No VM change, product-security bypass or Gate A acceptance follows this update.
+
 ## Status And Evidence
 
 2026-10-17: document preparation following the user's report that the USD 200
@@ -584,3 +601,230 @@ inputs are unchanged. This completes creation of the notice files, not legal
 clearance or transfer approval. Applicable redistribution conditions and exact
 archive/transfer review remain open. No cloud resources, VM settings, snapshot,
 disk swap, upload or test run are authorized by this housekeeping task.
+
+### Requested Inventory Received - 2026-10-17
+
+The user subsequently supplied the operator SID, guest UUID, observed console
+session, 64-bit architecture, all five adapter entries, successful DISM package
+listing, current boot-loader entry, VM JSON and OS-disk JSON. These complete the
+requested inventory; do not ask for the Windows build or encryption output again.
+The exact supplied identifiers and original console transcript are retained only
+in the ignored local impact record. They are not independently queried cloud state
+or an immutable execution binding. Runtime preflight must detect drift rather
+than silently adopt another identity or configuration.
+
+The VM UUID matches the guest UUID. The attached disk ID matches the supplied disk
+resource, with East US/Zone 1, 127 GiB Premium_LRS/P10, Windows, Hyper-V generation
+V2, x64 and TrustedLaunch. Disk encryption is EncryptionAtRestWithPlatformKey;
+the VM enables Secure Boot and vTPM. The current loader has EMS enabled. No boot,
+encryption, security or adapter correction is proposed. The existing OS-disk
+deleteOption is Delete: do not delete/recreate the VM or change that option.
+
+Disk publicNetworkAccess Enabled and networkAccessPolicy AllowAll are recorded,
+not proof of an anonymously accessible disk or permission to export it. No disk
+access grant, disk export or disk-network-policy change is included in this work.
+The reported optional disk capabilities are not assertions that they are enabled.
+
+These fields do not prove successful Trusted Launch restoration. Azure manages
+VMGS alongside the OS disk; the single inert rehearsal and failure stop rule stay
+mandatory. Relevant reviewed documentation:
+[VMGS and restore failures](https://learn.microsoft.com/en-us/azure/virtual-machines/trusted-launch-faq),
+[OS-disk swap requirements](https://learn.microsoft.com/en-us/azure/virtual-machines/windows/os-disk-swap).
+
+### Preparation Permission Proposal - Not Authorization
+
+This is the concrete Step 2 proposal based on the supplied inventory. Source and
+identity evidence is sufficient to propose it, not to execute it. The previously
+specified transfer/redistribution review must finish before operational approval;
+no download/upload secret or executable transfer helper has been reviewed yet.
+This is an existing preparation prerequisite, not another startup investigation.
+
+| Item | Proposed Exact Scope |
+| --- | --- |
+| Existing resources | Same MyVM, resource group and OS disk identified in the private record; no second VM or resource group |
+| Local kit | New Python-only archive, at most 64 MiB both compressed and expanded; original base manifest/binaries unchanged; observer/reference and notices as separate sidecars; record complete inventory and archive hash before upload |
+| Transfer resources | Proposed new StorageV2 account stmayagatea26101701, East US, Standard_LRS/Hot, container gatea-input, blob python-comparison-26h2.zip; use the existing resource group |
+| Transfer access | Private container, anonymous blob access disabled, HTTPS-only/TLS 1.2 minimum, shared-key authorization disabled; propose operator Entra upload and one blob-scoped read-only HTTPS user-delegation SAS valid at most 30 minutes; no guest Azure login or stored cloud credential |
+| Guest destination | C:\MayaGateA, reviewed binaries/inputs separate from empty case state and disabled execution manifests; no Python/helper/reference/observer launch during preparation |
+| Baseline | Graceful shutdown/deallocation, one full Standard_LRS snapshot named maya-gatea-26h2-baseline-20261017 of the exact original OS disk; retain original disk and existing VM |
+| Preserved settings | VM identity, accounts, boot settings, Secure Boot, vTPM, BitLocker, original disk encryption, NIC/NSG/public IP and disk Delete/Detach settings unchanged |
+| Preparation stop point | Verified guest kit, expired transfer access, baseline snapshot and recorded originals; no replacement disk, swap, NIC disable round trip, LPAC/WFP/registry grant or A-D startup |
+
+Proposed names require availability/collision checks. If unavailable or already
+present, stop for a named revision; do not adopt another account or overwrite a
+resource. The proposal creates new transfer resources, not broader access to
+customer storage. Public HTTPS service reachability for the private blob is not
+anonymous access; disclose and approve this access model before creation.
+
+The guest downloader must take the SAS through interactive secret input, never a
+command-line argument, saved script, browser/history, transcript or manifest.
+Its reviewed implementation must bind the expected account/container/blob and
+archive hash, reject redirects/unexpected destinations, bound archive/extraction
+size and paths, and leave no transfer secret in the baseline. Do not silently use
+a browser URL, mapped drive, clipboard/device redirection or live guest cloud
+credentials as a substitute. Approval of this draft alone does not qualify it.
+
+Costs use the dated public-rate assumptions above, not a fresh subscription quote.
+For preparation alone, one full snapshot has a conservatively estimated storage
+cost of about USD 0.23 over 24 hours; a 64 MiB input blob is less than USD 0.01 in
+capacity charges over that window at the quoted rate, before operations/transfer.
+The existing 24-hour sensitivity including VM/original disk and the later four
+replacement disks remains about USD 5.77-7.98 before excluded charges. Propose the
+same USD 10 planning allowance, not an enforced billing cap or permission to spend.
+Confirm portal estimates before paid creation. Retain evidence for review after
+24 hours; storage continues to accrue. No automatic resource deletion is proposed.
+
+Rollback boundaries: before any disk swap, the original OS disk remains attached;
+preparation failure means stop and preserve evidence, not delete/repair/reimage.
+If safely shut down with no payload or uncertain security state, restarting that
+same original disk may be included in preparation approval. A later failed swap
+requires its separately approved rollback to the recorded original disk; do not
+automatically reconnect, repair boot, alter TPM or weaken security. Deletion of
+the transfer account/archive, snapshots or case disks needs a separate explicit
+retention/disposal decision.
+
+After preparation acceptance, seek separate approval for the one previously
+defined marker/snapshot/restore and offline-NIC rehearsal. Only after it passes
+can the frozen A-D/security execution approval be considered. No additional test
+case, retry, product runtime change or Gate A acceptance is introduced here.
+
+### Transfer And Packaging Review Result - 2026-10-17
+
+The user requested completion of the remaining technical review, not another
+observer review or permission to change the VM. The source/fixture observer
+acceptance remains valid for its existing scope; neither frozen review JSON was
+relabelled. This review reads existing artifacts and official terms only.
+
+**Disposition: review complete with open preparation blockers. Do not request
+unconditional operational approval or upload this kit as ready.** The previous
+expectation that review alone would immediately yield a ready VM-preparation
+request was premature: a proposed downloader is not an implemented transfer path.
+
+Verified evidence:
+
+- All 802 listed base entries and the frozen base manifest match, with exactly
+  803 files and 36,640,963 bytes. No installed site-packages, Hermes tree, generated
+  Python bytecode/startup links, .env or private-key file category is present.
+  These checks do not prove absence of all conceivable secrets; this is an exact
+  allowlisted diagnostic subset, not permission to upload arbitrary build output.
+- The nine original sidecar notices match their sizes and hashes. The full
+  Python incorporated-code text is retained, including original distribution
+  conditions, rather than replaced with a generic Python licence.
+- Inventory also identifies the unopened pip 26.1.2 wheel in Python's ensurepip
+  directory, with 42 embedded licence/copyright/authors files. The earlier README
+  saying pip was absent was inaccurate; it is corrected to distinguish the
+  retained bootstrap archive from installed/activated pip. The complete wheel
+  remains unchanged. The sidecar manifest records its hash and selected notice
+  hashes. No dependency or runtime change follows this documentation correction.
+- .NET, Windows, build tools and SDK installers are not transfer payloads. The
+  native reference is the pinned unmodified MIT source built Release/x64 with
+  static CRT; MIT alone is not a substitute for Microsoft component terms.
+
+Official Microsoft Build Tools and runtime terms were downloaded into the ignored
+local review directory and their text read without accepting another agreement.
+The Build Tools terms identify Visual Studio licensing and an open-source
+dependency exception; the runtime terms distinguish own use from transfer to
+others. This is a private same-operator diagnostic proposal, not a public release,
+customer distribution, general toolchain entitlement finding or new EULA. No
+agreement is accepted on the user's behalf, and no additional end-user terms are
+invented. Windows_Client remains an observed setting, not verified entitlement.
+Before any external/customer redistribution, establish the applicable component
+rights and required distributor/end-user conditions separately. References:
+[Build Tools terms](https://visualstudio.microsoft.com/license-terms/vs2022-ga-diagnosticbuildtools/),
+[runtime terms](https://visualstudio.microsoft.com/license-terms/vs2022-cruntime/),
+[redistribution list](https://learn.microsoft.com/en-us/visualstudio/releases/2022/redistribution).
+The exact vendor documents' SHA256 values are
+`2f66b86a00e8d9833789897ce23d05a4a2dbea370cf39c8c1098dbc17d0e7bdc`
+and `f1e3d56ceb2ad68aae0711b910375009e651ac5530fa0760f0dea6e81e54fae1`,
+respectively; they are review evidence, not new frozen-runtime inputs.
+
+The proposed storage controls are documented by Microsoft: disable anonymous and
+Shared Key access, use operator Entra access and a blob-scoped read-only HTTPS
+user-delegation SAS. The existing Owner role alone does not establish data-plane
+authorization. If needed, disclose a Storage Blob Data Contributor assignment to
+the existing operator on the new dedicated account only; never subscription-wide
+data access, a new service principal, guest cloud login or account-key fallback.
+This new role/access and SAS creation need explicit permission. Revoking user
+delegation keys affects the account's SAS tokens and can be delayed by caching;
+use the dedicated account, short expiry and verified expiry before baseline
+capture, not an assertion that revocation is instantaneous. No SAS has been made.
+References: [Shared Key control](https://learn.microsoft.com/en-us/azure/storage/common/shared-key-authorization-prevent),
+[Entra data roles](https://learn.microsoft.com/en-us/azure/storage/blobs/assign-azure-role-data-access),
+[SAS scope and revocation](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas).
+Do not copy broad read/write/delete/list examples from service-specific tutorials;
+this proposal permits only read of one named input blob by the guest.
+
+The exact preparation blockers, within the existing Step 2 transfer prerequisite:
+
+1. No reviewed downloader exists. The repository has no implementation providing
+   the proposed interactive secret input, fixed destination, redirect/proxy/error
+   protection, size limits and hash/path-checked extraction. A design description
+   and PowerShell/SDK examples do not qualify it. Do not put SAS URLs in browser
+   history, process arguments or scripts as a workaround.
+2. No final assembled archive or whole-kit manifest/hash exists. The candidate
+   inventory is the frozen 803-file base, one reference executable, observer
+   host/library and the 11-file notice directory, before any approved transfer
+   helper or whole-kit manifest. Preserve the nested base paths and original
+   manifest. Exclude all raw evidence, user/cloud identifiers, live authorization,
+   account tokens, source checkouts, compiler/test output and prior case state.
+   A manifest must distinguish bootstrap/observer/reference components and must
+   not declare them production-qualified. Do not invent an archive hash.
+
+Recommended bounded next scope for explicit user decision: complete these two
+local transfer-preparation items only, with inert tests (synthetic archive and
+mocked HTTP/secret failures), no sockets, payload/native backend, cloud access or
+guest deployment. Keep it within Step 2, then present the single exact operational
+preparation request with the final artifacts and costs. No new startup test or
+observer implementation/acceptance round is proposed. If a different transfer
+method, tool install, runtime modification or permission is needed, stop and
+request that particular deviation before acting. Review completion itself does
+not authorize this new local implementation, cloud work, rehearsal or A-D.
+
+### Local Implementation Interruption - 2026-10-18
+
+The user approved the two bounded local transfer-preparation items. Initial
+downloader and packaging sources were created, but the downloader became
+unreadable and disappeared before corrective edits and fixture creation. The
+user's screenshot identifies Bitdefender quarantine, not Windows Defender or a
+confirmed filesystem sandbox fault. A Windows Defender event query was declined;
+do not repeat it or treat it as evidence about Bitdefender.
+
+The user restored the file. Its observed restored SHA256 is
+`ae399e6fc7e9bc0f46b5923d039e06fdf7e39a609125be52bcf7678b4eb5453b`.
+The user reports that the original detection details are no longer available;
+record the detection name as unknown rather than repeatedly requesting it or
+declaring a false positive. Restoration is not test acceptance or proof of safety.
+The agent has not changed antivirus settings, created an exclusion, submitted the
+file to a third party or executed the restored script. Do not recreate/rename the
+file elsewhere or obfuscate it to bypass quarantine.
+
+Text-only review remains possible. The current source still needs bounded
+per-entry ZIP hashing, file-versus-directory conflict preflight and the intended
+guest identity/build binding. These are unfinished implementation details within
+the approved local scope, not changes to the frozen runtime or another startup
+experiment. No synthetic transfer fixtures have run and no final archive/hash
+has been produced. Complete source review and ordinary functional corrections
+before considering the approved inert tests; renewed antivirus blocking is a
+stop, not permission to disable protection. Live transfer and all VM/security,
+rehearsal and A-D permissions remain separate and ungranted.
+
+### Same-Path Write Block - 2026-10-18
+
+The user instructed continuation of the approved local scope after restoration.
+The initial file remained readable at its recorded restored hash, but the normal
+patch operation could not write it. Read-only ACL inspection found the same file
+access descriptor on the downloader and the packaging source. No ACL was changed.
+An explicitly permissioned retry outside the filesystem sandbox also failed to
+write the same source path. Its first Windows-wrapper attempt rejected patch
+formatting without writing; the subsequent direct patch-tool invocation reached
+the file and reported write failure. This does not establish a new antivirus
+detection or prove its cause, but it does rule out treating a sandbox retry as
+a successful correction.
+
+Stop same-file retries here. No alternate file name/location, obfuscation,
+exclusion, antivirus change or permission reset is authorized. The functional
+corrections were not applied; no synthetic transfer test or archive assembly ran.
+The approved local deliverables remain incomplete. Resolve the host write block
+through reviewed security-product/host diagnostics before resuming; any vendor
+file submission or different implementation strategy needs explicit permission.
+Do not request another restore as a substitute for identifying the write block.
