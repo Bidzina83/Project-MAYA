@@ -187,3 +187,9 @@
 /docs/third-party/governance-v2-python-comparison/README.md text eol=lf
 /docs/third-party/governance-v2-python-comparison/notices-manifest.json text eol=lf
 /tests/test_governance_v2_python_notices.py text eol=lf
+/src/project_maya/windows_runtime/*.cs text eol=lf
+/src/project_maya/windows_runtime/*.py text eol=lf
+/src/project_maya/windows_runtime/*.manifest text eol=lf
+/tests/windows_protected_python_fixtures.cs text eol=lf
+/tests/test_windows_protected_python.py text eol=lf
+/docs/architecture/maya_protected_python_startup_package.md text eol=lf

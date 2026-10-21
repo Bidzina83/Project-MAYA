@@ -173,6 +173,111 @@ an implementation change or additional sequence. A particular security change,
 artifact rebuild or startup retains its applicable approval. Gates A-E and the
 customer-protection requirements remain unchanged; production stays blocked.
 
+The user's subsequent request is preparation of the first product-owned protected
+Python startup component, not another test runner or resumed A-D comparison.
+The fixed offline scope and permission disclosure are in
+[the startup package](maya_protected_python_startup_package.md): zero extra
+capabilities, six package-scoped deny-all filters and no registry correction or
+gateway exception. Source, compilation, inert checks and offline assembly are
+authorized for this component only. No native startup/security change follows
+preparation; the VM run needs product-owned informed consent. The trusted setup
+host is elevated; standard-user setup, native lifecycle, containment and Hermes
+remain unqualified. Review the first result before any correction or expansion.
+
+The first VM report blocks before Python resume at TokenElevation query error 24
+and reports complete cleanup. The user approved the exact four-byte query fix,
+inert regression checks and package 2 preparation only, with unchanged payload,
+permissions and protections. Preserve the failed package/report; no native local
+launch or automatic follow-on correction is authorized. The startup package
+record retains the result, scope and pending corrected-VM qualification.
+
+Package 2's operator result is a generic pre-resume token mismatch with complete
+cleanup reported, not Python entry or identification of the failed property.
+The user approved reporting-only package 3: name the failed scalar check and
+expected/observed values, preserving every predicate, API query, security scope,
+payload and cleanup behavior. No local native run or automatic next correction
+follows. Keep both earlier results and review the next report before any expansion.
+
+Package 3 identifies elevation flag 1, expected 0, before resume, and reports
+complete cleanup. The user approved bounded same-user privilege-reduction
+assessment/preparation. Package 4 uses a verified reduced primary token for the
+existing LPAC launch, not a weaker child predicate. No account/UAC/desktop ACL or
+manual Windows preparation, added capability/grant, local native run or fallback
+is authorized. Native success remains unproven; preserve evidence and stop after
+the consented VM result. See the startup package contract for the exact method.
+
+The two subsequent Package 4 reports pass pre-resume token checks but fail startup
+(timeout, then 0xC0000142); cleanup is reported complete. No Task Manager dump was
+obtained. The 2026-10-19 approval permits preparation of the separate
+[loader-diagnostic procedure](maya_protected_python_loader_diagnostic.md), not
+another product correction or native run. VM tool transfer/setup, public-symbol
+retrieval and its one proposed debugger-instrumented attempt need explicit
+approval. Preserve the package and protections; no persistent debugger setting,
+permission grant, automatic retry or Gate A acceptance is authorized.
+
+The user's subsequent 2026-10-19 approval covers debugger transfer/setup and
+matching public-symbol retrieval only, using unchanged Microsoft tools and a
+standard setup-only ZIP. Operator preflight results remain pending. No product
+patch, additional testing script, system installation or debugger-owned native
+Maya/Python launch is authorized by this setup stage.
+
+The operator subsequently reports setup success and exact guest ntdll symbol
+matching, and supplied Package 4's guest path with the matching EXE hash. The user
+explicitly approved one debugger-controlled VM run, preserving protections and
+the 30-second wait. Start with the procedure's initial symbol readback; actual
+capture, cleanup and qualification remain pending. No retry or fix is authorized.
+
+The subsequent copied VM log consumes that single allowance: matching child,
+verified loader-snaps flag, but only early KERNEL32 loading before the trace ends.
+The operator reports timeout and complete cleanup; final debugger exit/closure is
+not recorded. The manual breakpoint procedure can confound the product deadline.
+Diagnosis is inconclusive; no failed initializer or safe correction is established.
+See the loader procedure outcome. No further run, timeout change, grant or rebuild
+is authorized; first establish the existing session's state for safe closure.
+
+Subsequent normal Maya closure returned CDB to PowerShell, shown in the operator's
+screenshot; the final log adds only visualizer-unload lines to the reviewed prefix.
+Session closure is resolved, not independent cleanup qualification. Diagnosis
+remains inconclusive, with no more closure/capture steps pending or new run approved.
+
+The 2026-10-20 source-review recommendation is now approved for Package 5's
+process-local critical-error handling and failed-child evidence retention only;
+see the startup package record. Preserve the original failure classification,
+30-second wait, frozen payload and all protection scopes. Do not extend this to
+the separate missing-journal recovery issue, new VM/native execution or renewed
+debugger capture. No DLL root cause, containment or Gate A acceptance is inferred.
+
+The subsequent Package 5 operator report matches the prepared EXE and records
+consent, token checks, child resume, natural pre-cleanup 0xC0000142 exit, complete
+but empty stdout/stderr, no startup beacon and complete cleanup reported. Startup
+still fails; this is normal-exit evidence, not timeout-branch qualification or
+identification of the failed initializer. Stop for a separate decision before
+another run, trace, correction or grant; Gate A remains open.
+
+The user then approved document preparation of the separate
+[automatic loader-capture proposal](maya_protected_python_loader_capture_v2.md).
+Its pre-consent notify callbacks remove planned manual startup stops, not debugger
+timing effects. It preserves Package 5 and protection scopes. Actual guest-path
+binding and separate one-launch approval remain pending; no engine/native test,
+new script/tool/build, runtime correction or qualification follows preparation.
+
+The subsequent separately approved Package 5 capture now correlates the matching
+child's natural 0xC0000142 exit with KERNELBASE.dll's DLL_PROCESS_ATTACH failure
+during Windows bootstrap. Successful DLL mapping is observed; its initializer's
+internal failed operation/resource remains unknown. No Python runtime loading or
+startup beacon is observed; cleanup is reported complete. See the
+[capture outcome](maya_protected_python_loader_capture_v2.md#captured-outcome-2026-10-20).
+The single allowance is consumed. This narrows diagnosis, not a safe correction
+or Gate A acceptance; no new trace, grant, patch or repeat is authorized.
+
+The later separately approved initializer attempt records a base-helper zero
+before ARI, with matching natural 0xC0000142 exit. Its unexpected child heap-tail
+flag and missing full child-path readback leave diagnostic qualification partial;
+no underlying operation/resource or safe correction is identified. See the
+[outcome](maya_protected_python_initializer_diagnostic.md#captured-outcome-2026-10-20).
+Both targets exited, cleanup is reported complete and the attempt/read budgets
+are consumed. No retry, deeper trace, grant or product correction follows.
+
 Before coding, propose a fixed Windows profile, specific isolation mechanism,
 supported capabilities, trust assumptions, exact allowed/denied tests, evaluation
 budget and stop conditions; obtain user approval. Demonstrate real pinned Hermes
