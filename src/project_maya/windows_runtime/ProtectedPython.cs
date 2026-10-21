@@ -13,13 +13,50 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Maya protected Python startup candidate")]
 [assembly: AssemblyVersion("0.1.0.0")]
+#if HERMES_IMPORT
+[assembly: AssemblyFileVersion("0.1.1.1")]
+[assembly: AssemblyInformationalVersion("0.1.1-hermes-import.1")]
+#else
 [assembly: AssemblyFileVersion("0.1.0.11")]
 [assembly: AssemblyInformationalVersion("0.1.0-screen.11")]
+#endif
 
 namespace ProjectMaya.WindowsRuntime
 {
     internal static class ProtectedPython
     {
+#if HERMES_IMPORT
+        internal const string Version = "0.1.1-hermes-import.1";
+        internal const string Scope = "offline-hermes-import-v1";
+        internal const string Consent =
+            "Maya protected Hermes import " + Version + "\r\n\r\n" +
+            "Unsigned development component, not production-qualified. With your consent, Maya " +
+            "copies verified Python 3.13.14, pinned Hermes and 63 dependencies into a new private " +
+            "ProgramData attempt. This profile permits at most 8192 files and a 4 MiB inventory; " +
+            "32 MiB per-file and 256 MiB expanded limits remain. Extraction and cleanup may take longer.\r\n\r\n" +
+            "Maya creates one ordinary AppContainer profile, grants read/execute on its runtime " +
+            "and read/write on its low-integrity private state, and creates six profile-scoped " +
+            "WFP network denies. Ordinary AppContainer has Windows' existing All Application " +
+            "Packages access; that is not complete customer-data isolation. A reduced same-user " +
+            "token, one-process job and child-process policy restrict one Python process.\r\n\r\n" +
+            "Python imports the real run_agent:AIAgent class but never constructs an agent or calls " +
+            "a model, tool, skill, connector or authoritative store. Imports can initialize tool " +
+            "registries and native dependencies. Existing modules may skip optional imports. " +
+            "Hermes lazy installs are disabled through its supported environment option. " +
+            "No existing home, .env, credentials or customer files are provided. A fresh private " +
+            "home/cache/temp configuration and explicit read-only import/DLL paths are used.\r\n\r\n" +
+            "No synthetic listeners, path aliases, shared-memory fixture, public-file grant or " +
+            "WFP event collection is needed. No Windows policy, registry grants, loopback exemption, " +
+            "antivirus, boot, encryption or machine Python/PATH setting changes. " +
+            "All network access remains denied. Python has a 22-second cooperative import budget " +
+            "and unchanged 30-second host deadline; output/report bounds remain unchanged.\r\n\r\n" +
+            "Maya stops the job before removing grants, profile and filters. Files and reports " +
+            "remain for inspection. Process-local critical-error handling is unchanged. " +
+            "Administrator consent is required for setup; Python must pass restricted-token checks. " +
+            "Closing forcibly may leave cleanup pending. Do not retry or weaken protection after " +
+            "failure. Import success does not qualify construction, Hermes execution, governance " +
+            "or containment; independent cleanup is still required.";
+#else
         internal const string Version = "0.1.0-screen.11";
         internal const string Scope = "synthetic-containment-screen-v1";
         internal const string Consent =
@@ -70,6 +107,7 @@ namespace ProjectMaya.WindowsRuntime
             "standard-user setup. If startup or cleanup fails, stop and send the report. " +
             "Do not disable Windows protections. Closing Maya forcibly may leave cleanup " +
             "pending; reopen it and use Recover cleanup. No unrestricted fallback or retry occurs.";
+#endif
 
         [STAThread]
         public static int Main(string[] args)
@@ -273,20 +311,28 @@ namespace ProjectMaya.WindowsRuntime
                     isolation.CreateProfile();
                     screen.Stage = "file_grants";
                     ProductFiles.Grant(directory, isolation.Package, user);
+#if HERMES_IMPORT
+                    HermesImport.Prepare(directory);
+#else
                     screen.Prepare();
+#endif
                     screen.Stage = "network_provision";
                     isolation.ProvisionNetwork();
                     record["network_filters_verified"] = 6;
+#if !HERMES_IMPORT
                     screen.Stage = "udp_evidence_setup";
                     screen.ConfigureUdp(isolation, record);
+#endif
                     screen.Stage = "child_create_suspended";
                     isolation.Start(directory, run, user);
                     screen.BindChild(checked((int)isolation.ChildPid));
+#if !HERMES_IMPORT
                     screen.Stage = "plan_write";
                     screen.WritePlan(isolation.StandardHandles);
                     record["screen_fixture_inventory"] = screen.Plan;
                     screen.Stage = "acl_inventory";
                     record["screen_acl_metadata_inventory"] = screen.AclInventory();
+#endif
                     record["restricted_token_verified"] = true;
                     record["child_pid"] = isolation.ChildPid;
                     record["status"] = "restricted_child_suspended";
@@ -336,7 +382,14 @@ namespace ProjectMaya.WindowsRuntime
                     }
                     if (!recover && isolation.Resumed)
                     {
-                        try { observations = screen.Collect(record); }
+                        try {
+#if HERMES_IMPORT
+                            screen.Stage = "hermes_import_report";
+                            HermesImport.Collect(directory, run, record);
+#else
+                            observations = screen.Collect(record);
+#endif
+                        }
                         catch (Exception error)
                         {
                             record["screen_evidence_reason_code"] = FailureCode(error);
@@ -367,6 +420,11 @@ namespace ProjectMaya.WindowsRuntime
                 record["cleanup_complete"] = cleanup;
                 if (!recover)
                 {
+#if HERMES_IMPORT
+                    record["hermes_import_status"] = HermesImport.Result(record, cleanup);
+                    record["status"] = record["hermes_import_status"];
+                    record["independent_cleanup_verified"] = false;
+#else
                     if (!isolation.ExitCode.HasValue || isolation.ExitCode.Value != 0 ||
                         !record.ContainsKey("python_started") || !(bool)record["python_started"])
                         observations["execution.incomplete"] = "inconclusive";
@@ -376,6 +434,7 @@ namespace ProjectMaya.WindowsRuntime
                     record["screen_observations"] = observations;
                     record["screen_independent_cleanup_verified"] = false;
                     record["status"] = record["screen_status"];
+#endif
                 }
                 if (!recover) record["finished_utc"] = DateTime.UtcNow.ToString("o");
                 if (recover && cleanup)

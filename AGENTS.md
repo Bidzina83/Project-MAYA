@@ -1265,6 +1265,37 @@ probes, protections and deadlines. Do not enable event collection or auditing;
 missing/ambiguous evidence stays inconclusive. Native behavior, containment and
 production remain unqualified; separate artifact/run approval is required.
 
+The separately approved Screen 11 VM run now reports all 48 expected synthetic
+observations and four UDP drops matched to Maya filters. Manual checks found no
+processes, aliases, package-SID grants, WFP resources or listener ports, and Medium
+state-root integrity; profile/mapping removal remains independently unverified.
+See the containment-screen outcome. The run allowance is consumed. The next
+document-only import compatibility proposal is
+docs/architecture/maya_protected_hermes_import_proposal.md. It selects the existing
+production Hermes pin, not the older patched governance candidate. No new
+package, dependency acquisition, native run, permission change, Hermes startup,
+Gate A acceptance or production activation follows this proposal.
+
+The user then approved import-only assessment/package preparation. The build
+assessment in docs/architecture/maya_protected_hermes_import_build_assessment.md
+finds an estimated 6,690-file flat payload versus the current 2,000-file guard,
+and incomplete cached installed records. No runnable package or native execution
+exists. The proposed import-specific 8,192-file/4-MiB index envelope and exact
+verified-wheel acquisition need approval; existing guards, pins and protections
+were not changed. Do not omit dependencies or use a patched runtime to bypass
+this preparation boundary. VM execution remains separately gated.
+
+The user approved the import-specific envelope and verified wheel acquisition.
+Preparation now uses HERMES_IMPORT, real pinned Hermes and 63 exact dependencies,
+with no payload execution. The handoff is
+docs/architecture/maya_protected_hermes_import_handoff.md. Legacy limits remain
+2,000 files/1 MiB; this profile permits 8,192/4 MiB with unchanged byte caps,
+isolation, deadlines and cleanup. The fresh state remains home/cache/temp;
+explicit read-only import/DLL paths and the supported lazy-install opt-out are
+disclosed. No construction/model/tool invocation or native VM run is authorized
+by preparation. Keep all qualification flags false and obtain separate run
+approval after exact artifact/impact review.
+
 When uncertain, choose the option that best maximizes, in order:
 
 1. Local governance and customer control

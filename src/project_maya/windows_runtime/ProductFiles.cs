@@ -121,17 +121,24 @@ namespace ProjectMaya.WindowsRuntime
                     (stem.Length == 4 && (stem.StartsWith("COM") || stem.StartsWith("LPT")) && stem[3] >= '0' && stem[3] <= '9'))
                     throw new StartupFailure("payload_path_rejected");
             }
-            if (relative != "startup_check.py" && relative != "containment_check.py" && !relative.StartsWith("python/", StringComparison.Ordinal) &&
+            bool importPath = false;
+#if HERMES_IMPORT
+            importPath = relative == "hermes_import_check.py" || relative == "hermes-import-contract.json" ||
+                relative.StartsWith("hermes/", StringComparison.Ordinal) || relative.StartsWith("dependencies/", StringComparison.Ordinal);
+#endif
+            if (!importPath && relative != "startup_check.py" && relative != "containment_check.py" && !relative.StartsWith("python/", StringComparison.Ordinal) &&
                 !relative.StartsWith("notices/", StringComparison.Ordinal)) throw new StartupFailure("payload_scope_rejected");
             return relative.Replace('/', Path.DirectorySeparatorChar);
         }
         internal static PayloadIndex ReadIndex(Stream stream)
+        { return ReadIndex(stream, false); }
+        internal static PayloadIndex ReadIndex(Stream stream, bool hermesImport)
         {
             PayloadIndex index;
             using (var reader = new StreamReader(stream, Encoding.UTF8))
-                index = new JavaScriptSerializer { MaxJsonLength = 1024 * 1024 }.Deserialize<PayloadIndex>(reader.ReadToEnd());
+                index = new JavaScriptSerializer { MaxJsonLength = (hermesImport ? 4 : 1) * 1024 * 1024 }.Deserialize<PayloadIndex>(reader.ReadToEnd());
             if (index == null || index.python_version != "3.13.14" || index.files == null ||
-                index.files.Count < 3 || index.files.Count > 2000 || !Digest(index.zip_sha256))
+                index.files.Count < 3 || index.files.Count > (hermesImport ? 8192 : 2000) || !Digest(index.zip_sha256))
                 throw new StartupFailure("payload_index_rejected");
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase); long total = 0;
             foreach (var file in index.files)
@@ -156,7 +163,11 @@ namespace ProjectMaya.WindowsRuntime
             using (var manifest = assembly.GetManifestResourceStream("MayaPython.payload-index.json"))
             {
                 if (manifest == null) throw new StartupFailure("embedded_index_missing");
+#if HERMES_IMPORT
+                index = ReadIndex(manifest, true);
+#else
                 index = ReadIndex(manifest);
+#endif
             }
             using (var payload = assembly.GetManifestResourceStream("MayaPython.payload.zip"))
             {

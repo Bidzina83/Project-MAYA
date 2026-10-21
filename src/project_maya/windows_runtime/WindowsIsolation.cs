@@ -395,10 +395,16 @@ namespace ProjectMaya.WindowsRuntime
                 Attribute(attributes, 0x20002, inherited, 3 * IntPtr.Size);
                 string runtime = Path.Combine(directory, "runtime"), state = Path.Combine(directory, "state");
                 string python = Path.Combine(runtime, "python", "python.exe"), check = Path.Combine(runtime, "containment_check.py");
+#if HERMES_IMPORT
+                check = Path.Combine(runtime, "hermes_import_check.py");
+#endif
                 StandardHandles = new[] { inputRead.ToInt64(), outputWrite.ToInt64(), errorWrite.ToInt64() };
                 string system = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
                 string env = "HERMES_HOME=" + state + "\0LOCALAPPDATA=" + state + "\0PATH=" + Path.Combine(runtime, "python") + ";" + Environment.SystemDirectory +
                     "\0SYSTEMROOT=" + system + "\0TEMP=" + state + "\0TMP=" + state + "\0USERPROFILE=" + state + "\0WINDIR=" + system + "\0\0";
+#if HERMES_IMPORT
+                env = "HERMES_DISABLE_LAZY_INSTALLS=1\0" + env;
+#endif
                 environment = Marshal.StringToHGlobalUni(env);
                 var startup = new StartupEx { startup = new Startup { size = (uint)Marshal.SizeOf(typeof(StartupEx)), flags = 0x100,
                     input = inputRead, output = outputWrite, error = errorWrite }, attributes = attributes };

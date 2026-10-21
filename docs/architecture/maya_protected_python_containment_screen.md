@@ -439,3 +439,34 @@ qualified. Other-rule drops are diagnostic only. Independent profile/mapping
 cleanup, journal-less recovery, Hermes, Gate A and production remain unqualified.
 No VM/native product run occurred; obtain separate artifact/run approval and
 fresh product-owned consent before any attempt.
+
+## Screen 11 Operator Outcome
+
+The user approved one VM run, supplied the exact guest path and matching EXE
+hash, then returned a report from Windows 11 Pro 26300.9711 with product consent.
+Python started, both entry beacons matched, output capture completed and the
+child naturally exited zero. All 48 summaries have expected observations:
+42 observed_denied and six observed_allowed, including product-reported cleanup.
+There are no failed or inconclusive summary rows.
+
+Four retained classify-drop events match the four UDP operation tuples and the
+verified Maya filter inventory: outbound IPv4/IPv6 at AUTH_CONNECT and inbound
+IPv4/IPv6 at AUTH_RECV_ACCEPT. Host sends report child socket ownership checks;
+host controls/postconditions passed and no unauthorized listener effect was
+observed. The child's raw UDP rows remain inconclusive on API evidence alone;
+the host resolves them using the matching OS events. No other-rule drop is used
+to satisfy these cases. Retained-event history/loss accounting remains limited.
+
+The subsequent read-only operator checks found no matching processes, route links
+or reparse points; no package-SID grant across 888 entries (zero failures); Medium
+integrity on the state root; none of the six filter GUIDs or sublayer GUID in a
+successful WFP export; and no endpoints on the four recorded listener ports.
+Profile and named-mapping removal remain product-reported, not independently
+verified. This is not a complete independent-cleanup qualification.
+
+The one native-run allowance is consumed. Preserve the package and original
+report. This bounded synthetic success does not qualify Hermes, all customer
+data channels, indirect brokers, races, crash recovery, Gate A or production.
+The next import-only Hermes proposal is
+`maya_protected_hermes_import_proposal.md`; no new package/run is approved by
+recording the result or preparing that proposal.
