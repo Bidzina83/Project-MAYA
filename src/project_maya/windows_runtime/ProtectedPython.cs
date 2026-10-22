@@ -1,4 +1,13 @@
 // Product-owned startup candidate. No Hermes execution or containment acceptance.
+#if HERMES_MEMORY && (!HERMES_CONSTRUCTION || HERMES_STATE)
+#error HERMES_MEMORY requires HERMES_CONSTRUCTION and excludes HERMES_STATE.
+#endif
+#if HERMES_STATE && !HERMES_CONSTRUCTION
+#error HERMES_STATE requires the HERMES_CONSTRUCTION profile.
+#endif
+#if HERMES_CONSTRUCTION && !HERMES_IMPORT
+#error HERMES_CONSTRUCTION requires the HERMES_IMPORT payload and no-fixture profile.
+#endif
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,7 +22,16 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Maya protected Python startup candidate")]
 [assembly: AssemblyVersion("0.1.0.0")]
-#if HERMES_IMPORT
+#if HERMES_MEMORY
+[assembly: AssemblyFileVersion("0.1.4.1")]
+[assembly: AssemblyInformationalVersion("0.1.4-hermes-memory.1")]
+#elif HERMES_STATE
+[assembly: AssemblyFileVersion("0.1.3.1")]
+[assembly: AssemblyInformationalVersion("0.1.3-hermes-state.1")]
+#elif HERMES_CONSTRUCTION
+[assembly: AssemblyFileVersion("0.1.2.2")]
+[assembly: AssemblyInformationalVersion("0.1.2-hermes-construction.2")]
+#elif HERMES_IMPORT
 [assembly: AssemblyFileVersion("0.1.1.1")]
 [assembly: AssemblyInformationalVersion("0.1.1-hermes-import.1")]
 #else
@@ -25,7 +43,96 @@ namespace ProjectMaya.WindowsRuntime
 {
     internal static class ProtectedPython
     {
-#if HERMES_IMPORT
+#if HERMES_MEMORY
+        internal const string Version = "0.1.4-hermes-memory.1";
+        internal const string Scope = "offline-hermes-native-memory-v1";
+        internal const string Consent =
+            "Maya protected Hermes native memory " + Version + "\r\n\r\n" +
+            "Unsigned development component, not production-qualified. Maya copies verified Python 3.13.14, " +
+            "the same pinned Hermes and 63 dependencies into a fresh private ProgramData attempt. Limits " +
+            "remain 8192 files, 4 MiB inventory, 32 MiB per file and 256 MiB expanded.\r\n\r\n" +
+            "With consent Maya creates one ordinary AppContainer, runtime read/execute and low-integrity " +
+            "private-state read/write grants, six package-scoped WFP network denies, a reduced same-user token, " +
+            "one-process job, child-process block and three inherited pipes. Existing All Application Packages " +
+            "access is not complete customer-data isolation.\r\n\r\n" +
+            "One real agent enables its native MemoryStore with 2200/1375-character limits and no external " +
+            "memory provider. For each of MEMORY.md and USER.md it adds two fixed synthetic entries, replaces " +
+            "the first and removes the second: eight native mutations. A fresh store reloads both files in " +
+            "the same process; snapshots, exact readbacks, hashes and residue are checked. This is not " +
+            "authoritative memory, tool authorization, crash/restart durability or atomic-write qualification.\r\n\r\n" +
+            "Private state/memories holds MEMORY.md, USER.md and their .lock files; native .mem_*.tmp files " +
+            "are transient, and unexpected backups cause failure. One nonblocking acquire/release probe per " +
+            "lock file follows native calls, not a concurrent-writer test. A 64 KiB aggregate acceptance " +
+            "ceiling is checked at stages, not enforced as a disk quota. Config/cache/logs/sessions and bounded " +
+            "reports remain. Native setup may create an empty memories directory before construction.\r\n\r\n" +
+            "No conversation, model request, tool, connector, customer data or real credential is supplied. " +
+            "The SDK uses the same public non-secret placeholder, synthetic model and .invalid URL. All network " +
+            "including localhost stays denied. SQLite is not exercised. Context files, checkpoints, compression, " +
+            "environment probing, tool search and lazy installs stay disabled. No new permissions, registry " +
+            "grant, loopback exemption, Windows policy, antivirus, boot/encryption, system Python/PATH or supervisor.\r\n\r\n" +
+            "The 22-second cooperative budget, 30-second host deadline and output/report bounds remain. Maya " +
+            "stops the job before revoking grants and removing profile/filters; synthetic files/reports remain. " +
+            "Administrator consent and child-token verification are required. Shutdown may suppress errors; " +
+            "independent cleanup is still necessary. Forced closure may leave cleanup pending. Stop on failure; " +
+            "no retry or weakened protections. Containment, Gate A and production remain unqualified.";
+#elif HERMES_STATE
+        internal const string Version = "0.1.3-hermes-state.1";
+        internal const string Scope = "offline-hermes-session-state-v1";
+        internal const string Consent =
+            "Maya protected Hermes session storage " + Version + "\r\n\r\n" +
+            "Unsigned development component, not production-qualified. Maya copies the same verified Python " +
+            "3.13.14, pinned Hermes and 63 dependencies into a fresh private ProgramData attempt. Limits " +
+            "remain 8192 files, 4 MiB inventory, 32 MiB per file and 256 MiB expanded.\r\n\r\n" +
+            "With your consent Maya creates one ordinary AppContainer, runtime read/execute and low-integrity " +
+            "private-state read/write grants, and six package-scoped WFP network denies. Reduced same-user " +
+            "token, one-process job, child-process block and three inherited pipes remain. Existing All " +
+            "Application Packages access is not complete customer-data isolation.\r\n\r\n" +
+            "Python creates Hermes' real state.db with its native schema and possible SQLite WAL/SHM/journal " +
+            "sidecars. It creates one synthetic session, attaches the DB to one real agent, and stores exactly " +
+            "two small fixed fixture messages, not model output. It verifies records, ends the agent session, " +
+            "closes the DB, reopens it read-only in the same process, verifies persistence and closes again. " +
+            "This is not crash recovery, restart durability, full search or memory-file qualification.\r\n\r\n" +
+            "No model request, conversation, tool, connector, MEMORY.md/USER.md or customer-data operation is " +
+            "invoked. Memory providers remain disabled. The real SDK/TLS client uses the same public non-secret " +
+            "placeholder, synthetic model and .invalid URL. All network access stays denied, including localhost. " +
+            "No real credentials, existing home/.env or authoritative business store is supplied.\r\n\r\n" +
+            "Private config/cache/logs/sessions and bounded reports remain. SQLite files must stay within a " +
+            "32 MiB acceptance ceiling at checked stages; this is not a disk quota. WAL must be observed; " +
+            "no forced journal setting or fallback is accepted as success. No new permissions, registry grants, " +
+            "loopback exemption, Windows policy, antivirus, boot/encryption, global Python/PATH or supervisor.\r\n\r\n" +
+            "The 22-second cooperative budget, 30-second host deadline and output/report bounds remain. " +
+            "Maya stops the job before revoking grants and removing profile/filters; files and reports remain. " +
+            "Administrator consent is required; child token checks must pass. Shutdown may suppress errors, " +
+            "so independent cleanup remains necessary. Forced closure may leave cleanup pending. Stop after " +
+            "failure: no retry or weakened protections. No containment, governance or production qualification.";
+#elif HERMES_CONSTRUCTION
+        internal const string Version = "0.1.2-hermes-construction.2";
+        internal const string Scope = "offline-hermes-construction-v1";
+        internal const string Consent =
+            "Maya protected Hermes construction " + Version + "\r\n\r\n" +
+            "Unsigned development component, not production-qualified. With your consent Maya copies " +
+            "verified Python 3.13.14, pinned Hermes and the same 63 dependencies into a new private " +
+            "ProgramData attempt. Limits remain 8192 files, 4 MiB inventory, 32 MiB per file and 256 MiB expanded.\r\n\r\n" +
+            "Maya creates one ordinary AppContainer, runtime read/execute and low-integrity private-state " +
+            "read/write grants, and six package-scoped WFP network denies. A reduced same-user token, " +
+            "one-process job and child-process block remain. Existing All Application Packages access " +
+            "means this is not complete customer-data isolation.\r\n\r\n" +
+            "Python imports and constructs one real Hermes agent with tools, memory providers, context " +
+            "files, checkpoints and conversations disabled, then calls context shutdown and close. " +
+            "The real SDK/TLS client initializes using a fixed public non-secret placeholder key, " +
+            "synthetic model and https://maya-construction.invalid/v1. No server or model request is invoked. " +
+            "All network access remains denied. No customer data, real credentials or existing home is supplied.\r\n\r\n" +
+            "A fixed private config.yaml disables compression and the environment probe and sets context " +
+            "size 131072. Hermes may create private sessions/logs/cache state. Supported lazy installs remain " +
+            "disabled. No registry, loopback, antivirus, boot, encryption, machine Python/PATH or Windows " +
+            "policy changes; no test listeners or external supervisor.\r\n\r\n" +
+            "The 22-second cooperative budget, 30-second host deadline and output/report bounds remain. " +
+            "Maya stops the job before revoking grants and removing profile/filters. Files and reports remain. " +
+            "Administrator consent is required; the child must pass all restricted-token checks. " +
+            "Shutdown methods suppress some errors: a returned call is not complete cleanup proof. " +
+            "Forced closure can leave cleanup pending. Stop on failure; do not retry or weaken protections. " +
+            "Success qualifies neither governed execution nor containment or production; independent cleanup remains required.";
+#elif HERMES_IMPORT
         internal const string Version = "0.1.1-hermes-import.1";
         internal const string Scope = "offline-hermes-import-v1";
         internal const string Consent =
@@ -311,7 +418,11 @@ namespace ProjectMaya.WindowsRuntime
                     isolation.CreateProfile();
                     screen.Stage = "file_grants";
                     ProductFiles.Grant(directory, isolation.Package, user);
-#if HERMES_IMPORT
+#if HERMES_MEMORY
+                    HermesMemory.Prepare(directory);
+#elif HERMES_CONSTRUCTION
+                    HermesConstruction.Prepare(directory);
+#elif HERMES_IMPORT
                     HermesImport.Prepare(directory);
 #else
                     screen.Prepare();
@@ -383,7 +494,16 @@ namespace ProjectMaya.WindowsRuntime
                     if (!recover && isolation.Resumed)
                     {
                         try {
-#if HERMES_IMPORT
+#if HERMES_MEMORY
+                            screen.Stage = "hermes_memory_report";
+                            HermesMemory.Collect(directory, run, record);
+#elif HERMES_STATE
+                            screen.Stage = "hermes_state_report";
+                            HermesState.Collect(directory, run, record);
+#elif HERMES_CONSTRUCTION
+                            screen.Stage = "hermes_construction_report";
+                            HermesConstruction.Collect(directory, run, record);
+#elif HERMES_IMPORT
                             screen.Stage = "hermes_import_report";
                             HermesImport.Collect(directory, run, record);
 #else
@@ -420,7 +540,19 @@ namespace ProjectMaya.WindowsRuntime
                 record["cleanup_complete"] = cleanup;
                 if (!recover)
                 {
-#if HERMES_IMPORT
+#if HERMES_MEMORY
+                    record["hermes_memory_status"] = HermesMemory.Result(record, cleanup);
+                    record["status"] = record["hermes_memory_status"];
+                    record["independent_cleanup_verified"] = false;
+#elif HERMES_STATE
+                    record["hermes_state_status"] = HermesState.Result(record, cleanup);
+                    record["status"] = record["hermes_state_status"];
+                    record["independent_cleanup_verified"] = false;
+#elif HERMES_CONSTRUCTION
+                    record["hermes_construction_status"] = HermesConstruction.Result(record, cleanup);
+                    record["status"] = record["hermes_construction_status"];
+                    record["independent_cleanup_verified"] = false;
+#elif HERMES_IMPORT
                     record["hermes_import_status"] = HermesImport.Result(record, cleanup);
                     record["status"] = record["hermes_import_status"];
                     record["independent_cleanup_verified"] = false;

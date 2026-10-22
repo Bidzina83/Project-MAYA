@@ -1,5 +1,102 @@
 # Project MAYA Agent Guidance
 
+## Protected Hermes Construction Assessment (2026-10-22)
+
+The operator's Import 1 report establishes bounded real-Hermes import success;
+manual checks found no matching processes, reparse points, package-SID ACEs or
+six WFP filters/sublayer. Profile removal remains product-reported only.
+See docs/architecture/maya_protected_hermes_construction_proposal.md for the
+source assessment and proposed offline real-agent construction/shutdown test.
+Its non-secret SDK placeholder and fixed private configuration require package
+preparation approval, followed by separate exact-artifact VM-run approval and
+product consent. No package/run, broader grant, runtime patch or qualification
+is authorized by this assessment. Preserve the import artifacts and all existing
+AppContainer/WFP restrictions; Gate A and production activation remain blocked.
+
+The user subsequently approved construction-package preparation only. The
+HERMES_CONSTRUCTION/HERMES_IMPORT profile uses the real pinned class and SDK,
+fixed private config and a public non-secret placeholder, then context shutdown
+and close; no conversation/tool/model call is invoked. Tool search is explicitly
+off to avoid its independent metadata lookup. See
+docs/architecture/maya_protected_hermes_construction_handoff.md. Preserve all
+existing payload members, dependencies, security restrictions and deadlines.
+Inert checks/builds do not qualify native construction or cleanup; obtain
+separate exact-artifact VM-run approval and product consent before execution.
+
+Construction 1's approved matching-hash VM run constructed the real Hermes
+agent, but its SDK closure verifier treated is_closed as a property rather than
+the packaged method. Natural child exit 4 blocked acceptance; actual closure
+and independent cleanup remain unverified. Config readback was not reached.
+The user approved only calling is_closed(), matching regression fixtures and
+separate Construction 2 preparation. See
+docs/architecture/maya_protected_hermes_construction_2_handoff.md. Preserve
+Construction 1 artifacts/results and all dependencies, permissions, filters,
+predicates and deadlines. No new native run or further fix is authorized;
+obtain separate exact-artifact VM-run approval and fresh product consent.
+
+Construction 2's matching-hash VM report confirms bounded real-Hermes
+construction/shutdown, SDK closure, unchanged config and natural exit 0.
+Manual checks found no processes, reparse points, package-SID ACEs (7,386
+entries; zero failures), six WFP filters or sublayer, and restored Medium
+state integrity. Profile removal remains product-reported; full containment,
+independent cleanup and production qualification are not established. The run
+allowance is consumed. The user approved only the next proposal preparation:
+docs/architecture/maya_protected_hermes_operational_state_proposal.md proposes
+native SessionDB synthetic persistence first, not MEMORY.md/USER.md or model
+traffic. No package preparation, native run, new grant or runtime fix follows
+this proposal; obtain separate preparation and exact-artifact execution approval.
+
+The user subsequently approved Operational State 1 package preparation only.
+The HERMES_STATE profile exercises pinned native SessionDB with one synthetic
+session/two messages, real agent binding, end-state readback and read-only
+close/reopen persistence. See
+docs/architecture/maya_protected_hermes_operational_state_handoff.md. It preserves
+configuration, dependencies, security boundaries and deadlines; requires WAL,
+exact readbacks and a 32 MiB DB/sidecar acceptance ceiling. No native local or
+VM run, extra grant, memory-file test, model traffic, retry or runtime patch
+is authorized by preparation. Review exact artifacts before separate VM-run
+approval and fresh product consent; all qualification gates remain unchanged.
+
+Session State 1's matching-hash VM report confirms native SQLite writes and
+same-process read-only reopen persistence: one synthetic session/two messages,
+WAL, verified session/connection/client closure, natural exit 0 and peak
+424,176 bytes. Manual checks found no processes, links or package-SID ACEs
+(7,391 entries; zero failures), restored Medium integrity and no six filters
+or sublayer in a successful WFP export. Profile removal remains product-reported.
+The run allowance is consumed; no full containment or crash/restart durability
+is established. The user approved only preparation of the next proposal:
+docs/architecture/maya_protected_hermes_memory_proposal.md covers native memory
+file functionality, not another permissions test. No memory package or run,
+new grant, hook bypass or runtime patch is approved; existing gates remain.
+
+The user subsequently approved Native Memory 1 package preparation. See
+docs/architecture/maya_protected_hermes_memory_handoff.md. The HERMES_MEMORY
+profile uses the real agent-attached MemoryStore with supported memory flags,
+eight fixed synthetic mutations, same-process fresh-store reload/snapshot
+checks, exact independent file readbacks and two nonblocking lock probes.
+Freshness is checked before Hermes imports; native bootstrap may then create
+an empty memories directory, but existing memory files are rejected. Keep
+the existing isolation, six denies, dependencies, byte bounds and deadlines.
+The 64 KiB memory-file acceptance ceiling is not a quota; lock probes do not
+qualify concurrent writers or atomic/crash durability. No tool-wrapper hook
+bypass, authoritative mutation, model call, new grant or native execution is
+authorized by preparation. Obtain exact-artifact VM-run approval and fresh
+product consent; Gate A and all qualification flags remain unchanged.
+
+Native Memory 1's matching-hash VM result now confirms all eight synthetic
+mutations, exact fresh reload/snapshots/hashes, two lock probes, natural exit 0
+and no model calls (peak 214 bytes). Scoped manual cleanup found no processes,
+reparse points, package-SID ACEs (7,395 entries; zero failures) or six WFP
+filters/sublayer, and restored Medium state integrity. Profile removal remains
+product-reported; no containment or crash/restart qualification follows.
+See docs/architecture/maya_product_development_test_sequence.md for the recorded
+A-E dependency sequence and next A3 authorization-bridge contract assessment.
+Existing broker/HTTP adapters are test-only, not a qualified product path.
+Reuse the existing gateway; do not invent a parallel policy engine. Specify
+trusted identity, transport, audit, allowed/denied effects and exact impacts
+before bridge implementation. No new grant, transport change, model traffic,
+VM run or Gate A acceptance is authorized by this continuation assessment.
+
 This file contains mandatory instructions for coding agents and automation
 working in this repository.
 

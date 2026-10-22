@@ -395,7 +395,13 @@ namespace ProjectMaya.WindowsRuntime
                 Attribute(attributes, 0x20002, inherited, 3 * IntPtr.Size);
                 string runtime = Path.Combine(directory, "runtime"), state = Path.Combine(directory, "state");
                 string python = Path.Combine(runtime, "python", "python.exe"), check = Path.Combine(runtime, "containment_check.py");
-#if HERMES_IMPORT
+#if HERMES_MEMORY
+                check = Path.Combine(runtime, "hermes_memory_check.py");
+#elif HERMES_STATE
+                check = Path.Combine(runtime, "hermes_state_check.py");
+#elif HERMES_CONSTRUCTION
+                check = Path.Combine(runtime, "hermes_construction_check.py");
+#elif HERMES_IMPORT
                 check = Path.Combine(runtime, "hermes_import_check.py");
 #endif
                 StandardHandles = new[] { inputRead.ToInt64(), outputWrite.ToInt64(), errorWrite.ToInt64() };

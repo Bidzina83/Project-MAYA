@@ -1,0 +1,1 @@
+{"model":{"context_length":131072},"context":{"engine":"compressor"},"compression":{"enabled":false},"agent":{"environment_probe":false},"tools":{"tool_search":{"enabled":"off"}},"memory":{"memory_enabled":true,"user_profile_enabled":true,"provider":"","memory_char_limit":2200,"user_char_limit":1375}}
