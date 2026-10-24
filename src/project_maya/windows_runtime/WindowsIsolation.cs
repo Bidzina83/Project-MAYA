@@ -74,11 +74,12 @@ namespace ProjectMaya.WindowsRuntime
         }
         static void SetAndVerifyLabel(string path, bool low)
         {
+            bool folder = Directory.Exists(path);
             IntPtr descriptor = IntPtr.Zero;
             try
             {
                 uint size; bool present, defaulted; IntPtr acl;
-                Require(ConvertStringSecurityDescriptorToSecurityDescriptor("S:(ML;OICI;NW;;;" + (low ? "LW" : "ME") + ")",
+                Require(ConvertStringSecurityDescriptorToSecurityDescriptor("S:(ML;" + (folder ? "OICI" : "") + ";NW;;;" + (low ? "LW" : "ME") + ")",
                     1, out descriptor, out size), "state_label_descriptor");
                 Require(GetSecurityDescriptorSacl(descriptor, out present, out acl, out defaulted) && present, "state_label_acl");
                 Check(SetNamedSecurityInfoW(path, 1, 0x10, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, acl), "state_label_set");
@@ -92,18 +93,22 @@ namespace ProjectMaya.WindowsRuntime
                 if (length < 20 || length > 65536) throw new StartupFailure("state_label_descriptor_size");
                 byte[] bytes = new byte[length]; Marshal.Copy(found, bytes, 0, length);
                 var raw = new RawSecurityDescriptor(bytes, 0);
-                if (raw.SystemAcl == null || raw.SystemAcl.Count != 1) throw new StartupFailure("state_label_mismatch");
-                // Mandatory-label ACEs are represented as custom ACEs by some CLR versions.
-                byte[] ace = new byte[raw.SystemAcl[0].BinaryLength]; raw.SystemAcl[0].GetBinaryForm(ace, 0);
-                if (ace[0] != 0x11 || (ace[1] & 3) != 3 || BitConverter.ToInt32(ace, 4) != 1 ||
-                    new SecurityIdentifier(ace, 8).Value != (low ? "S-1-16-4096" : "S-1-16-8192"))
-                    throw new StartupFailure("state_label_mismatch");
+                VerifyLabel(raw, low, folder);
             }
             finally { LocalFree(found); }
         }
+        internal static void VerifyLabel(RawSecurityDescriptor raw, bool low, bool folder)
+        {
+                if (raw.SystemAcl == null || raw.SystemAcl.Count != 1) throw new StartupFailure("state_label_mismatch");
+                // Mandatory-label ACEs are represented as custom ACEs by some CLR versions.
+                byte[] ace = new byte[raw.SystemAcl[0].BinaryLength]; raw.SystemAcl[0].GetBinaryForm(ace, 0);
+                if (ace[0] != 0x11 || ace[1] != (folder ? 3 : 0) || BitConverter.ToInt32(ace, 4) != 1 ||
+                    new SecurityIdentifier(ace, 8).Value != (low ? "S-1-16-4096" : "S-1-16-8192"))
+                    throw new StartupFailure("state_label_mismatch");
+        }
     }
 
-    internal sealed class WindowsIsolation : IDisposable
+    internal sealed partial class WindowsIsolation : IDisposable
     {
         // DETACHED_PROCESS | EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED.
         internal const uint LaunchCreationFlags = 0x0008040c;
@@ -395,7 +400,9 @@ namespace ProjectMaya.WindowsRuntime
                 Attribute(attributes, 0x20002, inherited, 3 * IntPtr.Size);
                 string runtime = Path.Combine(directory, "runtime"), state = Path.Combine(directory, "state");
                 string python = Path.Combine(runtime, "python", "python.exe"), check = Path.Combine(runtime, "containment_check.py");
-#if HERMES_MEMORY
+#if HERMES_BRIDGE
+                check = Path.Combine(runtime, "bridge_child_entry.py");
+#elif HERMES_MEMORY
                 check = Path.Combine(runtime, "hermes_memory_check.py");
 #elif HERMES_STATE
                 check = Path.Combine(runtime, "hermes_state_check.py");
@@ -419,6 +426,9 @@ namespace ProjectMaya.WindowsRuntime
                 Native.Require(CreateProcessAsUserW(launchToken, python, new StringBuilder(Quote(python) + " -I -S -B " + Quote(check) + " " + run),
                     IntPtr.Zero, IntPtr.Zero, true, LaunchCreationFlags, environment, state, ref startup, out child), "create_suspended_python");
                 TokenCheck(child.process, user);
+#if HERMES_BRIDGE
+                BridgeInput = inputWrite; handles.Remove(inputWrite);
+#endif
             }
             finally
             {
@@ -689,7 +699,7 @@ namespace ProjectMaya.WindowsRuntime
         {
             // KILL_ON_JOB_CLOSE remains the last-resort lifecycle boundary.
             if (job != IntPtr.Zero) { Native.CloseHandle(job); job = IntPtr.Zero; }
-            foreach (IntPtr handle in new[] { child.thread, child.process, readOutput, readError }) if (handle != IntPtr.Zero) Native.CloseHandle(handle);
+            foreach (IntPtr handle in new[] { child.thread, child.process, readOutput, readError, BridgeInput }) if (handle != IntPtr.Zero) Native.CloseHandle(handle);
             if (engine != IntPtr.Zero) { FwpmEngineClose0(engine); engine = IntPtr.Zero; }
             if (sid != IntPtr.Zero) { FreeSid(sid); sid = IntPtr.Zero; }
         }

@@ -1,4 +1,7 @@
 // Product-owned startup candidate. No Hermes execution or containment acceptance.
+#if HERMES_BRIDGE && (!HERMES_CONSTRUCTION || !HERMES_IMPORT || HERMES_STATE || HERMES_MEMORY)
+#error HERMES_BRIDGE requires CONSTRUCTION/IMPORT and excludes STATE/MEMORY.
+#endif
 #if HERMES_MEMORY && (!HERMES_CONSTRUCTION || HERMES_STATE)
 #error HERMES_MEMORY requires HERMES_CONSTRUCTION and excludes HERMES_STATE.
 #endif
@@ -22,7 +25,10 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Maya protected Python startup candidate")]
 [assembly: AssemblyVersion("0.1.0.0")]
-#if HERMES_MEMORY
+#if HERMES_BRIDGE
+[assembly: AssemblyFileVersion("0.2.0.2")]
+[assembly: AssemblyInformationalVersion("0.2.0-bridge-document.2")]
+#elif HERMES_MEMORY
 [assembly: AssemblyFileVersion("0.1.4.1")]
 [assembly: AssemblyInformationalVersion("0.1.4-hermes-memory.1")]
 #elif HERMES_STATE
@@ -43,7 +49,40 @@ namespace ProjectMaya.WindowsRuntime
 {
     internal static class ProtectedPython
     {
-#if HERMES_MEMORY
+#if HERMES_BRIDGE
+        internal const string Version = "0.2.0-bridge-document.2";
+        internal const string Scope = "offline-authorized-document-bridge-v1";
+        internal const string Consent =
+            "Maya authorization bridge " + Version + "\r\n\r\n" +
+            "Unsigned development component, not production-qualified. Copies verified bundled Python 3.13.14, " +
+            "pinned Hermes, the same dependency set and canonical Maya code into a fresh private ProgramData attempt.\r\n\r\n" +
+            "Maya creates its ordinary zero-capability AppContainer, read/execute runtime and low-integrity " +
+            "private state, reduced token, one-process job, child-process block and six deny-all network filters. " +
+            "All Application Packages access remains a limitation, not full customer-data isolation.\r\n\r\n" +
+            "NEW: Maya starts one additional trusted medium-integrity Python gateway worker outside AppContainer, " +
+            "with a separate one-process kill-on-close job. This worker is trusted product code; the child's " +
+            "network filters do not sandbox it. It has no model/network operation. Private inherited pipes " +
+            "carry framed requests, not HTTP or listening sockets. No child can choose actor, path or policy.\r\n\r\n" +
+            "NEW: a protected host folder contains an unpredictable synthetic document, exact local policy, " +
+            "worker configuration and required audit. Only SYSTEM, Administrators and this operator have access; " +
+            "there is no child package grant. These files and private reports remain after cleanup. No customer " +
+            "file, provider credential, model call, business write, connector or Metabase is used.\r\n\r\n" +
+            "Ten fixed native cases test one authorized document release and denied policy, direct file access, " +
+            "wrong identity/target/action, replay, expiry, cancellation and disclosure. Both audit-failure cases " +
+            "remain mandatory local tests, not native-qualified. A failed audit is never reopened to continue. " +
+            "The real Hermes tool registry is used; there is no conversation/model selection test.\r\n\r\n" +
+            "Required audit is flushed and fsynced before read and disclosure. Cancellation cannot recall " +
+            "already committed bytes; uncertain outcomes stop without retry. NEW framing bounds: 8192 bytes " +
+            "per frame, 128 KiB each channel direction, 1 KiB document, 128 KiB audit, 4 KiB stderr and 64 KiB " +
+            "report. Child budgets stay 22 seconds cooperative/30 seconds host. Worker readiness 5 seconds, " +
+            "processing 2 seconds and incomplete frames 1 second. Payload caps remain 8192 files/4 MiB index, " +
+            "32 MiB per file/256 MiB expanded. No new capability, network permit, loopback or registry grant.\r\n\r\n" +
+            "No system Python/PATH, account/service, Windows policy, antivirus, boot/encryption change or test " +
+            "supervisor. Maya must confirm both jobs stopped before revoking permissions/profile/filters. " +
+            "Forced closure or uncertain cleanup requires review; bridge automatic recovery is not qualified. " +
+            "Independent cleanup remains necessary. Stop after one result. No weakened protection or retry; " +
+            "Gate A, containment and production remain unqualified.";
+#elif HERMES_MEMORY
         internal const string Version = "0.1.4-hermes-memory.1";
         internal const string Scope = "offline-hermes-native-memory-v1";
         internal const string Consent =
@@ -365,6 +404,9 @@ namespace ProjectMaya.WindowsRuntime
             if (!recover && pending.Count != 0) throw new StartupFailure("cleanup_pending_use_recovery");
             string run = recover ? Path.GetFileName(pending[0]) : Guid.NewGuid().ToString("N");
             string directory = Path.Combine(ProductFiles.Root, run);
+#if HERMES_BRIDGE
+            if (recover) throw new StartupFailure("bridge_recovery_requires_review");
+#endif
             string moniker = "Maya.ProtectedPython.Startup1." + run;
             Dictionary<string, object> record;
             if (recover)
@@ -407,6 +449,9 @@ namespace ProjectMaya.WindowsRuntime
             var observations = new Dictionary<string, string>(StringComparer.Ordinal);
             record["security_resource_inventory"] = isolation.ResourceInventory();
             bool cleanup = false;
+#if HERMES_BRIDGE
+            BridgeRuntime bridge = null;
+#endif
             try
             {
                 if (!recover)
@@ -430,6 +475,11 @@ namespace ProjectMaya.WindowsRuntime
                     screen.Stage = "network_provision";
                     isolation.ProvisionNetwork();
                     record["network_filters_verified"] = 6;
+#if HERMES_BRIDGE
+                    screen.Stage = "bridge_worker_setup";
+                    bridge = new BridgeRuntime(directory, run, user, record);
+                    bridge.PrepareWorker();
+#endif
 #if !HERMES_IMPORT
                     screen.Stage = "udp_evidence_setup";
                     screen.ConfigureUdp(isolation, record);
@@ -450,6 +500,15 @@ namespace ProjectMaya.WindowsRuntime
                     screen.Stage = "suspended_record_write";
                     SaveRecord(recordPath, record);
                     screen.Stage = "child_resume_wait";
+#if HERMES_BRIDGE
+                    uint exit = bridge.Run(isolation);
+                    record["child_resumed"] = true;
+                    record["child_exit_hex"] = "0x" + exit.ToString("X8");
+                    record["fresh_state_beacon"] = ReadFreshBeacon(directory, run);
+                    record["python_started"] = exit == 0 && (bool)record["fresh_state_beacon"] &&
+                        record.ContainsKey("bridge_python_entry_observed") && true.Equals(record["bridge_python_entry_observed"]);
+                    record["status"] = "bridge_child_completed";
+#else
                     uint exit = isolation.ResumeAndWait();
                     record["child_resumed"] = true;
                     screen.Stage = "child_startup_evidence";
@@ -460,6 +519,7 @@ namespace ProjectMaya.WindowsRuntime
                     record["python_entry_observed"] = beacon && isolation.OutputCaptureComplete && isolation.Stdout == ExpectedBeacon(run);
                     record["python_started"] = StartupComplete(exit, isolation.Stdout, beacon, run);
                     record["status"] = (bool)record["python_started"] ? "startup_completed_not_containment_qualified" : "startup_failed";
+#endif
                 }
             }
             catch (Exception error)
@@ -479,6 +539,9 @@ namespace ProjectMaya.WindowsRuntime
                 {
                     screen.Stage = "job_stop";
                     isolation.Stop();
+#if HERMES_BRIDGE
+                    if (bridge != null) bridge.Stop();
+#endif
                     if (!recover && isolation.Resumed && (string)record["startup_status"] == "blocked")
                     {
                         try
@@ -494,7 +557,9 @@ namespace ProjectMaya.WindowsRuntime
                     if (!recover && isolation.Resumed)
                     {
                         try {
-#if HERMES_MEMORY
+#if HERMES_BRIDGE
+                            record["bridge_evidence_collected"] = true;
+#elif HERMES_MEMORY
                             screen.Stage = "hermes_memory_report";
                             HermesMemory.Collect(directory, run, record);
 #elif HERMES_STATE
@@ -537,10 +602,19 @@ namespace ProjectMaya.WindowsRuntime
                 }
                 record["screen_last_stage"] = screen.Stage;
                 isolation.Dispose();
+#if HERMES_BRIDGE
+                if (bridge != null) bridge.Dispose();
+#endif
                 record["cleanup_complete"] = cleanup;
                 if (!recover)
                 {
-#if HERMES_MEMORY
+#if HERMES_BRIDGE
+                    record["status"] = cleanup && true.Equals(record["python_started"]) &&
+                        record.ContainsKey("bridge_evidence_matches") && true.Equals(record["bridge_evidence_matches"]) &&
+                        record.ContainsKey("bridge_worker_stopped") && true.Equals(record["bridge_worker_stopped"])
+                        ? "bridge_document_completed_pending_independent_cleanup" : "blocked";
+                    record["independent_cleanup_verified"] = false;
+#elif HERMES_MEMORY
                     record["hermes_memory_status"] = HermesMemory.Result(record, cleanup);
                     record["status"] = record["hermes_memory_status"];
                     record["independent_cleanup_verified"] = false;

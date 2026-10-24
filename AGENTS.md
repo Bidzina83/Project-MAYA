@@ -1,5 +1,19 @@
 # Project MAYA Agent Guidance
 
+## Authorization Bridge Document 2 Preparation
+
+Document 1 attempt 3e7ecf7926ae44a290741c01107808e5 matched its frozen EXE
+and stopped at bridge_worker_setup/state_label_mismatch before child creation.
+The operator's icacls readback shows Medium OI/CI/NW on host and Medium/NW on
+document.txt. Cleanup remains product-reported, not independently verified.
+The user approved only distinguishing file/directory mandatory-label inheritance
+in setup/readback, regression checks and separate Document 2 preparation.
+See docs/architecture/maya_authorization_bridge_document_2_handoff.md.
+Preserve Document 1 and all payload/dependency/security/authorization/deadline
+boundaries. No native local run, retry, broader correction or VM execution is
+authorized by preparation. Obtain separate matching-artifact VM-run approval
+and fresh product consent; Gate A and qualification flags remain unchanged.
+
 ## Protected Hermes Construction Assessment (2026-10-22)
 
 The operator's Import 1 report establishes bounded real-Hermes import success;
@@ -96,6 +110,42 @@ Reuse the existing gateway; do not invent a parallel policy engine. Specify
 trusted identity, transport, audit, allowed/denied effects and exact impacts
 before bridge implementation. No new grant, transport change, model traffic,
 VM run or Gate A acceptance is authorized by this continuation assessment.
+
+The requested A3 bridge design/test contract is now prepared in
+docs/architecture/maya_authorization_bridge_v1_design.md and
+docs/architecture/maya_authorization_bridge_v1_tests.json. The proposal selects
+private inherited pipes, one additional trusted medium-integrity gateway worker,
+a product-created protected host folder and the existing Python authorization
+engine, with separate read/disclosure gates. It preserves child AppContainer,
+zero capabilities and six network denies; its process/ACL/framing/audit changes
+are disclosed, not implemented. Twelve native cases and mandatory local fault
+checks are specified; no runtime patch, dependency acquisition, native test,
+model traffic, implementation or Gate A acceptance follows design preparation.
+
+On 2026-10-23 the user approved bridge implementation preparation. The initial
+product codec, required-audit adapter and existing-gateway state machine are
+implemented with thirty inert tests; see
+docs/architecture/maya_authorization_bridge_v1_progress.md. No worker/Windows
+integration or runnable package is ready. Implementation found the twelve-case
+native schedule conflicts with fail-closed required audit: after N09 poisons
+the shared sink, subsequent cases cannot proceed safely. Keep the original
+contract and protections; do not reopen/replace the failed ledger automatically.
+Review the proposed ten-case native first run (N09/N11 retained as mandatory
+local faults, not native qualification) before Windows integration/assembly.
+No native launch, security change, model traffic or qualification occurred.
+
+The user approved the ten-case bridge correction and continuation. The active
+successor contract is docs/architecture/maya_authorization_bridge_v1_tests_10.json;
+the original twelve-case record remains intact. Preparation now includes the
+trusted worker, native Hermes extension, Windows token/job/handle integration,
+protected host files and bounded coordinator protocol; see
+docs/architecture/maya_authorization_bridge_v1_handoff.md. The worker's canonical
+package imports reuse existing cryptography/cffi/pycparser pins, not new wheels.
+N09/N11 are mandatory local faults, not native qualification. Required audit is
+never reopened; coordinator-confirmed release outcomes are audited separately.
+No native launch, security provisioning, model call or qualification follows
+compilation/assembly. Review exact artifacts before separate RDP run approval
+and product consent. Bridge automatic recovery remains disabled pending review.
 
 This file contains mandatory instructions for coding agents and automation
 working in this repository.

@@ -1,0 +1,270 @@
+{
+  "schema": "maya.authorization_bridge.test_contract.v1.1",
+  "status": "approved_preparation_not_native_execution",
+  "date": "2026-10-23",
+  "design": "maya_authorization_bridge_v1_design.md",
+  "hermes_commit": "b13e2fd6948a59eeb59fe618914147d97a2ee90a",
+  "native_attempt_budget": 1,
+  "native_case_order": [
+    "N01",
+    "N02",
+    "N03",
+    "N04",
+    "N05",
+    "N06",
+    "N07",
+    "N08",
+    "N10",
+    "N12"
+  ],
+  "native_case_count": 10,
+  "max_leases": 16,
+  "max_requests": 16,
+  "expected_total_document_reads": 2,
+  "expected_total_document_releases": 1,
+  "negative_case_document_bytes_released": 0,
+  "child_deadline_ms": 30000,
+  "child_cooperative_budget_ms": 22000,
+  "worker_ready_ms": 5000,
+  "worker_call_ms": 2000,
+  "lease_ttl_ms": 2000,
+  "incomplete_frame_ms": 1000,
+  "frame_payload_limit": 8192,
+  "channel_direction_cumulative_bytes": 131072,
+  "document_limit": 1024,
+  "stderr_limit": 4096,
+  "public_report_limit": 65536,
+  "host_audit_limit": 131072,
+  "capabilities": 0,
+  "network_denies": 6,
+  "network_exceptions": 0,
+  "native_cases": [
+    {
+      "id": "N01",
+      "name": "allow_real_registry_read",
+      "tier": "native_first_package",
+      "stimulus": "Real Hermes registry dispatch through the product extension",
+      "expected": "one matching file.read and file.disclose ALLOW; durable audit before read and release",
+      "expected_document_opens": 1,
+      "expected_document_reads": 1,
+      "expected_document_releases": 1
+    },
+    {
+      "id": "N02",
+      "name": "direct_protected_file_open",
+      "tier": "native_first_package",
+      "stimulus": "Actual child attempts read/write opens on host document/policy/audit/config outside bridge",
+      "expected": "all opens denied; descriptors verified; no canary returned",
+      "expected_document_opens": 0,
+      "expected_document_reads": 0,
+      "expected_document_releases": 0
+    },
+    {
+      "id": "N03",
+      "name": "policy_deny",
+      "tier": "native_first_package",
+      "stimulus": "Raw framed request; current host policy denies exact file.read",
+      "expected": "DENY before document open",
+      "expected_document_opens": 0,
+      "expected_document_reads": 0,
+      "expected_document_releases": 0
+    },
+    {
+      "id": "N04",
+      "name": "wrong_resource",
+      "tier": "native_first_package",
+      "stimulus": "Raw framed request for a different resource ID",
+      "expected": "fixed denial; no path lookup",
+      "expected_document_opens": 0,
+      "expected_document_reads": 0,
+      "expected_document_releases": 0
+    },
+    {
+      "id": "N05",
+      "name": "claimed_actor_field",
+      "tier": "native_first_package",
+      "stimulus": "Add actor_id to otherwise valid request",
+      "expected": "unknown-field denial; host identity is not replaced",
+      "expected_document_opens": 0,
+      "expected_document_reads": 0,
+      "expected_document_releases": 0
+    },
+    {
+      "id": "N06",
+      "name": "replay_consumed_admission",
+      "tier": "native_first_package",
+      "stimulus": "Reuse N01 consumed token with the current next channel sequence; independently test byte-identical request replay in local L02",
+      "expected": "deny replay; revoke current lease too; no cached document resend",
+      "expected_document_opens": 0,
+      "expected_document_reads": 0,
+      "expected_document_releases": 0
+    },
+    {
+      "id": "N07",
+      "name": "expired_lease",
+      "tier": "native_first_package",
+      "stimulus": "Wait beyond actual host monotonic TTL before submission",
+      "expected": "deny expiry without fake native clock",
+      "expected_document_opens": 0,
+      "expected_document_reads": 0,
+      "expected_document_releases": 0
+    },
+    {
+      "id": "N08",
+      "name": "cancel_before_admission",
+      "tier": "native_first_package",
+      "stimulus": "Host revokes fresh lease before child's request is admitted",
+      "expected": "deny cancelled request",
+      "expected_document_opens": 0,
+      "expected_document_reads": 0,
+      "expected_document_releases": 0
+    },
+    {
+      "id": "N10",
+      "name": "disclosure_policy_deny",
+      "tier": "native_first_package",
+      "stimulus": "Authorize/read synthetic file; deny separate file.disclose",
+      "expected": "bounded read is recorded, no document bytes released",
+      "expected_document_opens": 1,
+      "expected_document_reads": 1,
+      "expected_document_releases": 0
+    },
+    {
+      "id": "N12",
+      "name": "unsupported_operation",
+      "tier": "native_first_package",
+      "stimulus": "Raw framed file-write or generic execution operation",
+      "expected": "fixed denial, no other dispatch/effect",
+      "expected_document_opens": 0,
+      "expected_document_reads": 0,
+      "expected_document_releases": 0
+    }
+  ],
+  "local_required_cases": [
+    {
+      "id": "L01",
+      "name": "framing",
+      "tier": "local_inert_required_not_native_qualified",
+      "stimulus": "Partial headers/body, invalid UTF-8/BOM, duplicate keys, NaN, trailing JSON, depth 9 and zero/8193 length",
+      "expected": "reject before allocation/effect; terminal channel on framing faults"
+    },
+    {
+      "id": "L02",
+      "name": "schema_and_limits",
+      "tier": "local_inert_required_not_native_qualified",
+      "stimulus": "Extra fields, bool/float seq, wrong versions/attempt, malformed token, 17th request, cumulative limit",
+      "expected": "strict denial or terminal bounded overflow; no release"
+    },
+    {
+      "id": "L03",
+      "name": "identity_and_channel",
+      "tier": "local_inert_required_not_native_qualified",
+      "stimulus": "Wrong child binding, worker reply request-ID mismatch, crossed worker/child handles",
+      "expected": "no admission or response delivery"
+    },
+    {
+      "id": "L04",
+      "name": "audit_durability",
+      "tier": "local_inert_required_not_native_qualified",
+      "stimulus": "Read/release audit append, flush, fsync failures and audit size overflow",
+      "expected": "required failure stops affected effect/release"
+    },
+    {
+      "id": "L05",
+      "name": "decision_types",
+      "tier": "local_inert_required_not_native_qualified",
+      "stimulus": "Every non-ALLOW decision, ALLOW with constraints/redactions, policy exceptions or invalid result",
+      "expected": "no unhandled authorization result proceeds"
+    },
+    {
+      "id": "L06",
+      "name": "revocation_races",
+      "tier": "local_inert_required_not_native_qualified",
+      "stimulus": "Deterministic cancellation/expiry before read, before release commit and after commit",
+      "expected": "zero release before commit; after commit accurately committed/sent/uncertain, never pretend recall"
+    },
+    {
+      "id": "L07",
+      "name": "disconnects_and_deadlines",
+      "tier": "local_inert_required_not_native_qualified",
+      "stimulus": "Worker crash/EOF/hang, child EOF mid-frame, blocked pipe, partial response send",
+      "expected": "revoke, deadline stop, no retransmit/fallback; preserve uncertain outcome"
+    },
+    {
+      "id": "L08",
+      "name": "protected_paths",
+      "tier": "local_inert_required_not_native_qualified",
+      "stimulus": "Reparse/link/path substitution, host file replacement, wrong DACL/inherited broad grant, oversize document",
+      "expected": "block before release; no arbitrary-file resolution"
+    },
+    {
+      "id": "L09",
+      "name": "hermes_interface",
+      "tier": "local_inert_required_not_native_qualified",
+      "stimulus": "AST-bound native registry signatures, duplicate registration, wrong handler/schema/toolset, dispatch error JSON",
+      "expected": "reject fake/partial tool integration; error JSON is not success"
+    },
+    {
+      "id": "L10",
+      "name": "lifecycle_and_evidence",
+      "tier": "local_inert_required_not_native_qualified",
+      "stimulus": "Failed worker token/job/readiness, coordinator crash model, stderr overflow, missing/forged child evidence",
+      "expected": "no child resume where preflight fails; fail closed and honest cleanup state"
+    },
+    {
+      "id": "L11",
+      "name": "secret_safe_reporting",
+      "tier": "local_inert_required_not_native_qualified",
+      "stimulus": "Token/canary/error text supplied as diagnostics or reflected fields",
+      "expected": "no raw secret/document/exception in public report"
+    },
+    {
+      "id": "L12",
+      "name": "disclosure_validation",
+      "tier": "local_inert_required_not_native_qualified",
+      "stimulus": "Unexpected worker content/schema/length/digest or unsupported recipient",
+      "expected": "no document release"
+    },
+    {
+      "id": "N09",
+      "name": "audit_failure_before_read",
+      "tier": "local_inert_required_not_native_qualified",
+      "stimulus": "Fixed test-profile writer fault on read-intent append/flush path",
+      "expected": "fail closed; no file read; independently count zero release",
+      "expected_document_opens": 0,
+      "expected_document_reads": 0,
+      "expected_document_releases": 0
+    },
+    {
+      "id": "N11",
+      "name": "audit_failure_before_release",
+      "tier": "local_inert_required_not_native_qualified",
+      "stimulus": "Authorize/read; fixed test-profile writer fault at release-intent durability",
+      "expected": "read is recorded, zero document bytes released; uncertain audit flagged",
+      "expected_document_opens": 1,
+      "expected_document_reads": 1,
+      "expected_document_releases": 0
+    }
+  ],
+  "fault_injection": {
+    "N09": "fixed compile-profile host-owned audit writer fault, not actual disk-failure qualification",
+    "N11": "fixed compile-profile host-owned release audit durability fault, not actual disk-failure qualification",
+    "child_selectable": false,
+    "production_switch": false,
+    "native": false
+  },
+  "evidence": {
+    "authoritative": "trusted coordinator/worker actual event order and effect/channel counters",
+    "child": "untrusted supporting observations only",
+    "negative_counter_scope": "per case delta, not cumulative",
+    "canary": "host-generated 256-bit unpredictable value; not preseeded or published",
+    "public_data": "fixed codes/counts/digests, never admission tokens/document bytes",
+    "direct_denial": "actual child read/write failures plus verified descriptors"
+  },
+  "stop": "first unexpected/missing/inconclusive result aborts remaining cases, revokes and cleans up; no retry",
+  "success_status": "bridge_document_completed_pending_independent_cleanup",
+  "production_qualified": false,
+  "containment_qualified": false,
+  "independent_cleanup_verified": false,
+  "supersedes_native_schedule": "maya_authorization_bridge_v1_tests.json"
+}

@@ -126,15 +126,19 @@ namespace ProjectMaya.WindowsRuntime
             importPath = relative == "hermes_import_check.py" || relative == "hermes-import-contract.json" ||
                 relative.StartsWith("hermes/", StringComparison.Ordinal) || relative.StartsWith("dependencies/", StringComparison.Ordinal);
 #endif
+#if HERMES_BRIDGE
+            importPath = importPath || relative == "bridge_child_entry.py" || relative == "bridge_worker_entry.py" ||
+                relative == "bridge-contract.json" || relative.StartsWith("project_maya/", StringComparison.Ordinal);
+#endif
 #if HERMES_CONSTRUCTION
             importPath = importPath || relative == "hermes_construction_check.py" ||
                 relative == "hermes-construction-contract.json" || relative == "hermes-construction-config.json";
 #endif
-#if HERMES_MEMORY
+#if HERMES_MEMORY || HERMES_BRIDGE
             importPath = importPath || relative == "hermes_memory_check.py" ||
                 relative == "hermes-memory-contract.json" || relative == "hermes-memory-config.json";
 #endif
-#if HERMES_STATE || HERMES_MEMORY
+#if HERMES_STATE || HERMES_MEMORY || HERMES_BRIDGE
             importPath = importPath || relative == "hermes_state_check.py" || relative == "hermes-state-contract.json";
 #endif
             if (!importPath && relative != "startup_check.py" && relative != "containment_check.py" && !relative.StartsWith("python/", StringComparison.Ordinal) &&

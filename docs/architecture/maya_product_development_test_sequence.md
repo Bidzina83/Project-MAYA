@@ -75,6 +75,12 @@ corrections rather than repeatedly rerunning the same successful storage tests.
 
 ## Next Bounded Deliverable: Authorization Bridge Contract
 
+The requested design is now recorded in maya_authorization_bridge_v1_design.md
+and maya_authorization_bridge_v1_tests.json. It proposes private inherited pipes,
+one trusted medium-integrity worker reusing the Python gateway, a protected host
+folder and exact document read/disclosure gates. Its 12 native cases and required
+local fault/codec cases are design scope, not execution or implementation approval.
+
 Prepare the exact product integration contract for A3 before its package:
 
 1. Bind the trusted host's actual operator principal and attempt/request identity.
