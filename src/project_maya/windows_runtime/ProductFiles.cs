@@ -130,6 +130,10 @@ namespace ProjectMaya.WindowsRuntime
             importPath = importPath || relative == "bridge_child_entry.py" || relative == "bridge_worker_entry.py" ||
                 relative == "bridge-contract.json" || relative.StartsWith("project_maya/", StringComparison.Ordinal);
 #endif
+#if HERMES_MODEL
+            importPath = importPath || relative == "model_child_entry.py" || relative == "model_worker_entry.py" ||
+                relative == "model-contract.json" || relative == "model-config.json" || relative == "model-native-literals.json";
+#endif
 #if HERMES_CONSTRUCTION
             importPath = importPath || relative == "hermes_construction_check.py" ||
                 relative == "hermes-construction-contract.json" || relative == "hermes-construction-config.json";

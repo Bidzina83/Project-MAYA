@@ -42,7 +42,7 @@ namespace ProjectMaya.WindowsRuntime
                     rule.InheritanceFlags != (folder ? InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit : InheritanceFlags.None))
                     throw new StartupFailure("bridge_host_acl_rejected");
         }
-        static void Write(string path, byte[] content, SecurityIdentifier user)
+        internal static void Write(string path, byte[] content, SecurityIdentifier user)
         {
             ProductFiles.NoLinks(path);
             using (var file = new FileStream(path, FileMode.CreateNew, FileSystemRights.Write, FileShare.None, 4096, FileOptions.None, FileAcl(user)))

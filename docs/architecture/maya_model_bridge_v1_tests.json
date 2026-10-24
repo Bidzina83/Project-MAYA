@@ -1,0 +1,53 @@
+{
+  "schema": "maya.model_bridge.proposed_tests.v1",
+  "prepared_on": "2026-10-24",
+  "status": "M01_staging_and_offline_package_preparation_approved_execution_pending",
+  "offline_continuation_approved": true,
+  "integration_correction_approved": true,
+  "integration_review": "maya_model_bridge_v1_integration_review.md",
+  "implementation_approved": true,
+  "native_run_approved": false,
+  "model_calls_approved": false,
+  "first_native_proposal": {"cases": ["M01"], "purpose": "positive_compatibility_not_boundary_qualification", "schedule_approved": true, "package_preparation_approved": true, "review": "maya_model_bridge_m1_native_review.md", "remaining_cases": ["M02", "M03", "M04", "M05", "M06", "M07", "M08", "M09"]},
+  "production_qualified": false,
+  "containment_qualified": false,
+  "policy_authority": "project_maya.governance.ActionAuthorizationGateway",
+  "transport": "private_inherited_pipes_no_child_network_permit",
+  "factory_contract": "approved_pinned_subclass_nonstreaming_flag_and_delegated_per_client_pipe_factory",
+  "pins": {"hermes_commit": "b13e2fd6948a59eeb59fe618914147d97a2ee90a", "python": "3.13.14", "openai": "2.24.0", "httpx": "0.28.1"},
+  "limits": {"frames_bytes": 8192, "direction_bytes": 131072, "request_bytes": 4096, "response_bytes": 4096, "final_text_bytes": 1024, "output_tokens": 32, "effective_dispatches": 1, "sdk_retries": 0, "hermes_api_max_retries": 1, "m1_child_deadline_ms": 30000, "m1_cooperative_ms": 22000, "worker_ready_ms": 5000, "rpc_ms": 2000, "incomplete_frame_ms": 1000},
+  "m1": {
+    "provider_kind": "explicit_synthetic_wire_fixture_not_inference",
+    "credentials": false,
+    "networking": false,
+    "native_schedule_frozen": true,
+    "package_blockers": ["assemble_and_verify_exact_config_contract_payload_resources_and_artifacts"],
+    "later_matrix_blockers": ["approve_exact_bypass_probe_targets_and_positive_controls_for_later_matrix"],
+    "proposed_cases": [
+      {"id": "M01", "entry": "real_Hermes_run_conversation_real_SDK", "expect": "one_synthetic_dispatch_validated_runtime_and_operator_delivery"},
+      {"id": "M02", "entry": "gateway_egress_deny", "expect": "zero_dispatch_zero_release"},
+      {"id": "M03", "entry": "wrong_model_route_actor_or_payload_digest", "expect": "zero_dispatch_zero_release"},
+      {"id": "M04", "entry": "expired_replayed_or_revoked_lease", "expect": "zero_dispatch_zero_release"},
+      {"id": "M05", "entry": "second_effective_request_auxiliary_retry_or_fallback", "expect": "fresh_authorization_required_second_dispatch_denied"},
+      {"id": "M06", "entry": "model_output_deny", "expect": "one_dispatch_zero_runtime_or_operator_release"},
+      {"id": "M07", "entry": "invalid_or_oversize_provider_response", "expect": "withheld_allowlisted_error_no_raw_content"},
+      {"id": "M08", "entry": "child_final_output_mismatch", "expect": "operator_release_denied_even_after_runtime_release"},
+      {"id": "M09", "entry": "native_direct_SDK_socket_alternate_route", "expect": "no_external_effect_with_correlated_denial_and_reachable_control", "status": "pending_exact_probe_targets_not_authorized"}
+    ]
+  },
+  "mandatory_inert_faults": ["audit_failure_before_send", "audit_failure_after_possible_send_reports_uncertain", "audit_failure_before_each_destination_release", "partial_write_no_retry", "truncated_duplicate_invalid_UTF8_oversize_or_unknown_frames", "cancel_before_send_and_after_send", "client_recreation_does_not_bypass_transport", "SDK_and_Hermes_retry_limits", "proxy_redirect_header_or_endpoint_injection", "non_allow_constraints_redactions_denied", "process_stop_before_security_cleanup", "worker_child_client_closure_and_failed_close"],
+  "terminal_fault_rule": "fresh_service_and_audit_instance_per_terminal_fault_never_reopen_poisoned_sink",
+  "m2": {
+    "status": "unbound_not_ready_for_packaging",
+    "real_inference": true,
+    "effective_dispatch_limit": 1,
+    "provider": null,
+    "model": null,
+    "endpoint": null,
+    "credential_backend_reference": null,
+    "spend_ceiling": null,
+    "required_approvals": ["exact_route_model_and_wire_contract", "product_secret_handling", "exact_synthetic_payload_disclosure_and_retention", "spend_and_call_budget", "timeout_feasibility", "package_and_exact_artifact_VM_run", "fresh_product_consent"]
+  },
+  "evidence": ["exact_exe_and_payload_hashes", "actual_process_and_token_bindings", "trusted_serialized_request_digest_and_size", "per_client_transport_and_attempt_accounting", "actual_dispatch_and_destination_release_counts", "complete_durable_audit_bindings", "native_Hermes_response_and_final_output_checks", "natural_exit_and_client_closure", "scoped_manual_cleanup_with_profile_gap_disclosed"],
+  "nonclaims": ["real_inference_from_M1", "all_model_routes_qualified", "general_customer_output_validation", "full_containment", "Gate_A_acceptance", "production_activation"]
+}

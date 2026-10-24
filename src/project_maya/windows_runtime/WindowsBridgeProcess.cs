@@ -13,6 +13,10 @@ namespace ProjectMaya.WindowsRuntime
         internal IntPtr BridgeInput;
         internal IntPtr BridgeOutput { get { return readOutput; } }
         internal void StartWorker(string directory, string run, SecurityIdentifier user)
+        { StartWorkerEntry(directory, run, user, "bridge_worker_entry.py"); }
+        internal void StartModelWorker(string directory, string run, SecurityIdentifier user)
+        { StartWorkerEntry(directory, run, user, "model_worker_entry.py"); }
+        void StartWorkerEntry(string directory, string run, SecurityIdentifier user, string entryName)
         {
             job = CreateJobObject(IntPtr.Zero, null); Native.Require(job != IntPtr.Zero, "bridge_worker_job");
             var limits = new JobLimits { basic = new BasicLimits { flags = 0x2000 | 8, activeProcessLimit = 1 } };
@@ -36,7 +40,7 @@ namespace ProjectMaya.WindowsRuntime
                 Marshal.WriteIntPtr(inherited, inputRead); Marshal.WriteIntPtr(inherited, IntPtr.Size, outputWrite); Marshal.WriteIntPtr(inherited, 2 * IntPtr.Size, errorWrite);
                 Attribute(attributes, 0x20002, inherited, 3 * IntPtr.Size);
                 string runtime = Path.Combine(directory, "runtime"), host = Path.Combine(directory, "host");
-                string python = Path.Combine(runtime, "python", "python.exe"), entry = Path.Combine(runtime, "bridge_worker_entry.py");
+                string python = Path.Combine(runtime, "python", "python.exe"), entry = Path.Combine(runtime, entryName);
                 string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
                 string env = "HERMES_DISABLE_LAZY_INSTALLS=1\0HERMES_HOME=" + host + "\0LOCALAPPDATA=" + host +
                     "\0PATH=" + Path.Combine(runtime, "python") + ";" + Environment.SystemDirectory + "\0SYSTEMROOT=" + windows +

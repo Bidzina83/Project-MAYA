@@ -1,5 +1,59 @@
 # Maya Development And Test Sequence
 
+## M1 Package Preparation (2026-10-24)
+
+The user approved M01-only staging and offline package preparation. See
+maya_model_bridge_m1_package.md. Next gates are exact artifact/hash review,
+separate VM-run approval and fresh product consent, followed by result analysis
+and scoped independent cleanup checks. No native launch or real inference is
+authorized by assembly; M02-M09 and M2 remain pending.
+
+## M1 Native Source Candidate (2026-10-24)
+
+Guarded native entries, host-owned exact request bytes, offline worker, Windows
+coordinator/UI publication and independent audit admission are now source-ready
+and inert-checked. See maya_model_bridge_m1_native_review.md. Proposed first run
+is one M01 positive compatibility test, not the full boundary matrix; M02-M09,
+native faults and full containment remain pending. Review this first-run staging
+before package assembly. No payload/archive or approved native invocation exists;
+real inference, M2 permissions, Gate A and production remain blocked.
+
+## M1 Source Milestone (2026-10-24)
+
+The private non-streaming correction was subsequently approved. Offline model
+admission and the pipe SDK/client-factory adapter now have 42 new inert checks;
+174 Python regression cases pass. See maya_model_bridge_v1_progress.md for scope
+and remaining native-integration/package gates. No runnable M1 package, native
+Hermes conversation, inference or containment qualification is claimed. The
+earlier integration hold is resolved only for that approved source dependency.
+
+## M1 Compatibility Gate (2026-10-24)
+
+Offline continuation was approved, but pinned-source review found a proposal
+mismatch before implementation: native Hermes prefers streaming without callbacks.
+The approved factory-only subclass does not select the required non-streaming
+path. See maya_model_bridge_v1_integration_review.md for the proposed additional
+private class flag and parent-factory delegation. Await this narrow scope decision;
+no runtime code, package, native launch, network grant or inference was performed.
+
+## Current Continuation (2026-10-24)
+
+Document 2's bounded native bridge result and scoped manual cleanup are recorded
+in maya_authorization_bridge_document_2_outcome.md. Ten cases passed: two reads,
+one release and 21 verified audit events, both processes natural exit 0. Profile
+removal remains product-reported; no full containment/cleanup qualification.
+The historical A3 assessment below is superseded for bounded document mediation,
+not for broader lifecycle/adversarial acceptance.
+
+The user approved document-only A4 design/test preparation, now in
+maya_model_bridge_v1_design.md and maya_model_bridge_v1_tests.json. Proposed M1
+uses real pinned Hermes/SDK with private pipes and explicit synthetic provider
+wire replies, not inference. Proposed M2 needs separate exact provider/model,
+credential, disclosure, spend, artifact and execution approvals. A proposed
+versioned private client-factory override needs review before implementation;
+replacing only the primary SDK client is insufficient. No code/package/native
+run or model call is authorized by this continuation. All child denies remain.
+
 ## Status
 
 2026-10-22: continuation of the approved A-E order in
@@ -36,8 +90,8 @@ No further VM command or rerun is required by this record.
 | --- | --- | --- |
 | A1 Runtime compatibility | Real protected Python and pinned Hermes import, construction, closure and bounded native storage | Demonstrated for the individual frozen startup/import/construction/SQLite/memory fixtures; not all Hermes workloads |
 | A2 Boundary screen | Effect-level allowed/denied controls with declared limitations | Screen 11 synthetic observations reported; ordinary AppContainer shared access and broader isolation coverage remain open |
-| A3 Product authorization bridge | Restricted Hermes requests one host-owned protected operation through existing authorization, authenticated request lifetime and required audit; corresponding denied cases have no effect | Next integration assessment; no product bridge qualified |
-| A4 Effective model mediation | Real Hermes model request through trusted authorization/transport and validated delivery; direct SDK, auxiliary, fallback and alternate-route denial controls | Pending A3 and exact model/protocol/transport scope |
+| A3 Product authorization bridge | Restricted Hermes requests one host-owned protected operation through existing authorization, authenticated request lifetime and required audit; corresponding denied cases have no effect | Document 2 bounded document slice passed; broader security/lifecycle qualification remains open |
+| A4 Effective model mediation | Real Hermes model request through trusted authorization/transport and validated delivery; direct SDK, auxiliary, fallback and alternate-route denial controls | Document-only M1/M2 proposal prepared; factory integration and exact native schedule need review; no execution approval |
 | A5 Feasibility closure | Resolve coverage register, lifecycle/failure gaps and trust assumptions; qualify allowed operations and required bypass denials | Gate A remains open; earlier successes cannot substitute |
 | B Minimal protected path | Authenticated input, governed SMB retrieval, real Hermes inference and validated response, with revoked identity/cancellation/policy/service/audit failure controls | Pending Gate A acceptance; no claim of protected end-to-end product readiness |
 | C Useful operations | Named ingestion/search/conversion, authoritative business-memory changes, embeddings, analytics and selected governed connectors | Pending protected core; define each operation's identity, targets and outcomes before implementation |

@@ -1,0 +1,1 @@
+{"model":{"context_length":131072},"context":{"engine":"compressor"},"compression":{"enabled":false},"agent":{"environment_probe":false,"api_max_retries":1},"tools":{"tool_search":{"enabled":"off"}},"timezone":"UTC"}

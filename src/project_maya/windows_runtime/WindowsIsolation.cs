@@ -400,7 +400,9 @@ namespace ProjectMaya.WindowsRuntime
                 Attribute(attributes, 0x20002, inherited, 3 * IntPtr.Size);
                 string runtime = Path.Combine(directory, "runtime"), state = Path.Combine(directory, "state");
                 string python = Path.Combine(runtime, "python", "python.exe"), check = Path.Combine(runtime, "containment_check.py");
-#if HERMES_BRIDGE
+#if HERMES_MODEL
+                check = Path.Combine(runtime, "model_child_entry.py");
+#elif HERMES_BRIDGE
                 check = Path.Combine(runtime, "bridge_child_entry.py");
 #elif HERMES_MEMORY
                 check = Path.Combine(runtime, "hermes_memory_check.py");

@@ -1,5 +1,79 @@
 # Project Maya Product Specification
 
+## Offline M1 Package Preparation Approval (2026-10-24)
+
+The user approved M01-only first-positive staging and separate offline package
+assembly. See docs/architecture/maya_model_bridge_m1_package.md. Preserve every
+Document 2 payload member and frozen artifact; no new dependency or grant.
+Compilation, archive/resource verification and inert checks are preparation only.
+Obtain separate matching-artifact VM-run approval and fresh product consent.
+M02-M09, M2, real inference, containment, Gate A and production remain unapproved
+or unqualified. No product execution, automatic recovery or retry is authorized.
+
+## Offline M1 Native Source Candidate (2026-10-24)
+
+Approved continuation now includes the host-owned native request oracle, guarded
+real-Hermes child entry, trusted offline worker, HERMES_MODEL Windows integration,
+protected host files, bounded UI publication and independent six-event C# audit
+admission. See docs/architecture/maya_model_bridge_m1_native_review.md and progress.
+197 Python tests/221 subtests pass; prior C# components pass 711 checks, document
+bridge 154, model profile 178 (paired legacy-model-path rejection run 175 overlaps).
+Only inert fixture mains/non-execution guards ran: no native product, Hermes,
+bundled SDK, security provisioning, network/inference or VM execution.
+The proposed first native schedule is M01 positive compatibility only; M02-M09
+remain required pending coverage. Review that staging/impact before package
+assembly; no product payload/EXE/ZIP is frozen or ready to run. Exact artifact
+and separate VM-run approval/fresh consent remain required. Preserve all frozen
+artifacts, child restrictions/deadlines and disabled recovery. Profile deletion,
+full containment, Gate A and production remain unqualified; M2 is unapproved.
+
+## Offline M1 Source Implementation (2026-10-24)
+
+The user approved the additional private non-streaming class flag and continuation.
+The offline model state machine and pinned, parent-delegating per-client pipe
+factory/transport are implemented; 42 new inert cases and the 174-case regression
+suite pass. See docs/architecture/maya_model_bridge_v1_progress.md. No Hermes,
+bundled SDK, security setup, product process, network or native VM execution ran.
+Windows worker/coordinator integration, exact host-owned native request bytes,
+audit admission and native schedule remain package gates. No runnable M1 package
+exists. Do not treat synthetic dispatch as inference, prepared output as delivered,
+or fixture factory behavior as native compatibility. Preserve frozen packages and
+all child restrictions. M2 route/credentials/disclosure/spend and native execution
+remain separately gated; Gate A and all qualification flags remain unchanged.
+
+## M1 Integration Review Hold (2026-10-24)
+
+The user approved offline model-bridge continuation. Mandatory pinned-source
+review found real Hermes prefers streaming without callbacks, conflicting with
+the factory-only/non-streaming proposal. See
+docs/architecture/maya_model_bridge_v1_integration_review.md. Before implementation,
+obtain approval for the additional private class-level _disable_streaming contract;
+preserve native factory validation/lifecycle by delegating with a new pipe HTTP
+client in copied kwargs. No streaming expansion, deliberate fallback attempt,
+live monkeypatch, Mock/runtime substitution or wheel change is authorized.
+No code/package/native run or inference occurred. All prior boundaries remain;
+M2 credentials/disclosure/spending and VM execution require separate approval.
+
+## Document 2 Outcome And A4 Design (2026-10-24)
+
+Document 2's separately approved matching-hash VM attempt
+4ddae15a3c1b4cb2b7c5a56111718464 passed ten document-bridge cases, two reads,
+one release, 21 verified audit events and natural child/worker exit 0. Scoped
+operator cleanup found no matching processes, package-SID ACEs (7,467 entries,
+zero failures) or six filters/sublayer; state and retained host labels/permissions
+matched. Reparse-check attribution assumes the instructed root remained set;
+profile removal remains product-reported. See
+docs/architecture/maya_authorization_bridge_document_2_outcome.md.
+The run allowance is consumed; full containment/cleanup and Gate A remain open.
+The user approved recording this evidence and document-only A4 model-bridge
+design/test preparation. See docs/architecture/maya_model_bridge_v1_design.md
+and maya_model_bridge_v1_tests.json in that directory. Reuse private pipes and
+the existing gateway, preserve all child restrictions and frozen artifacts.
+The proposed private Hermes client-factory integration requires review; M1 is
+offline synthetic wire evidence, not inference; M2 needs exact route, secret,
+disclosure, budget and run approvals. No implementation, package, dependency,
+credential access, model call, native run or qualification follows this design.
+
 ## Authorization Bridge Document 2 Preparation
 
 Document 1 attempt 3e7ecf7926ae44a290741c01107808e5 matched its frozen EXE
