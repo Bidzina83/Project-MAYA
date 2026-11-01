@@ -1,0 +1,153 @@
+{
+  "schema": "maya.model.m05b.review.v1",
+  "recorded_date": "2026-11-01",
+  "status": "offline_assembly_approved_native_run_not_approved",
+  "case": "M05b",
+  "proposed_version": "0.2.1-offline-recreate.1",
+  "source_preparation_approved": true,
+  "assembly_approved": true,
+  "native_run_approved": false,
+  "new_grant": false,
+  "new_adapter": false,
+  "dependencies_changed": false,
+  "proposed_lifecycle": "owner_thread_after_original_native_close_before_hook_return",
+  "original_close_delegations": 1,
+  "distinct_new_sdk_http_transport": true,
+  "same_consumed_adapter": true,
+  "rebind_allowed": false,
+  "request_bytes_and_headers_unchanged": true,
+  "total_transport_attempts": 2,
+  "adapter_requests": 1,
+  "completed_exchanges": 1,
+  "budget_rejections": 1,
+  "first_effects": {
+    "gateway_calls": 2,
+    "dispatches": 1,
+    "runtime_writes": 1,
+    "operator_publications": 0
+  },
+  "additional_effects": {
+    "pipe_requests": 0,
+    "gateway_calls": 0,
+    "dispatches": 0,
+    "runtime_writes": 0,
+    "operator_publications": 0
+  },
+  "exact_audit_records": [
+    "egress_intent",
+    "dispatch_outcome",
+    "runtime_release_intent",
+    "runtime_delivery"
+  ],
+  "schema_freeze_required_before_assembly": false,
+  "omissions_approved": true,
+  "real_inference": false,
+  "production_qualified": false,
+  "containment_qualified": false,
+  "independent_cleanup_verified": false,
+  "scope": "offline-hermes-recreated-client-budget-v1",
+  "profile": "HERMES_MODEL_RECREATE",
+  "source_review": "maya_model_bridge_m05b_source_review.md",
+  "child_schema": "maya.offline.model.recreate.child.v1",
+  "child_key_count": 16,
+  "client_objects": {
+    "type": "integer",
+    "minimum": 3,
+    "maximum": 8
+  },
+  "probe": {
+    "case": "M05b",
+    "boundary": "adapter_consumed_budget",
+    "transport_attempts": 2,
+    "model_requests": 1,
+    "completed_exchanges": 1,
+    "budget_rejections": 1,
+    "distinct_new_clients": true,
+    "same_consumed_adapter": true,
+    "request_sha256": "actual_original_request",
+    "request_bytes": "actual_integer_length"
+  },
+  "lifecycle": {
+    "schema": "maya.model.recreate.lifecycle.v1",
+    "stage": "complete",
+    "failure_stage": "",
+    "armed": true,
+    "hook_calls": 1,
+    "close_delegations": 1,
+    "owner_thread_verified": true,
+    "used_client_verified": true,
+    "native_close_verified": true,
+    "probe_after_native_close": true,
+    "new_clients_distinct": true,
+    "same_adapter_verified": true,
+    "new_client_close_verified": true
+  },
+  "protocol": {
+    "probe": [
+      "v",
+      "type=model_adapter_probe",
+      "attempt",
+      "request_id"
+    ],
+    "finish": [
+      "v",
+      "type=model_adapter_finish",
+      "attempt",
+      "request_id",
+      "delivery_command_id"
+    ],
+    "complete": [
+      "v",
+      "type=model_adapter_complete",
+      "attempt",
+      "request_id",
+      "effects"
+    ],
+    "order": [
+      "runtime_ack",
+      "old_native_close",
+      "probe_control",
+      "factory_recreation",
+      "original_guard_rejection",
+      "new_client_close",
+      "positive_conversation_return",
+      "normal_shutdown",
+      "child_EOF_exit0",
+      "worker_finish_complete_EOF_exit0",
+      "exact_four_record_audit"
+    ]
+  },
+  "inert_evidence": {
+    "focused_python_tests": 359,
+    "python_subtests": 1303,
+    "m05b_python_tests": 20,
+    "m05b_python_subtests": 130,
+    "active_csharp_assertions": 355,
+    "paired_profiles": 11,
+    "paired_assertions_each": 346,
+    "invalid_compile_profiles": 15,
+    "reader_assertions": 163,
+    "reader_cases": 13,
+    "native_execution": false
+  },
+  "future_payload_plan": {
+    "assembly_approved": true,
+    "replacements": [
+      "model-contract.json",
+      "model_child_entry.py",
+      "model_validation_worker_entry.py",
+      "project_maya/bridge/model_worker.py",
+      "project_maya/hermes_plugins/model_bridge.py"
+    ],
+    "additions": [
+      "model_recreate_child_entry.py",
+      "model_recreate_worker_entry.py",
+      "project_maya/hermes_plugins/model_recreate.py"
+    ],
+    "preserve_canonical_model_budget": true,
+    "approved_omissions": [
+      "model_budget_child_entry.py",
+      "model_budget_worker_entry.py"
+    ]
+  }
+}

@@ -31,6 +31,22 @@ class ModelDenied(PermissionError):
         super().__init__("model_bridge.uncertain" if uncertain else "model_bridge.denied")
 
 
+class RequestModelDenied(ModelDenied):
+    """Only a structurally valid request with a non-allowlisted model."""
+
+
+class RequestRouteDenied(ModelDenied):
+    """Only a wrong route after the other envelope bindings are checked."""
+
+
+class RequestBodyDenied(ModelDenied):
+    """Valid request syntax/model, but bytes differ from the host oracle."""
+
+
+class RequestAttemptDenied(ModelDenied):
+    """Untrusted attempt mismatch; the actual host identity never changes."""
+
+
 def digest(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
@@ -40,7 +56,7 @@ def checked_request(raw: bytes) -> dict:
         raise ModelDenied()
     body = decode(raw)
     if (set(body) != {"model", "messages", "max_tokens", "stream"}
-            or body["model"] != MODEL or body["stream"] is not False
+            or body["stream"] is not False
             or type(body["max_tokens"]) is not int or not 1 <= body["max_tokens"] <= 32
             or type(body["messages"]) is not list or not 1 <= len(body["messages"]) <= 4):
         raise ModelDenied()
@@ -49,6 +65,8 @@ def checked_request(raw: bytes) -> dict:
                 or item["role"] not in ("system", "user") or type(item["content"]) is not str
                 or not item["content"] or len(item["content"].encode("utf-8")) > 4096):
             raise ModelDenied()
+    if body["model"] != MODEL:
+        raise RequestModelDenied()
     return body
 
 
@@ -106,6 +124,14 @@ class OfflineModelBridge:
         self.dispatch_attempted = False
         self.prepared_runtime_releases = self.confirmed_runtime_releases = 0
         self.prepared_operator_releases = self.confirmed_operator_releases = 0
+        self.request_validated = False
+        self.request_shape_validated = False
+        self.egress_gateway_denied = False
+        self.envelope_validated = False
+        self.envelope_identity_validated = False
+        self.envelope_attempt_context_validated = False
+        self.validation_stage = ""
+        self.gateway_calls = 0
 
     @property
     def dispatches(self) -> int:
@@ -141,10 +167,16 @@ class OfflineModelBridge:
             self._revoked = self._closed = True
 
     def _authorize(self, capability: str, destination: str) -> None:
+        self.gateway_calls += 1
         result = self._gateway.authorize(ActionRequest(
             actor_id="windows:" + self.binding.operator_sid, capability=capability,
             target=TARGET, operation="infer" if capability == "model.egress" else "disclose",
             data_classification="internal-synthetic", metadata=self._metadata(destination)))
+        if (capability == "model.egress" and isinstance(result, AuthorizationResult)
+                and result.decision is GovernanceDecision.DENY
+                and result.reason_code == "governance.no_matching_rule"
+                and not result.constraints and not result.redactions):
+            self.egress_gateway_denied = True
         if (not isinstance(result, AuthorizationResult) or result.decision is not GovernanceDecision.ALLOW
                 or result.constraints or result.redactions):
             raise ModelDenied(self.dispatch_attempted)
@@ -188,19 +220,28 @@ class OfflineModelBridge:
                 if (type(message) is not dict or set(message) !=
                         {"v", "type", "attempt", "route", "lease", "seq", "method", "path", "body"}
                         or type(message["v"]) is not int or message["v"] != 1
-                        or message["type"] != "model_request" or message["attempt"] != self.binding.attempt
-                        or message["route"] != ROUTE or type(message["seq"]) is not int or message["seq"] != 1
+                        or message["type"] != "model_request"
+                        or type(message["seq"]) is not int or message["seq"] != 1
                         or message["method"] != "POST" or message["path"] != PATH
                         or type(channel_id) is not str or not hmac.compare_digest(channel_id, self.binding.channel_id)
                         or type(message["lease"]) is not str or not re.fullmatch(r"[0-9a-f]{64}", message["lease"])
                         or not hmac.compare_digest(message["lease"], self._token or "")
                         or type(message["body"]) is not str):
                     raise ModelDenied()
+                if message["attempt"] != self.binding.attempt:
+                    self.envelope_attempt_context_validated = message["route"] == ROUTE
+                    raise RequestAttemptDenied()
+                self.envelope_identity_validated = True
+                if message["route"] != ROUTE:
+                    raise RequestRouteDenied()
                 raw = message["body"].encode("utf-8", errors="strict")
+                self.envelope_validated = True
                 checked_request(raw)
+                self.request_shape_validated = True
                 if not hmac.compare_digest(raw, self._expected):
-                    raise ModelDenied()
+                    raise RequestBodyDenied()
                 self._phase = "admitted"
+                self.request_validated = True
             self._authorize("model.egress", "provider")
             self._event("egress_intent", "provider")
             with self._lock:
@@ -227,6 +268,18 @@ class OfflineModelBridge:
                 self._phase = "runtime_prepared"
                 self.prepared_runtime_releases = 1
                 return reply
+        except RequestBodyDenied:
+            self.validation_stage = "request_body"
+            self._fail()
+        except RequestAttemptDenied:
+            self.validation_stage = "request_attempt"
+            self._fail()
+        except RequestRouteDenied:
+            self.validation_stage = "request_route"
+            self._fail()
+        except RequestModelDenied:
+            self.validation_stage = "request_model"
+            self._fail()
         except Exception:
             self._fail()
 

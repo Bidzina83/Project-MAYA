@@ -17,7 +17,9 @@ namespace ProjectMaya.WindowsRuntime
             Directory.CreateDirectory(host,BridgeHostFiles.DirectoryAcl(user));Native.SetLabel(host,false);
             BridgeHostFiles.Verify(Directory.GetAccessControl(host),user,true);
             var rules=new[] {
+#if !HERMES_MODEL_DENY
                 new Dictionary<string,object>{{"capability","model.egress"},{"target","model:maya-offline-fixture"},{"operation","infer"},{"actor_id","windows:"+user.Value}},
+#endif
                 new Dictionary<string,object>{{"capability","model.output"},{"target","model:maya-offline-fixture"},{"operation","disclose"},{"actor_id","windows:"+user.Value}}
             };
             var json=new JavaScriptSerializer();

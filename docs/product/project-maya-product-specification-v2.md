@@ -1,5 +1,622 @@
 # Project Maya Product Specification
 
+## M05b Offline Assembly Approval (2026-11-01)
+
+User approved separate offline assembly INCLUDING only omission of
+model_budget_child_entry.py/model_budget_worker_entry.py from NEW M05b payload.
+See docs/architecture/maya_model_bridge_m05b_package.md. Preserve frozen Budget3/
+predecessors and canonical model_budget.py/helpers. Five replacements/three
+additions/two omissions;6782-member actual-profile/resource/freeze checks required.
+Compilation/inert checks only, not product/native/bundled-runtime or VM execution.
+No security/grant/dependency/deadline change, inference, retry/recovery or later case.
+Separate exact-artifact one-run approval/fresh consent remain required.
+Final identities go in maya_offline_model_recreate_1_build_record.md after seal.
+All qualification flags remain false/Gate A open.
+
+## M05b Source Preparation (2026-11-01)
+
+User approved M05b-only product source preparation/inert tests. Candidate
+0.2.1-offline-recreate.1/file0.2.1.14 implements separate owner-thread
+post-native-close factory recreation with distinct new triple and SAME consumed
+adapter. Original M05a helper/guard/service/audit remain unchanged.
+See docs/architecture/maya_model_bridge_m05b_source_review.md and tests JSON.
+359 Python tests/1303 subtests;355 active C# assertions/11 paired346 each and
+15 invalid profile compile guards pass, with earlier profile/shared regressions.
+No product/native/bundled-runtime/VM/security execution or package occurred.
+Future assembly approval MUST explicitly include only two inactive M05a root
+omissions from NEW payload: model_budget_child_entry.py/model_budget_worker_entry.py.
+Keep canonical model_budget.py and all predecessors; do not widen admission.
+Full actual-payload/freeze checks and separate artifact one-run approval/fresh
+consent remain gated. No new grant/dependency/TTL/deadline, recovery, inference,
+M06-M09/M2 or qualification. Native M05b compatibility unverified/Gate A open.
+
+## Budget3 Outcome And M05b Review (2026-11-01)
+
+Budget3 attempt8131568a06b64fdba0791873d2917425 matched frozen EXE and
+reported genuine first exchange plus same-used-client budget rejection, first
+gateway2/effects(1,1,0), no additional pipe/effects/publication, four verified audit
+records and natural child/worker exit0. Scoped operator cleanup passed as reported:
+no processes/links/SID ACEs (7491 entries/zero failures), matching labels and seven
+WFP IDs absent after export0. See maya_offline_model_budget_3_outcome.md.
+Profile removal product-reported; original false flags/status preserved.
+Successful startup does not prove Budget2 root cause. Run allowance consumed.
+User approved M05b REVIEW only; see maya_model_bridge_m05b_review.md and tests JSON.
+Propose separate owner-thread post-native-close recreation/probe using the original
+factory and same consumed adapter, distinct new SDK/HTTP/transport, no rebind.
+Existing M05a hook/observer cannot be reused unchanged. No implementation/package/
+native run, omission, dependency/grant/deadline/security change or qualification.
+Obtain M05b-only source preparation approval next; preserve frozen predecessors.
+
+## Budget3 Offline Assembly Approval (2026-11-01)
+
+User separately approved offline assembly of reader-corrected Budget3.
+See docs/architecture/maya_channel_reader_package.md. Only model-contract.json
+changes in payload; no additions/omissions. Launcher changes are BridgeChannel.cs,
+ModelBridgeRuntime.cs and ProtectedPython.cs. Preserve frozen predecessors and
+all runtime/dependency/security/grant/audit/deadline boundaries.
+Compile and inert archive/resource/profile checks only; no product/native/VM run.
+Separate exact-artifact one-run approval and fresh consent remain mandatory.
+No root-cause/native-fix claim, inference, recovery or qualification.
+Final identity belongs in maya_offline_model_budget_3_build_record.md after seal.
+
+## Channel Reader Source Correction (2026-11-01)
+
+Approved source-only correction is prepared, not packaged or VM-tested. See
+ docs/architecture/maya_channel_reader_source_review.md and its tests JSON.
+Budget3 candidate0.2.1-offline-budget.3 preserves all deadlines/security/grants.
+163 inert assertions/13 cases pass; actual VM cause/correction remains unproven.
+Separate assembly and exact-artifact run approvals/fresh consent remain required.
+All predecessors/false flags preserved; M05a native-unqualified/Gate A open.
+
+## Channel Scheduling Inert Reproduction (2026-11-01)
+
+User approved LOCAL inert-only reproduction, now complete. See
+ docs/architecture/maya_channel_scheduling_inert_result.md. Separate fixture Main
+compiled30 pinned frozen Budget2 C# sources;38 assertions/nine cases pass.
+Complete79-byte frame/default scheduler accepted; deliberately held nested reader
+caused incomplete-frame timeout with78 bytes still present/no tail read. Real
+partial-header/payload cases yield SAME category. Reader/tasks/private workers
+released/drained; limits5000/1000 unchanged. Private scheduler fixture is NOT
+proof of actual VM scheduler/starvation/root cause. All140 current product
+source hashes and Budget2 deliverable pins match frozen manifest; no product
+source/VM/security/dependency/deadline change or product/bundled-runtime run.
+Recommend separate SOURCE-ONLY scheduling/progress correction approval, preserving
+all budgets, terminal failure, pending-reader ownership/joins, audit/authorization
+and case boundaries. No fix, package or VM retry authorized by this experiment.
+All predecessors/false flags preserved, M05a native-unqualified/Gate A open.
+
+## Budget2 Startup Review Hold (2026-11-01)
+
+Budget2 attempt60f8459ed44142c4818ac5bf96255a67 matched frozen EXE but blocked
+before worker readiness; child never resumed. request.json2617/audit.jsonl0
+are lengths only, not admitted request/flush/ready proof. Scoped cleanup passed
+as reported: no processes/links/SID ACEs (7477 entries, zero failures), matching
+labels/seven WFP IDs absent after export0. Profile deletion product-reported;
+blank UI unconfirmed/all false flags unchanged. See
+ docs/architecture/maya_offline_model_budget_2_outcome.md.
+User approved read-only source REVIEW; see
+ docs/architecture/maya_model_bridge_budget2_startup_review.md. Channel category
+proves first stdout byte observed, but nested task's1000-ms wait includes
+scheduling/I/O/parse; producer truncation or ThreadPool starvation NOT established.
+Exception-only startup diagnostics do not identify a live stall. Recommend
+separate local INERT fixture approval to compare full-frame scheduling delay
+with true partial-frame cases at UNCHANGED limits, before choosing any fix.
+No product/test source edit, compile, package, VM run, grant/dependency/deadline
+change, retry/recovery, M05b/inference or qualification authorized by review.
+Preserve all frozen packages/source copies; corrected lifecycle remains native-
+untested, Gate A open.
+
+## M05a Budget2 Package Preparation Approval (2026-11-01)
+
+User approved separate Budget2 offline assembly after lifecycle source review.
+See docs/architecture/maya_model_bridge_m05a_lifecycle_package.md. Only four
+payload replacements (contract/child/model_bridge/model_budget), NO additions
+or omissions; only ModelBudgetAdmission.cs/ProtectedPython.cs launcher changes.
+Preserve Budget1/all prior artifacts/source freezes. Compile/inert full-profile
+inventory/resource/archive/freeze checks only; no product/bundled runtime or
+VM/security execution. Preserve original close/guard, same-used owner-thread
+probe, v2 untrusted diagnostics and exact FOUR-record/gateway2/effects(1,1,0)
+with zero added effects/publication. No dependency/grant/TTL/deadline change,
+M05b/later case, inference, retry/recovery or qualification. Native scheduling
+unverified. Matching guest artifact plus separate one-run approval/fresh consent
+remain mandatory. Gate A/all false flags unchanged.
+
+## M05a Lifecycle Source Correction (2026-11-01)
+
+User approved M05a-only source correction and lifecycle tests. Candidate
+0.2.1-offline-budget.2 moves the fixed probe into the request owning-thread
+pre-native-close hook, always delegates original close, never reopens/replaces
+clients or changes the budget guard. Arm before conversation; consume existing
+trusted control in hook; require genuine positive conversation/closure afterward.
+Bounded v2 child lifecycle diagnostics remain untrusted; independent FOUR-record
+ledger/no-extra-pipe/effect admission is unchanged. See
+ docs/architecture/maya_model_bridge_m05a_lifecycle_source_review.md and
+maya_model_bridge_m05a_lifecycle_tests.json. 339 focused Python tests/1173 subtests,
+219 active C# budget assertions/ten paired214 each, ten compile exclusions and
+prior replay409/nine paired400 pass. Pinned-helper byte/AST checks and native-
+shaped INERT close/abort/owner/failure tests do not qualify native scheduling.
+Budget1 ZIP/EXE and272 frozen sources preserved. No successor package/product/
+bundled runtime/native run/security change. Review before separate Budget2
+assembly approval (four proposed payload replacements, NO additions/omissions),
+then full actual-profile/freeze checks and matching-artifact one-run approval/
+fresh consent. Worker/service/audits/config/grants/TTL/deadlines/dependencies stay
+unchanged. No M05b/later case, inference, retry/recovery or qualification;
+Gate A/all false flags unchanged.
+
+## M05a Blocked Outcome And Lifecycle Review (2026-11-01)
+
+Budget1 attempt903761cb996541fc8b9dc9acc077daa7 matched its frozen EXE but
+blocked at adapter_probe. First dispatch/runtime write1 and native-positive
+child testimony exist; retained audit query returned four event NAMES only,
+not full audit admission. Scoped cleanup passed as reported: no processes/links/
+SID ACEs (7491 entries, zero failures), expected labels, seven WFP IDs absent
+following export0. Profile deletion product-reported; blank UI unconfirmed;
+all false flags unchanged. See docs/architecture/maya_offline_model_budget_1_outcome.md.
+User approved focused SOURCE REVIEW only. See
+ docs/architecture/maya_model_bridge_m05a_lifecycle_review.md.
+Pinned Hermes normally closes its request-scoped client before conversation
+returns; current probe runs afterward and requires that SAME used client open.
+Inert close-then-probe reproduction raises ProtocolError before budget guard
+(rejections0), with no extra pipe bytes. Source scheduling defect established;
+exact guest subcheck remains unobserved. Recommend M05a-only source approval for
+an owning-thread pre-native-close probe hook with unconditional original close,
+no reopen/replacement, exact four-record/effects preservation and lifecycle-
+composed regressions/bounded diagnostics. NO implementation, package, new native
+run, dependency/grant/deadline change, retry/recovery, M05b/inference/qualification
+is authorized by review. Preserve Budget1/all frozen predecessors; Gate A open.
+
+## M05a Package Preparation Approval (2026-11-01)
+
+User approved separate M05a offline assembly INCLUDING ONLY omission of
+model_replay_child_entry.py and model_replay_worker_entry.py from NEW successor.
+Preserve Replay1/all predecessors/canonical helper/shared support and pins. See
+docs/architecture/maya_model_bridge_m05a_package.md. Preparation permits compile,
+inert archive/resource/profile/full-inventory/freeze checks, not product/native
+or VM/security execution. Preserve original same-used-client budget guard,
+first gateway2/effects(1,1,0), genuine positive conversation, exact four-record
+audit and zero additional pipe/effects/publication. No dependency/grant/TTL/
+deadline change, M05b/later case, inference, retry/recovery or qualification.
+Source/native compatibility remains unproven. Separate matching-artifact one-run
+VM approval and fresh product consent remain mandatory; Gate A/all false flags
+unchanged.
+
+## M05a Source Preparation (2026-11-01)
+
+User approved M05a-only source preparation including bounded diagnostic reporting.
+Candidate0.2.1-offline-budget.1 implements same-ACTUALLY-used open-client second
+transport request after a genuine positive conversation. Original budget predicate,
+grant consumption and transport validation remain; case-bound observation is
+untrusted child evidence. Host independently requires no extra request/effect,
+natural exits and exact FOUR positive audit records, preserving gateway2 and
+effects(1,1,0). See docs/architecture/maya_model_bridge_m05a_source_review.md and
+maya_model_bridge_m05_tests.json. 324 focused Python tests/1163 subtests,197 active
+C# budget checks/ten paired192 each and ten compile exclusions pass; prior replay
+409/nine paired400 pass. Broad collection is incomplete (missing jsonschema in
+unrelated plugins); one stale-date replay TEST fixture corrected relative to its
+records, with frozen copies intact. No product/bundled runtime or native security
+execution, dependency change or package assembly. Future assembly approval must
+explicitly include two inactive REPLAY root omissions from NEW successor only;
+keep canonical helper/shared support and every frozen predecessor. Review source
+before that gate, then actual full payload admission/freeze, matching-artifact
+one-run VM approval and fresh consent. No M05b/later case, new grant/deadline,
+inference, recovery or qualification. Gate A/all false flags unchanged.
+
+## M04c Outcome And M05 Review (2026-11-01)
+
+Replay 1 attempt23eb71c0636944289bf515fcd5c6d69e matched its frozen EXE,
+retained gateway2/effects(1,1,0), rejected consumed replay at1417ms before
+TTL2000ms, verified five audit events and normal exits. Scoped manual cleanup
+found no processes/links/SID ACEs (7489 entries, zero failures), expected labels
+and seven WFP IDs absent after export0. See
+docs/architecture/maya_offline_model_replay_1_outcome.md. Profile deletion remains
+product-reported; blank UI unconfirmed; original false flags stay unchanged.
+User approved M05 source/test-contract REVIEW only. See
+docs/architecture/maya_model_bridge_m05_review.md and maya_model_bridge_m05_tests.json.
+Recommend M05a-only source preparation next; M05b recreation is a separate attempt.
+Both retain first positive effects and require exact four-event audit/no added
+pipe/effects. Local guard observation needs explicit reviewed source approval;
+child testimony is untrusted, not hostile-child bypass proof. No implementation,
+package, run, grant/dependency/deadline change, inference, recovery or qualification.
+Preserve frozen predecessors. Gate A stays open.
+
+## M04c Package Preparation Approval (2026-10-31)
+
+The user approved separate M04c offline assembly INCLUDING ONLY omission of
+model_revoke_child_entry.py and model_revoke_worker_entry.py from NEW successor
+payload. Preserve Revocation 1/all predecessors/canonical helpers and pins.
+See docs/architecture/maya_model_bridge_m04c_package.md. Preparation permits
+compile/inert payload/profile/resource/freeze checks, not Maya/bundled runtime
+execution or VM/security changes. Keep truthful first gateway2/effects(1,1,0),
+genuine positive child, new-ID consumed replay, exact five-record audit and zero
+additional effects/publication. No TTL/deadline/grant/dependency change,
+inference, M05/later case, retry/recovery or qualification. Separate matching-
+artifact one-run VM approval and fresh product consent remain mandatory.
+Native two-second timing remains unverified; Gate A and all false flags unchanged.
+
+## M04c Source Preparation (2026-10-31)
+
+The user approved M04c-only source preparation. Candidate0.2.1-offline-replay.1
+implements new-ID trusted consumed-grant replay after one truthful dispatch/
+runtime delivery, genuine POSITIVE child closure and exact five-record audit.
+See docs/architecture/maya_model_bridge_m04c_source_review.md. Preserve two prior
+gateway calls, one dispatch/delivery, original uncertain=true, true first
+request_validated and zero new effects/operator publication. Original guard must
+reject actual consumed phase while unexpired/unrevoked; generic failure cannot pass.
+Base service/TTL/confirmation, child client/factory and old audit verifiers unchanged.
+375 Python tests/1058 subtests, 409 active C# assertions/nine paired profiles400
+each and nine compile-exclusion controls pass. No product/native/bundled runtime
+run, VM/security changes or payload assembly. Separate assembly approval must
+include two exact inactive Revocation 1 root omissions from NEW successor only.
+Then actual full payload/freeze verification, matching-artifact one-run VM
+approval/fresh consent. No TTL/deadline/grant/dependency change, M05/later case,
+inference, retry/recovery or qualification; native two-second timing unverified.
+
+## M04b Outcome And M04c Review (2026-10-31)
+
+Revocation 1 attempt73614ee1410048d68c4526d2eb0efe0b matched its frozen EXE and
+reported acknowledged revoke at age1ms, original request rejected at1381ms before
+TTL2000ms, two verified audit records, zero gateway/effects and natural exit0.
+Scoped manual checks found no processes/links/SID ACEs (7491 entries, zero
+failures), matching host/state labels and seven WFP IDs absent after export0.
+See docs/architecture/maya_offline_model_revocation_1_outcome.md. Profile removal
+remains product-reported; blank UI unconfirmed. Preserve original false flags.
+The user approved M04c source/test-contract REVIEW only; see
+docs/architecture/maya_model_bridge_m04c_review.md and maya_model_bridge_m04c_tests.json.
+Consumed replay MUST retain first two gateway calls, one synthetic dispatch and
+one confirmed runtime delivery, four-event positive prefix and positive child
+conversation/closure. Propose new-ID trusted coordinator replay of the same
+unexpired/unrevoked consumed grant, then one exact fifth rejection record and
+no additional effects/operator publication. Preserve original denial uncertainty
+flag from prior dispatch; do not fabricate a zero-effect or second-child denial.
+No source/test edits, package, native run, TTL/deadline/grant/dependency change,
+inference, retry/recovery or qualification follows this review. Review before
+M04c-only source preparation approval; all frozen predecessors remain intact.
+
+## M04b Package Preparation Approval (2026-10-31)
+
+The user approved separate M04b offline assembly including ONLY omission of
+model_expiry_child_entry.py and model_expiry_worker_entry.py from the NEW successor
+payload. Preserve Expiry 1 and all prior artifacts/source/canonical helpers.
+See docs/architecture/maya_model_bridge_m04b_package.md. Compile/inert archive,
+full actual-profile inventory and source/dependency/freeze verification are
+preparation only, not product/native execution or VM/security changes.
+Same original 2000-ms grant/request, original revoke/guard, durable ack BEFORE
+model_begin, TWO exact audit records and zero effects required; no expiry wait
+or deadline change. No dependency/grant, M04c/later case, inference, retry/recovery
+or qualification. Separate matching-artifact one-run VM approval/fresh consent
+remain mandatory. Preserve all qualification flags false and Gate A open.
+
+## M04b Source Preparation (2026-10-31)
+
+The user approved M04b-only source preparation including fixed revoke/ack and
+TWO-record audit admission. Candidate 0.2.1-offline-revocation.1 is implemented
+and inert-verified; see docs/architecture/maya_model_bridge_m04b_source_review.md.
+Original revoke/_live/base service and earlier single-record audit remain unchanged.
+Same unexpired grant/request, genuine child guards, exact acknowledgement before
+model_begin, original guard rejection, two exact audit records and zero effects
+required. Expiry/generic failure/audit fault blocks, never passes. 353 Python
+tests/855 subtests, 268 active C# assertions/eight paired profiles259 each and
+eight invalid-profile compile guards pass, with earlier regressions. No product/
+bundled Hermes/SDK/native run/security setup or payload assembly occurred.
+Next assembly approval must include two exact inactive Expiry 1 root omissions
+from the NEW successor only; preserve canonical helpers/dependencies/all frozen
+artifacts. Actual full payload admission, matching-artifact VM approval and fresh
+consent remain gated. No TTL/deadline/grant change, fake native clock, M04c/later
+case, inference, retry/recovery or qualification. Gate A remains open.
+
+## M04a Outcome And M04b Review (2026-10-31)
+
+Expiry 1 attempt a599e5f4ead842048c48b5875865a569 matched its frozen EXE and
+reported exact lease_expired rejection: unchanged request, real 2112-ms pre-begin
+wait, worker age2948ms against TTL2000ms, zero gateway/effects, one verified audit
+and natural child/worker exit0. Scoped readbacks found no processes/links/SID ACEs
+(7490 entries, zero failures), matching host/state labels and seven absent WFP
+identifiers after export0. See docs/architecture/maya_offline_model_expiry_1_outcome.md.
+Profile removal remains product-reported; blank UI not separately confirmed.
+Original qualification flags remain false. No retroactive or further run approval.
+The user approved M04b source/test-contract REVIEW only. See
+docs/architecture/maya_model_bridge_m04b_review.md and maya_model_bridge_m04b_tests.json.
+Propose fixed trusted revoke/ack before model_begin, same still-unexpired grant/
+request, original guard rejection and TWO exact audit records. Generic failure or
+combined expiry cannot pass. Existing worker has no revoke command; future
+implementation must add a bounded exclusive protocol, not bypass child guards.
+No product/test source change, compilation, package, native run, TTL/deadline/grant/
+dependency change, inference, retry/recovery or qualification follows this review.
+Preserve frozen artifacts. Review before M04b-only source preparation approval.
+
+## M04a Package Preparation Approval (2026-10-31)
+
+The user approved separate M04a offline assembly including ONLY omission of
+model_body_child_entry.py and model_body_worker_entry.py from the NEW successor
+payload. Preserve Body 1 and all prior artifacts/source, canonical helpers and
+shared support. See docs/architecture/maya_model_bridge_m04a_package.md.
+Assembly may compile and inspect inert bytes/fixtures, not run Maya, the native
+expiry wait, bundled Hermes/SDK, or change VM/security settings. Verify exact
+five replacements/three additions/two omissions and every actual-profile payload
+member; all runtime/dependency/config bytes remain identical. The unchanged
+2000-ms grant and real pre-begin wait consume existing deadlines. No TTL change,
+new grant/dependency, M04b/c, inference, retry/recovery or qualification.
+Separate matching-artifact one-run VM approval and fresh consent remain required.
+
+## M04a Source Preparation (2026-10-31)
+
+The user approved M04a-only source preparation. Candidate 0.2.1-offline-expiry.1
+uses an unchanged 2000-ms grant and real >=2100-ms pre-begin coordinator wait
+OUTSIDE worker RPC, consuming existing 22/30-second budgets. Exact read-only
+request preflight is not admission. The original liveness guard must reject an
+unused/unrevoked grant; new case-bound expiry/audit evidence requires zero
+gateway/effects and normal closure. No generic timeout/denial is a pass. See
+docs/architecture/maya_model_bridge_m04a_source_review.md and its tests JSON.
+325 Python tests/709 subtests, 225 active C# expiry assertions and paired/prior
+checks pass. Native clock waits, product/Hermes/SDK execution and security setup
+did not run. No package exists. No base liveness/TTL/dependency/grant/deadline
+change, fake native clock, reissue, recovery or M04b/c implementation.
+Future assembly approval must include exactly two inactive Body 1 root omissions
+from the new successor only; keep canonical helpers/shared support and verify
+actual-profile ReadIndex. Preserve frozen artifacts. Review before package/omission
+approval, then matching-artifact one-run VM approval/fresh consent. M04b/c,
+M05-M09/M2/Gate A remain pending; all qualification flags remain false.
+
+## M03d Outcome And M04 Contract Review (2026-10-31)
+
+Body 1 attempt 894749d5a7f04612b6414f60876de7ef matched its frozen EXE,
+rejected the fixed altered body before gateway/effects, verified one audit record
+and natural child/worker exit 0. Scoped operator cleanup found no processes/links/
+package-SID ACEs (7489 entries, zero failures), matching host/state labels and
+seven absent WFP identifiers after export exit 0. See
+docs/architecture/maya_offline_model_body_1_outcome.md for provenance/limits.
+Profile deletion remains product-reported; blank UI not separately confirmed.
+Allowance consumed; all qualification flags remain false. Bounded M03a-d complete
+as reported, not full model-path/containment/Gate A qualification.
+The user approved M04 contract REVIEW only. See
+docs/architecture/maya_model_bridge_m04_review.md and maya_model_bridge_m04_tests.json.
+Split expiry/revocation/consumed-grant replay into M04a/b/c. Recommend M04a-only
+source preparation next: real 2100-ms pre-begin wait outside the unchanged worker
+RPC, original valid request, specific unused/unrevoked expiry evidence, zero
+effects, exact audit and normal closure. Generic denial/timeout is not a pass.
+M04c must retain its first dispatch/runtime delivery and use a new coordinator
+command ID, not weaken child guards or erase prior effects. No implementation,
+package, native run, grant/dependency/deadline change, inference or recovery is
+authorized by this document review. Obtain source approval, then source review,
+assembly approval and exact-artifact one-run VM approval/fresh consent. Preserve
+all frozen artifacts and restrictions; M04b/c/M05-M09/M2/Gate A remain pending.
+
+## M03d Assembly And Omission Approval (2026-10-31)
+
+The user approved M03d offline assembly INCLUDING omitting exactly
+model_attempt_child_entry.py and model_attempt_worker_entry.py from the new
+successor only. See docs/architecture/maya_model_bridge_m03d_package.md.
+Preserve frozen Attempt 1 and all predecessors, canonical modules/shared M03a
+support and every runtime/dependency/config byte. Verify six reviewed replacements,
+three additions, two omissions and actual M03d ReadIndex admission for all members.
+Do not broaden admission, enable inactive modes, change grants/bounds/deadlines or
+execute the product. Compilation/inert/archive checks are preparation only.
+Obtain separate matching-artifact one-run VM approval and fresh consent. No later
+case, retry/recovery, inference, Gate A acceptance or qualification follows.
+
+## M03c Outcome And M03d Source Preparation (2026-10-31)
+
+Attempt 1 eea4c9cf12eb4600a8d89d58bd27b829 matched its frozen EXE, rejected
+the copied wrong attempt ID with unchanged body, zero gateway/effects, one audit
+event and natural child/worker exit 0. Scoped operator cleanup found no processes/
+links/package-SID ACEs (7488 entries, zero failures), matching host/state labels
+and seven absent WFP identifiers after export exit 0. See
+docs/architecture/maya_offline_model_attempt_1_outcome.md for provenance/limits.
+Profile deletion remains product-reported; blank UI not separately confirmed.
+Allowance consumed; false qualification flags unchanged.
+The user approved M03d source preparation. Fixed HERMES_MODEL_BODY changes only
+the final synthetic user-canary hex digit, preserving model/shape and actual
+identity/envelope/grant. Require named exact-body rejection before gateway/effects,
+separate audit/body hashes and normal closure. See
+docs/architecture/maya_model_bridge_m03d_source_review.md and its tests JSON.
+304 Python tests/629 subtests, 136 active C# body assertions and prior regressions
+pass; no product/native execution or package. This is a trusted-coordinator worker
+diagnostic, not hostile-child bypass. Future assembly approval must explicitly
+include omitting the two inactive M03c root bootstraps from the new successor only;
+retain canonical modules/shared support and verify actual-profile ReadIndex.
+Preserve frozen artifacts, dependencies, grants, bounds and deadlines. No assembly,
+VM/security change, inference, later case, retry/recovery or qualification follows
+source preparation. Review before package/omission approval, then matching-artifact
+one-run VM approval and fresh consent. M04-M09/M2/Gate A remain pending/open.
+
+## M03c Exact Omission Approval (2026-10-31)
+
+The user separately approved omitting model_route_child_entry.py and
+model_route_worker_entry.py from the NEW M03c payload only, resolving the packaging
+hold. Keep canonical route helper, M03a shared support, runtime/dependency/config
+bytes and frozen Route 1 intact. See docs/architecture/maya_model_bridge_m03c_package.md.
+Assembly may now verify six replacements, three additions and these two omissions;
+verify every member with the actual M03c ReadIndex predicate inertly before freezing.
+Do not broaden admission, enable MODEL_ROUTE, change product/security/deadline
+predicates or execute the product. Exact-artifact one-run VM approval and fresh
+consent remain mandatory; no later case, retry/recovery, inference or qualification.
+
+## M03c Package Approval (2026-10-31)
+
+The user approved separate M03c offline assembly after source review. See
+docs/architecture/maya_model_bridge_m03c_package.md. Preserve frozen Route 1 and
+all predecessors. Verify six reviewed payload replacements/three additions and
+reviewed launcher changes; runtime/dependency/config bytes, grants, bounds and
+acceptance remain unchanged. Compilation/inert/archive checks do not authorize
+product or VM execution. Obtain separate matching-artifact one-run approval and
+fresh consent. No later case, retry/recovery, inference or qualification follows.
+
+Packaging preflight then found that the source plan's retained M03b root entries
+conflict with M03c's intentional allowlist: ReadIndex validates every member.
+Assembly is on hold before any payload/EXE/ZIP creation. Proposed successor-only
+omissions are model_route_child_entry.py and model_route_worker_entry.py; they
+require separate approval. Do not broaden admission, enable MODEL_ROUTE or alter
+frozen Route 1. Canonical route helper and all dependencies stay. Consult the
+package hold before continuing; no native execution or qualification follows.
+
+## M03b Outcome And M03c Source Preparation (2026-10-31)
+
+Route 1 attempt 63ad8e77b3fa458fbcab11574251f401 matched its frozen EXE,
+rejected the wrong route with unchanged native body, zero gateway/effects,
+one verified audit record and natural child/worker exit 0. Scoped manual cleanup
+found no processes/links/package-SID ACEs (7487 entries, zero failures); host/state
+labels matched and the operator reported all six filters/sublayer absent after
+export exit 0. See docs/architecture/maya_offline_model_route_1_outcome.md for
+provenance/limits. Profile deletion remains product-reported; blank UI was not
+separately confirmed. Run allowance consumed; qualification stays false.
+The user approved proceeding with M03c source preparation. HERMES_MODEL_ATTEMPT
+changes only a copied request's first attempt-ID hex digit, never actual host
+identity, outer command, grant, route or body. Requires named pre-gateway attempt
+binding rejection, exact versioned projection/audit evidence, zero effects and
+normal closure. See docs/architecture/maya_model_bridge_m03c_source_review.md
+and its tests JSON. 279 Python tests/550 subtests and 195 active C# assertions
+pass; paired/prior checks pass. This is a trusted-coordinator worker diagnostic,
+not Windows impersonation or hostile-child bypass. Preserve all frozen artifacts,
+dependencies, grants and deadlines. No package, product/native execution, VM
+change, inference, retry/recovery or qualification follows source preparation.
+Review before separate assembly approval, then exact-artifact one-run VM approval
+and fresh product consent. M03d/later cases/M2/Gate A remain pending/open.
+
+## M03b Package Approval (2026-10-31)
+
+The user approved separate M03b offline assembly after the source review. See
+docs/architecture/maya_model_bridge_m03b_package.md. Preserve Validation 2 and all
+predecessors. Enumerate exactly six reviewed payload replacements and three
+additions, plus reviewed launcher/source changes; all runtime/dependency/config
+bytes, grants, limits and acceptance predicates remain unchanged. Compilation,
+inert checks and archive/resource verification do not authorize product or VM
+execution. Obtain separate matching-artifact one-run approval and fresh product
+consent. No later case, startup-cause fix, retry, recovery or qualification follows.
+
+## M03a Outcome And M03b Source Preparation (2026-10-31)
+
+Validation 2 attempt 386ea8cea22c48a0967cdd458df839f6 matched its frozen EXE,
+rejected the fixed wrong-model request before any gateway call/effect, verified
+one audit event and natural child/worker exit 0. Scoped operator cleanup found
+no processes/links/package-SID ACEs (7484 entries, zero failures) or six filters/
+sublayer; state/host labels matched. See
+docs/architecture/maya_offline_model_validation_2_outcome.md. Profile deletion
+remains product-reported; blank UI output was not separately confirmed. The run
+allowance is consumed and Validation 1's startup cause remains unexplained.
+The user approved proceeding with M03b source preparation. Fixed HERMES_MODEL_ROUTE
+changes only the trusted coordinator's envelope route, preserves exact native
+body/grant/identity and requires named pre-gateway route rejection, zero effects,
+versioned projection/audit evidence and normal closure. See
+docs/architecture/maya_model_bridge_m03b_source_review.md and its tests JSON.
+258 Python tests/447 subtests and 177 active C# route assertions pass; paired and
+prior regressions pass. This is worker-diagnostic evidence, not hostile-child
+bypass. Preserve frozen artifacts and all dependencies/grants/deadlines. No
+package, product/native execution, VM/security change, inference, retry/recovery
+or qualification follows source preparation. Review before separate assembly
+approval, then exact-artifact one-run VM approval and fresh product consent.
+
+## Validation 2 Reporting Package Approval (2026-10-31)
+
+The user approved separate offline assembly of the reporting-only successor
+0.2.1-offline-validation.2 after source review. See
+docs/architecture/maya_worker_startup_reporting_package.md. Preserve Validation 1
+and all prior artifacts/results. Verify only reviewed worker/contract/launcher
+reporting changes, with unchanged dependencies, security, deadlines and acceptance.
+Assembly/inert checks do not authorize product execution, VM changes or a startup
+cause correction. Separate exact-artifact one-run approval and fresh consent
+remain mandatory. No retry, recovery, broader fix or qualification follows.
+
+
+## M03a Startup Reporting Preparation (2026-10-31)
+
+Validation 1 attempt bf5115d0f7974e639f60cecd92acbe4d stopped before worker
+readiness; no child resumed or validation occurred. Scoped manual cleanup passed
+as reported; profile deletion remains product-reported. Retained request/audit
+lengths 2618/0 narrow the startup interval but do not identify its cause. See
+docs/architecture/maya_offline_model_validation_1_outcome.md. The user approved
+reporting-only source preparation: bounded failure stages/types, preserved channel
+category and pre-stop/after-stop-attempt process/stderr observations. Candidate
+0.2.1-offline-validation.2 is inert-checked; see
+docs/architecture/maya_worker_startup_reporting_review.md and its tests JSON.
+Security, deadlines, audit and acceptance remain unchanged; no startup-cause fix,
+package or new run is approved. Preserve frozen artifacts. Review before separate
+assembly and exact-artifact VM-run approval/fresh consent; qualification stays false.
+
+
+## M03a Package Approval (2026-10-31)
+
+The user approved separate M03a offline package assembly after source review.
+See docs/architecture/maya_model_bridge_m03a_package.md. Preserve frozen M02,
+M01 and Document 2; enumerate reviewed product replacements/additions and omit
+only the two inactive M02 root bootstraps from the successor payload. All
+runtime/dependency bytes, grants and deadlines stay unchanged. Compilation,
+inert regression and archive/resource verification do not authorize product or
+VM execution. Obtain separate matching-artifact one-run approval and fresh
+consent. No later case, new grant/dependency, retry, recovery or qualification.
+
+
+## M03a Source Candidate (2026-10-31)
+
+The user approved M03a-only source preparation. The fixed HERMES_MODEL_VALIDATION
+profile preserves the native valid child request and derives one wrong-model
+worker request in the trusted coordinator. It requires named worker validation,
+zero gateway/effects, versioned audit evidence and natural child/worker closure;
+generic denial, expiry or failure is not a pass. See
+docs/architecture/maya_model_bridge_m03a_source_review.md for exact impacts and
+inert results. This is worker-diagnostic proof, not hostile-child bypass coverage.
+Frozen prior artifacts remain unchanged. No M03a package, native execution, new
+grant/dependency, inference or recovery is approved or performed. Source review
+and separate assembly approval precede exact-artifact VM approval/fresh consent.
+M03b-M03d, later cases, M2, Gate A and all qualification remain pending/open.
+
+
+## M02 Outcome And M03 Proposal (2026-10-31)
+
+The approved matching-hash M02 VM run cdd1e4746dc044018f2e656ae0861b52
+validated the native request then denied gateway egress, with zero dispatches/
+releases/publications, one verified denial event and normal child/worker exit 0.
+Scoped operator cleanup found no matching processes/links/package-SID ACEs
+(7483 entries, zero failures) or six WFP filters/sublayer; state/host labels matched.
+See docs/architecture/maya_offline_model_denial_1_outcome.md for provenance;
+profile removal is product-reported and blank UI output was not separately
+confirmed. The run allowance is consumed; all qualification flags remain false.
+Continuation prepared only docs/architecture/maya_model_bridge_m03_proposal.md
+and maya_model_bridge_m03_tests.json. Recommend M03a-only source review/approval:
+fixed trusted wrong-model injection after a valid native child request, preserving
+child guards, with exact worker-validation evidence. It is not hostile-child
+bypass proof. No implementation, package, run, grant, inference or recovery is
+authorized by proposal preparation. Preserve all frozen artifacts; Gate A stays open.
+
+
+## M02 Package Approval (2026-10-24)
+
+The user reviewed the M02 source recommendation and approved separate offline
+package assembly. See docs/architecture/maya_model_bridge_m02_package.md.
+Preserve frozen M01/Document 2; enumerate changed product members and verify all
+runtime/dependency members unchanged. Preparation permits compilation and inert
+archive/resource checks, not product execution, VM/security changes or another
+case. Obtain separate exact-artifact VM-run approval and fresh consent. No new
+dependency/grant, broader correction, recovery, real inference or qualification.
+
+## M02 Source Preparation (2026-10-24)
+
+The user approved M02-only source preparation. The fixed HERMES_MODEL_DENY
+profile omits only gateway egress permission, validates an actual no-matching-rule
+denial after request admission, returns bounded denial controls and independently
+admits the exact one-record zero-effect ledger. Native child/worker still require
+normal exit and closure; generic failures are blocked, not passed negatives.
+See docs/architecture/maya_model_bridge_m02_source_review.md for exact protocol,
+impacts and inert evidence. Frozen M01/Document 2 remain intact. No M02 package,
+native run, dependency/grant change or model inference is authorized or performed.
+Review this source record before separate package approval, then exact-artifact
+VM-run approval and fresh consent. M03-M09/M2, Gate A and qualification stay open.
+
+## M01 Outcome And Denial Proposal (2026-10-24)
+
+The separately approved matching-hash M01 VM run completed one offline synthetic
+Hermes/SDK exchange, matching request bytes, one runtime delivery, one visible
+operator publication, six verified audit events and natural worker/child exit 0.
+Scoped operator cleanup found no matching processes, links, package-SID ACEs
+(7477 entries, zero failures) or six filters/sublayer; state/host labels matched.
+See docs/architecture/maya_offline_model_1_outcome.md for provenance and limits.
+Profile deletion remains product-reported; all qualification flags stay false.
+The run allowance is consumed. Continuation prepared only the M02-M08 proposal
+and successor JSON in docs/architecture/maya_model_bridge_denial_proposal.md and
+maya_model_bridge_denial_tests.json. Recommend M02-only source preparation next;
+it requires exact denial protocol/audit/exit review. No implementation, package,
+new run, grant, live provider, retry or recovery is authorized by this proposal.
+Preserve frozen M01/Document 2; M09 and M2 remain separately gated, Gate A open.
+
 ## Offline M1 Package Preparation Approval (2026-10-24)
 
 The user approved M01-only first-positive staging and separate offline package

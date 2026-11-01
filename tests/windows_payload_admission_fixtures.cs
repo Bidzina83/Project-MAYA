@@ -1,0 +1,25 @@
+using System;
+using System.IO;
+using System.Text;
+using ProjectMaya.WindowsRuntime;
+
+internal static class PayloadAdmissionFixtures
+{
+    static int Main(string[] args)
+    {
+        if(!ModelAttemptAdmission.Enabled || ModelRouteAdmission.Enabled)throw new Exception("Wrong fixture profile");
+        int count;
+        using(var stream=File.OpenRead(args[0]))count=ProductFiles.ReadIndex(stream,true).files.Count;
+        if(count!=Int32.Parse(args[2]))throw new Exception("Inventory mismatch");
+        bool rejected=false;
+        try {using(var stream=File.OpenRead(args[1]))ProductFiles.ReadIndex(stream,true);}catch(StartupFailure){rejected=true;}
+        if(!rejected)throw new Exception("Inactive predecessor entries admitted");
+        foreach(string name in new[]{"model_route_child_entry.py","model_route_worker_entry.py"})
+        {
+            rejected=false;try{ProductFiles.PayloadPath(name);}catch(StartupFailure){rejected=true;}
+            if(!rejected)throw new Exception("Inactive route entry admitted");
+        }
+        Console.WriteLine("M03c payload admission passed for "+count+" members; predecessor index and both inactive entries rejected. No product execution.");
+        return 0;
+    }
+}

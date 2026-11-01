@@ -1,0 +1,41 @@
+{
+  "schema": "maya.model.m05.review.v1",
+  "recorded_date": "2026-11-01",
+  "status": "m05a_offline_assembly_approved_native_execution_not_approved",
+  "source_preparation_approved": true,
+  "source_preparation_scope": "M05a_only_including_bounded_diagnostic_reporting",
+  "candidate_version": "0.2.1-offline-budget.1",
+  "candidate_scope": "offline-hermes-same-client-budget-v1",
+  "profile": "HERMES_MODEL_BUDGET",
+  "assembly_approved": true,
+  "assembly_scope": "M05a_only_including_exact_two_inactive_replay_root_omissions_from_new_successor",
+  "successor_payload_omissions_approved": true,
+  "proposed_successor_payload_omissions": ["model_replay_child_entry.py", "model_replay_worker_entry.py"],
+  "native_run_approved": false,
+  "cases": [
+    {"case": "M05a", "trigger": "second_valid_transport_request_same_used_open_client", "recommended_next": true},
+    {"case": "M05b", "trigger": "second_valid_transport_request_recreated_client_same_consumed_adapter", "recommended_next": false}
+  ],
+  "first_exchange": {"native_conversation": true, "gateway_calls": 2, "synthetic_dispatches": 1, "runtime_deliveries": 1, "operator_publications": 0},
+  "second_attempt": {"transport_attempts_total": 2, "adapter_requests_total": 1, "additional_pipe_requests": 0, "additional_gateway_calls": 0, "additional_dispatches": 0, "additional_runtime_writes": 0, "operator_publications": 0},
+  "audit": {"exact_records": ["egress_intent", "dispatch_outcome", "runtime_release_intent", "runtime_delivery"], "worker_denial_record": false, "new_exact_validator_required": true},
+  "source_review_gates": ["exact_probe_and_terminal_protocol", "first_request_observation_without_mutation", "actual_used_transport_identity", "original_guard_read_only_observation", "independent_host_no_extra_effect_admission", "natural_exit_and_all_client_closure", "fault_and_prior_profile_regressions"],
+  "source_review_document": "maya_model_bridge_m05a_source_review.md",
+  "inert_evidence": {"focused_python_tests":324, "python_subtests":1163, "active_csharp_assertions":197, "paired_csharp_profiles":10, "paired_csharp_assertions_each":192, "invalid_compile_profiles":10, "native_execution":false, "package_assembled":false},
+  "protocol": {
+    "child_probe": ["v", "type=model_adapter_probe", "attempt", "request_id"],
+    "worker_finish": ["v", "type=model_adapter_finish", "attempt", "request_id", "delivery_command_id"],
+    "worker_complete": ["v", "type=model_adapter_complete", "attempt", "request_id", "effects"],
+    "effects": {"case":"M05a", "gateway_calls":2, "dispatches":1, "confirmed_runtime_releases":1, "confirmed_operator_releases":0, "real_inference":false, "request_sha256":"actual_original_request", "response_sha256":"actual_first_response", "delivery_command_id":"actual_runtime_confirmation"},
+    "child_schema": "maya.offline.model.budget.child.v1",
+    "child_probe_observation": {"case":"M05a", "boundary":"adapter_consumed_budget", "transport_attempts":2, "model_requests":1, "completed_exchanges":1, "budget_rejections":1, "same_used_client":true, "request_sha256":"actual_original_request", "request_bytes":"actual_integer_length"},
+    "order": ["original_runtime_ack", "child_probe", "positive_child_completion_and_probe_observation", "child_EOF_and_exit0", "worker_finish", "worker_complete", "worker_EOF_and_exit0", "exact_four_record_audit"],
+    "new_grant": false,
+    "operator_preparation": false
+  },
+  "evidence_limit": "Child local-boundary testimony is untrusted; independent host evidence supports no additional pipe request or effect, not hostile-child bypass prevention.",
+  "unchanged": ["grant_ttl_2000ms", "dependencies", "security_grants", "deadlines", "original_budget_guards", "old_audit_validators", "frozen_predecessors"],
+  "excluded": ["automatic_retry", "fallback", "new_adapter", "grant_reissue", "real_inference", "M06_M09", "M2", "qualification"],
+  "production_qualified": false,
+  "containment_qualified": false
+}

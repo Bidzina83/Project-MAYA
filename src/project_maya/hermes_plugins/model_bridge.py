@@ -57,6 +57,7 @@ class ModelChannelClient:
             raise ProtocolError()
         try:
             if self.closed or self._grant is None or self.requests:
+                self._budget_rejected()
                 raise ProtocolError()
             checked_request(raw)
             grant, self._grant = self._grant, None
@@ -66,6 +67,7 @@ class ModelChannelClient:
             self.channel.send(dict(v=1, type="model_request", attempt=self.attempt, route=ROUTE,
                 lease=grant["lease"], seq=1, method="POST", path=PATH, body=raw.decode("utf-8")))
             reply = self.channel.receive()
+            self._observe_denial(reply)
             if (type(reply) is not dict or set(reply) !=
                     {"v", "type", "attempt", "seq", "status", "body", "response_sha256"}
                     or type(reply["v"]) is not int or reply["v"] != 1
@@ -87,6 +89,66 @@ class ModelChannelClient:
             raise ProtocolError() from None
         finally:
             self._lock.release()
+
+    def _observe_denial(self, reply) -> None:
+        pass
+
+    def _budget_rejected(self) -> None:
+        pass
+
+
+class EgressDenialChannelClient(ModelChannelClient):
+    """Explicit M02 endpoint. A denial is never converted into model output."""
+    denial_case = "M02"
+    denial_reason = "gateway_egress_denied"
+    def __init__(self, channel: PrivateChannel, attempt: str) -> None:
+        super().__init__(channel, attempt)
+        self.denial_observed = False
+
+    def _observe_denial(self, reply) -> None:
+        if (type(reply) is dict and set(reply) == {"v", "type", "attempt", "seq", "case", "reason"}
+                and type(reply["v"]) is int and reply["v"] == 1
+                and reply["type"] == "model_denied" and reply["attempt"] == self.attempt
+                and type(reply["seq"]) is int and reply["seq"] == 1
+                and reply["case"] == self.denial_case and reply["reason"] == self.denial_reason):
+            self.denial_observed = True
+        raise ProtocolError()
+
+
+class WrongModelChannelClient(EgressDenialChannelClient):
+    """The native child sends its original VALID request; only host injects M03a."""
+    denial_case = "M03a"
+    denial_reason = "request_model_rejected"
+
+
+class WrongRouteChannelClient(EgressDenialChannelClient):
+    """Valid native request, fixed M03b host route-rejection control only."""
+    denial_case = "M03b"
+    denial_reason = "request_route_rejected"
+
+
+class WrongAttemptChannelClient(EgressDenialChannelClient):
+    """Original valid child identity; fixed M03c host rejection control only."""
+    denial_case = "M03c"
+    denial_reason = "request_attempt_rejected"
+
+
+class WrongBodyChannelClient(EgressDenialChannelClient):
+    """Original native body; only trusted host injects M03d."""
+    denial_case = "M03d"
+    denial_reason = "request_body_rejected"
+
+
+class RevokedGrantChannelClient(EgressDenialChannelClient):
+    """Exact M04b revoked-grant control; never a model response."""
+    denial_case = "M04b"
+    denial_reason = "lease_revoked"
+
+
+class ExpiredGrantChannelClient(EgressDenialChannelClient):
+    """Valid native request with exact M04a expiry control, never model output."""
+    denial_case = "M04a"
+    denial_reason = "lease_expired"
 
 
 class PipeModelTransport(httpx.BaseTransport):
@@ -119,13 +181,21 @@ class PipeModelTransport(httpx.BaseTransport):
             checked_request(raw)
             if request.headers.get("content-length") != str(len(raw)):
                 raise ProtocolError()
+            self._validated_request(request)
             response = self.channel.exchange(raw)
+            self._response_received()
             return httpx.Response(200, headers={"content-type": "application/json"},
                                   content=response, request=request)
         except Exception:
             self.closed = True
             self.channel.closed = True
             raise httpx.TransportError("model_bridge.unavailable") from None
+
+    def _validated_request(self, request) -> None:
+        pass
+
+    def _response_received(self) -> None:
+        pass
 
     def close(self) -> None:
         # Each SDK owns this transport, but not the shared coordinator pipe handles.
@@ -173,7 +243,7 @@ class OfflineModelClientMixin:
                 or len(self._maya_model_clients) >= 8 or self._maya_model_channel.closed):
             raise ProtocolError()
         kwargs = client_kwargs.copy()
-        transport = PipeModelTransport(self._maya_model_channel)
+        transport = self._maya_new_transport()
         http_client = httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=2.0)
         kwargs["http_client"], kwargs["max_retries"] = http_client, 0
         kwargs["timeout"] = 2.0
@@ -196,6 +266,9 @@ class OfflineModelClientMixin:
         self._maya_model_clients.append((client, http_client, transport))
         return client
 
+    def _maya_new_transport(self):
+        return PipeModelTransport(self._maya_model_channel)
+
     def close_model_clients(self) -> None:
         failures = False
         with self._maya_factory_lock:
@@ -217,7 +290,7 @@ class OfflineModelClientMixin:
             raise ProtocolError()
 
 
-def offline_agent_class():
+def offline_agent_class(*, same_client_budget=False, recreated_client_budget=False):
     """Import real pinned Hermes only during separately approved product execution."""
     from run_agent import AIAgent
 
@@ -228,7 +301,22 @@ def offline_agent_class():
     if any(digest((root / name).read_bytes()) != expected for name, expected in PINNED_SOURCES.items()):
         raise ProtocolError()
 
-    class OfflineModelAgent(OfflineModelClientMixin, AIAgent):
+    if (type(same_client_budget) is not bool or type(recreated_client_budget) is not bool
+            or same_client_budget and recreated_client_budget):
+        raise ProtocolError()
+    mixin = OfflineModelClientMixin
+    if same_client_budget:
+        from project_maya.hermes_plugins.model_budget import SameClientBudgetMixin, verify_lifecycle_source
+        verify_lifecycle_source(root)
+        mixin = SameClientBudgetMixin
+
+    if recreated_client_budget:
+        from project_maya.hermes_plugins.model_recreate import RecreatedClientBudgetMixin
+        from project_maya.hermes_plugins.model_budget import verify_lifecycle_source
+        verify_lifecycle_source(root)
+        mixin = RecreatedClientBudgetMixin
+
+    class OfflineModelAgent(mixin, AIAgent):
         pass
 
     return OfflineModelAgent

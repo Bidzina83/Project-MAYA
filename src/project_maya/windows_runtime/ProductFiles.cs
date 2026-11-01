@@ -134,6 +134,36 @@ namespace ProjectMaya.WindowsRuntime
             importPath = importPath || relative == "model_child_entry.py" || relative == "model_worker_entry.py" ||
                 relative == "model-contract.json" || relative == "model-config.json" || relative == "model-native-literals.json";
 #endif
+#if HERMES_MODEL_DENY
+            importPath = importPath || relative == "model_deny_child_entry.py" || relative == "model_deny_worker_entry.py";
+#endif
+#if HERMES_MODEL_VALIDATION
+            importPath = importPath || relative == "model_validation_child_entry.py" || relative == "model_validation_worker_entry.py";
+#endif
+#if HERMES_MODEL_ROUTE
+            importPath = importPath || relative == "model_route_child_entry.py" || relative == "model_route_worker_entry.py";
+#endif
+#if HERMES_MODEL_ATTEMPT
+            importPath = importPath || relative == "model_attempt_child_entry.py" || relative == "model_attempt_worker_entry.py";
+#endif
+#if HERMES_MODEL_BODY
+            importPath = importPath || relative == "model_body_child_entry.py" || relative == "model_body_worker_entry.py";
+#endif
+#if HERMES_MODEL_EXPIRY
+            importPath = importPath || relative == "model_expiry_child_entry.py" || relative == "model_expiry_worker_entry.py";
+#endif
+#if HERMES_MODEL_REVOKE
+            importPath = importPath || relative == "model_revoke_child_entry.py" || relative == "model_revoke_worker_entry.py";
+#endif
+#if HERMES_MODEL_REPLAY
+            importPath = importPath || relative == "model_replay_child_entry.py" || relative == "model_replay_worker_entry.py";
+#endif
+#if HERMES_MODEL_BUDGET
+            importPath = importPath || relative == "model_budget_child_entry.py" || relative == "model_budget_worker_entry.py";
+#endif
+#if HERMES_MODEL_RECREATE
+            importPath = importPath || relative == "model_recreate_child_entry.py" || relative == "model_recreate_worker_entry.py";
+#endif
 #if HERMES_CONSTRUCTION
             importPath = importPath || relative == "hermes_construction_check.py" ||
                 relative == "hermes-construction-contract.json" || relative == "hermes-construction-config.json";

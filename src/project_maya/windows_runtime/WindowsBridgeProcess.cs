@@ -11,11 +11,45 @@ namespace ProjectMaya.WindowsRuntime
     internal sealed partial class WindowsIsolation
     {
         internal IntPtr BridgeInput;
+        WorkerStartupCapture bridgeStartupCapture=null;
         internal IntPtr BridgeOutput { get { return readOutput; } }
         internal void StartWorker(string directory, string run, SecurityIdentifier user)
         { StartWorkerEntry(directory, run, user, "bridge_worker_entry.py"); }
         internal void StartModelWorker(string directory, string run, SecurityIdentifier user)
-        { StartWorkerEntry(directory, run, user, "model_worker_entry.py"); }
+        {
+#if HERMES_MODEL_RECREATE
+            bridgeStartupCapture=new WorkerStartupCapture();
+            StartWorkerEntry(directory, run, user, "model_recreate_worker_entry.py");
+#elif HERMES_MODEL_BUDGET
+            bridgeStartupCapture=new WorkerStartupCapture();
+            StartWorkerEntry(directory, run, user, "model_budget_worker_entry.py");
+#elif HERMES_MODEL_REPLAY
+            bridgeStartupCapture=new WorkerStartupCapture();
+            StartWorkerEntry(directory, run, user, "model_replay_worker_entry.py");
+#elif HERMES_MODEL_REVOKE
+            bridgeStartupCapture=new WorkerStartupCapture();
+            StartWorkerEntry(directory, run, user, "model_revoke_worker_entry.py");
+#elif HERMES_MODEL_EXPIRY
+            bridgeStartupCapture=new WorkerStartupCapture();
+            StartWorkerEntry(directory, run, user, "model_expiry_worker_entry.py");
+#elif HERMES_MODEL_BODY
+            bridgeStartupCapture=new WorkerStartupCapture();
+            StartWorkerEntry(directory, run, user, "model_body_worker_entry.py");
+#elif HERMES_MODEL_ROUTE
+            bridgeStartupCapture=new WorkerStartupCapture();
+            StartWorkerEntry(directory, run, user, "model_route_worker_entry.py");
+#elif HERMES_MODEL_ATTEMPT
+            bridgeStartupCapture=new WorkerStartupCapture();
+            StartWorkerEntry(directory, run, user, "model_attempt_worker_entry.py");
+#elif HERMES_MODEL_VALIDATION
+            bridgeStartupCapture=new WorkerStartupCapture();
+            StartWorkerEntry(directory, run, user, "model_validation_worker_entry.py");
+#elif HERMES_MODEL_DENY
+            StartWorkerEntry(directory, run, user, "model_deny_worker_entry.py");
+#else
+            StartWorkerEntry(directory, run, user, "model_worker_entry.py");
+#endif
+        }
         void StartWorkerEntry(string directory, string run, SecurityIdentifier user, string entryName)
         {
             job = CreateJobObject(IntPtr.Zero, null); Native.Require(job != IntPtr.Zero, "bridge_worker_job");
@@ -74,6 +108,7 @@ namespace ProjectMaya.WindowsRuntime
         }
         internal void ResumeBridge()
         {
+            if(bridgeStartupCapture!=null)bridgeStartupCapture.Start();
             errorThread = new Thread(delegate() {
                 try
                 {
@@ -81,10 +116,15 @@ namespace ProjectMaya.WindowsRuntime
                     {
                         byte[] buffer = new byte[1024]; int count;
                         while ((count = stream.Read(buffer, 0, buffer.Length)) > 0)
-                        { StderrBytes += count; if (StderrBytes > 4096) throw new StartupFailure("bridge_stderr_limit"); }
+                        {
+                            StderrBytes += count;
+                            if(bridgeStartupCapture!=null)bridgeStartupCapture.Append(buffer,count);
+                            if (StderrBytes > 4096) throw new StartupFailure("bridge_stderr_limit");
+                        }
                     }
                 }
                 catch { captureFailed = true; if (job != IntPtr.Zero) TerminateJobObject(job, 1); }
+                finally {if(bridgeStartupCapture!=null)bridgeStartupCapture.Complete(captureFailed);}
             });
             errorThread.IsBackground = true; errorThread.Start();
             if (ResumeThread(child.thread) != 1) throw new StartupFailure("bridge_resume_failed");
@@ -100,6 +140,18 @@ namespace ProjectMaya.WindowsRuntime
         internal void CloseBridgeInput()
         {
             if (BridgeInput != IntPtr.Zero) { Native.CloseHandle(BridgeInput); BridgeInput = IntPtr.Zero; }
+        }
+        internal Dictionary<string,object> SnapshotBridgeStartup()
+        {
+            string state="not_created";uint? code=null;
+            if(child.process!=IntPtr.Zero)
+            {
+                state="unavailable";
+                uint wait=WaitForSingleObject(child.process,0);
+                if(wait==0){state="exited";uint value;if(GetExitCodeProcess(child.process,out value))code=value;}
+                else if(wait==258)state="running";
+            }
+            return (bridgeStartupCapture??new WorkerStartupCapture()).Snapshot(state,code);
         }
     }
 }

@@ -1,4 +1,34 @@
 // Product-owned startup candidate. No Hermes execution or containment acceptance.
+#if HERMES_MODEL_RECREATE && (!HERMES_MODEL_VALIDATION || HERMES_MODEL_BUDGET || HERMES_MODEL_REPLAY || HERMES_MODEL_REVOKE || HERMES_MODEL_EXPIRY || HERMES_MODEL_BODY || HERMES_MODEL_ROUTE || HERMES_MODEL_ATTEMPT)
+#error HERMES_MODEL_RECREATE requires VALIDATION and excludes all other fixed model cases.
+#endif
+#if HERMES_MODEL_BUDGET && (!HERMES_MODEL_VALIDATION || HERMES_MODEL_REPLAY || HERMES_MODEL_REVOKE || HERMES_MODEL_EXPIRY || HERMES_MODEL_BODY || HERMES_MODEL_ROUTE || HERMES_MODEL_ATTEMPT)
+#error HERMES_MODEL_BUDGET requires VALIDATION and excludes all other fixed model cases.
+#endif
+#if HERMES_MODEL_REPLAY && (!HERMES_MODEL_VALIDATION || HERMES_MODEL_REVOKE || HERMES_MODEL_EXPIRY || HERMES_MODEL_BODY || HERMES_MODEL_ROUTE || HERMES_MODEL_ATTEMPT)
+#error HERMES_MODEL_REPLAY requires VALIDATION and excludes REVOKE/EXPIRY/BODY/ROUTE/ATTEMPT.
+#endif
+#if HERMES_MODEL_REVOKE && (!HERMES_MODEL_VALIDATION || HERMES_MODEL_EXPIRY || HERMES_MODEL_BODY || HERMES_MODEL_ROUTE || HERMES_MODEL_ATTEMPT)
+#error HERMES_MODEL_REVOKE requires VALIDATION and excludes EXPIRY/BODY/ROUTE/ATTEMPT.
+#endif
+#if HERMES_MODEL_EXPIRY && (!HERMES_MODEL_VALIDATION || HERMES_MODEL_BODY || HERMES_MODEL_ROUTE || HERMES_MODEL_ATTEMPT)
+#error HERMES_MODEL_EXPIRY requires VALIDATION and excludes BODY/ROUTE/ATTEMPT.
+#endif
+#if HERMES_MODEL_BODY && (!HERMES_MODEL_VALIDATION || HERMES_MODEL_ROUTE || HERMES_MODEL_ATTEMPT)
+#error HERMES_MODEL_BODY requires VALIDATION and excludes ROUTE/ATTEMPT.
+#endif
+#if HERMES_MODEL_ATTEMPT && (!HERMES_MODEL_VALIDATION || HERMES_MODEL_ROUTE)
+#error HERMES_MODEL_ATTEMPT requires HERMES_MODEL_VALIDATION and excludes HERMES_MODEL_ROUTE.
+#endif
+#if HERMES_MODEL_ROUTE && !HERMES_MODEL_VALIDATION
+#error HERMES_MODEL_ROUTE requires HERMES_MODEL_VALIDATION.
+#endif
+#if HERMES_MODEL_VALIDATION && (!HERMES_MODEL || HERMES_MODEL_DENY)
+#error HERMES_MODEL_VALIDATION requires HERMES_MODEL and excludes HERMES_MODEL_DENY.
+#endif
+#if HERMES_MODEL_DENY && !HERMES_MODEL
+#error HERMES_MODEL_DENY requires HERMES_MODEL.
+#endif
 #if HERMES_MODEL && !HERMES_BRIDGE
 #error HERMES_MODEL requires the private HERMES_BRIDGE topology.
 #endif
@@ -28,7 +58,37 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Maya protected Python startup candidate")]
 [assembly: AssemblyVersion("0.1.0.0")]
-#if HERMES_MODEL
+#if HERMES_MODEL_RECREATE
+[assembly: AssemblyFileVersion("0.2.1.14")]
+[assembly: AssemblyInformationalVersion("0.2.1-offline-recreate.1")]
+#elif HERMES_MODEL_BUDGET
+[assembly: AssemblyFileVersion("0.2.1.13")]
+[assembly: AssemblyInformationalVersion("0.2.1-offline-budget.3")]
+#elif HERMES_MODEL_REPLAY
+[assembly: AssemblyFileVersion("0.2.1.10")]
+[assembly: AssemblyInformationalVersion("0.2.1-offline-replay.1")]
+#elif HERMES_MODEL_REVOKE
+[assembly: AssemblyFileVersion("0.2.1.9")]
+[assembly: AssemblyInformationalVersion("0.2.1-offline-revocation.1")]
+#elif HERMES_MODEL_EXPIRY
+[assembly: AssemblyFileVersion("0.2.1.8")]
+[assembly: AssemblyInformationalVersion("0.2.1-offline-expiry.1")]
+#elif HERMES_MODEL_BODY
+[assembly: AssemblyFileVersion("0.2.1.7")]
+[assembly: AssemblyInformationalVersion("0.2.1-offline-body.1")]
+#elif HERMES_MODEL_ATTEMPT
+[assembly: AssemblyFileVersion("0.2.1.6")]
+[assembly: AssemblyInformationalVersion("0.2.1-offline-attempt.1")]
+#elif HERMES_MODEL_ROUTE
+[assembly: AssemblyFileVersion("0.2.1.5")]
+[assembly: AssemblyInformationalVersion("0.2.1-offline-route.1")]
+#elif HERMES_MODEL_VALIDATION
+[assembly: AssemblyFileVersion("0.2.1.4")]
+[assembly: AssemblyInformationalVersion("0.2.1-offline-validation.2")]
+#elif HERMES_MODEL_DENY
+[assembly: AssemblyFileVersion("0.2.1.2")]
+[assembly: AssemblyInformationalVersion("0.2.1-offline-denial.1")]
+#elif HERMES_MODEL
 [assembly: AssemblyFileVersion("0.2.1.1")]
 [assembly: AssemblyInformationalVersion("0.2.1-offline-model.1")]
 #elif HERMES_BRIDGE
@@ -55,7 +115,284 @@ namespace ProjectMaya.WindowsRuntime
 {
     internal static class ProtectedPython
     {
-#if HERMES_MODEL
+#if HERMES_MODEL_RECREATE
+        internal const string Version = "0.2.1-offline-recreate.1";
+        internal const string Scope = "offline-hermes-recreated-client-budget-v1";
+        internal const string Consent =
+            "Maya M05b recreated-client budget candidate " + Version + "\r\n\r\n" +
+            "Unsigned development candidate. One real pinned Hermes conversation uses a synthetic offline response, " +
+            "not inference. No credentials, customer content or charge. After one verified runtime delivery, the fixed " +
+            "probe runs on the request owning thread AFTER original native client close and before its hook returns. " +
+            "Original close always delegates exactly once. The existing factory creates one distinct SDK/HTTP/transport " +
+            "triple using the original validated settings and SAME consumed adapter. One explicit copied valid HTTP " +
+            "request must hit the original budget rejection locally before pipe send. No new adapter, grant or rebind. " +
+            "No automatic SDK retry, fallback or second conversation. New clients must close normally. " +
+            "Private-channel reads use one explicitly scheduled I/O worker with unchanged deadlines; failure reports add " +
+            "bounded read stages/counts, not message contents. Two first gateway checks, one dispatch/delivery and exactly " +
+            "four audit records remain counted. No operator publication: output and UI stay blank. Child observations " +
+            "are untrusted; host checks no extra pipe request or effects. Generic errors/timeouts do not pass. " +
+            "This does not prove hostile-child bypass resistance.\r\n\r\n" +
+            "Setup copies embedded Python3.13.14, pinned Hermes/dependencies and reviewed sources into a fresh private " +
+            "ProgramData attempt. Same AppContainer, zero capabilities, reduced tokens, one-process jobs, child-process " +
+            "block and six scoped deny-all WFP filters. Shared All Application Packages remains a limitation. Trusted " +
+            "medium worker is outside child containment and implements no networking. Four protected host files remain " +
+            "accessible to SYSTEM, Administrators and this operator. No manual OS preparation is authorized. No listener, " +
+            "account, service, registry change or loopback exception. No tools, memory or database workload. " +
+            "Private UTC does not change Windows timezone.\r\n\r\n" +
+            "Original TTL2000ms and ready/RPC/partial5000/2000/1000ms, child22/30s, frame8192 bytes, channel/audit128 KiB, " +
+            "request/response/stderr4 KiB, report64 KiB and output1024-byte limits stay. No new grant or deadline extension. " +
+            "Second local rejection makes no service-expiry claim. Retained evidence reports contain bounded hashes/counters, " +
+            "not raw lease/body/output or exception text. Natural child/worker closure is required before security cleanup. " +
+            "Cleanup can fail and needs independent checks. No automatic recovery/retry. Consent covers one M05b attempt " +
+            "and this setup only, with separate matching-artifact one-run approval and fresh consent required. " +
+            "Later cases, inference, containment, Gate A and production remain unqualified.";
+#elif HERMES_MODEL_BUDGET
+        internal const string Version = "0.2.1-offline-budget.3";
+        internal const string Scope = "offline-hermes-same-client-budget-v1";
+        internal const string Consent =
+            "Maya M05a same-client request-budget candidate " + Version + "\r\n\r\n" +
+            "Unsigned development candidate. One real pinned Hermes conversation uses a synthetic offline response, " +
+            "not inference. No credentials, customer content or charge. After one verified runtime delivery, Maya " +
+            "explicitly attempts a second valid HTTP transport request on the SAME used client. The fixed probe runs " +
+            "in the request owning thread BEFORE native client cleanup, which always delegates its original close. " +
+            "The original adapter budget must reject it locally before pipe send. No automatic SDK retry, fallback or second conversation. " +
+            "Private-channel reads use one explicitly scheduled I/O worker with unchanged deadlines; failure reports add bounded read stages/counts, not message contents. " +
+            "Two first gateway checks, one dispatch/delivery and exactly four audit records remain counted. " +
+            "No operator publication: output stays blank. Child observations are untrusted; host checks no extra pipe " +
+            "request or effects. Generic errors/timeouts do not pass. This does not prove hostile-child bypass resistance.\r\n\r\n" +
+            "Setup copies embedded Python3.13.14, pinned Hermes/dependencies and reviewed sources into a fresh private " +
+            "ProgramData attempt. Same AppContainer, zero capabilities, reduced tokens, one-process jobs, child-process " +
+            "block and six scoped deny-all WFP filters. Shared All Application Packages remains a limitation. Trusted " +
+            "medium worker is outside child containment and implements no networking. Four protected host files remain " +
+            "accessible to SYSTEM, Administrators and this operator. No listener, account, service, registry change " +
+            "or loopback exception. No tools, memory or database workload. Private UTC does not change Windows timezone.\r\n\r\n" +
+            "Original TTL2000ms and ready/RPC/partial5000/2000/1000ms, child22/30s, frame8192 bytes, channel/audit128 KiB, " +
+            "request/response/stderr4 KiB, report64 KiB and output1024-byte limits stay. No new grant or deadline extension. " +
+            "Second local rejection makes no service-expiry claim. Reports contain bounded hashes/counters, not raw " +
+            "lease/body/output or exception text. Natural child/worker closure is required before security cleanup. " +
+            "Cleanup can fail and needs independent checks. No automatic recovery/retry. Consent covers one M05a attempt " +
+            "and this setup only; M05b/later cases, inference, containment, Gate A and production remain unqualified.";
+#elif HERMES_MODEL_REPLAY
+        internal const string Version = "0.2.1-offline-replay.1";
+        internal const string Scope = "offline-hermes-consumed-lease-v1";
+        internal const string Consent =
+            "Maya M04c consumed-grant replay candidate " + Version + "\r\n\r\n" +
+            "Unsigned development candidate. No external inference, credentials, customer content or charge. " +
+            "Real pinned Hermes/SDK make ONE normal synthetic exchange. Two original gateway checks, ONE synthetic " +
+            "dispatch and ONE verified runtime delivery must remain counted. Maya then replays the exact saved request " +
+            "under a NEW trusted command ID. The original guard must reject the consumed, still-unexpired/unrevoked " +
+            "grant with no additional effects. Four positive audit events plus one exact rejection are required. " +
+            "The child keeps its one-request guard and genuine POSITIVE conversation/closure report. No child denial " +
+            "is fabricated. Operator preparation/publication is withheld: output stays blank. Generic denial, expiry, " +
+            "audit failure or timeout is NOT success. Prior effects are never reset.\r\n\r\n" +
+            "Setup copies embedded Python3.13.14, pinned Hermes/dependencies and reviewed sources into a fresh private " +
+            "ProgramData attempt. Same AppContainer/zero capabilities/reduced tokens/one-process jobs/child-process " +
+            "block/six child-scoped deny-all WFP filters. Shared All Application Packages remains a limitation. One " +
+            "trusted medium worker is OUTSIDE child containment and implements no networking. No listener, account, " +
+            "service, registry or loopback exception. Protected host request.json, policy.json, worker.json and audit.jsonl " +
+            "remain accessible to SYSTEM, Administrators and this operator. No tools/memory/database workload.\r\n\r\n" +
+            "Synthetic data only; private UTC does not change Windows timezone. Reports/audit contain bounded hashes, " +
+            "ages and effect evidence, not raw lease/body/output/exception messages. Original TTL2000ms covers the " +
+            "positive prefix AND replay. No deliberate wait, renewal, TTL/deadline extension or fake native clock. " +
+            "Ready/RPC/partial5000/2000/1000ms, child22/30s, frame8192 bytes, channel/audit128 KiB, request/response/" +
+            "stderr4 KiB, report64 KiB, output1024 bytes. Slow disk/scheduling blocks, never retries automatically.\r\n\r\n" +
+            "Natural child/worker closure is required. Both jobs stop before temporary security removal/label restoration. " +
+            "Cleanup may fail and needs independent checks. No fallback/retry/automatic recovery. Other cases, inference, " +
+            "containment, Gate A and production remain unqualified. Consent covers one M04c attempt and this setup only.";
+#elif HERMES_MODEL_REVOKE
+        internal const string Version = "0.2.1-offline-revocation.1";
+        internal const string Scope = "offline-hermes-lease-revocation-v1";
+        internal const string Consent =
+            "Maya M04b unused unexpired-grant revocation candidate " + Version + "\r\n\r\n" +
+            "Unsigned development candidate. No external inference, credential, customer content or charge. " +
+            "Real pinned Hermes/SDK send the original valid synthetic request. Maya issues its ordinary 2000-ms " +
+            "grant, calls the original revoke method and verifies a durable acknowledgement BEFORE model_begin. " +
+            "The original guard must reject that same unused, revoked but UNEXPIRED grant. Two exact audit records " +
+            "and zero gateway calls/dispatches/model-response releases/publications are required. Blank output is " +
+            "expected; expiry, timeout or generic denial is NOT success. No deliberate wait, TTL change, reissue, " +
+            "replay, child-guard bypass or fake native clock.\r\n\r\n" +
+            "Setup copies embedded Python 3.13.14, pinned Hermes/dependencies and reviewed sources to a fresh " +
+            "ProgramData attempt. Same ordinary AppContainer, zero capabilities, reduced tokens, one-process jobs, " +
+            "child-process block and six child-scoped deny-all WFP filters. Shared All Application Packages access " +
+            "remains a limitation. One trusted medium worker is OUTSIDE child containment and implements no networking. " +
+            "No listener/account/service/registry/loopback exception. Host request.json, policy.json, worker.json and " +
+            "audit.jsonl remain accessible to SYSTEM, Administrators and this operator.\r\n\r\n" +
+            "Synthetic data only, no tools/memory/database workload. Private UTC does not change Windows timezone. " +
+            "Reports contain bounded hashes, ages and evidence, not raw lease/body/output/exception messages. " +
+            "Required audit failure or expiry during revoke/guard/audit blocks acceptance; startup diagnostics are " +
+            "failure-only. Ready/RPC/partial limits 5000/2000/1000 ms, child 22/30 seconds, frame8192 bytes, " +
+            "channel/audit128 KiB, request/response/stderr4 KiB, report64 KiB, output1024 bytes. All operations " +
+            "consume existing budgets, with no extension. Natural child/worker closure is required.\r\n\r\n" +
+            "Both jobs stop before temporary security removal and label restoration. Cleanup may fail and needs " +
+            "independent checks. No fallback/retry/automatic recovery. Other cases, inference, containment, Gate A " +
+            "and production remain unqualified. Consent covers one M04b attempt and this disclosed setup only.";
+#elif HERMES_MODEL_EXPIRY
+        internal const string Version = "0.2.1-offline-expiry.1";
+        internal const string Scope = "offline-hermes-lease-expiry-v1";
+        internal const string Consent =
+            "Maya M04a unused-grant expiry candidate " + Version + "\r\n\r\n" +
+            "Unsigned development candidate. NO external inference, credential, customer content or charge. " +
+            "Real pinned Hermes/SDK send their original valid synthetic request. Maya issues its normal 2000-ms grant, " +
+            "waits at least 2100 real monotonic ms AFTER the reply and BEFORE model_begin, outside any worker RPC, " +
+            "then submits the unchanged request. Grant, body, model, route, identity and child guards are unchanged. " +
+            "The worker must observe its actual expiry guard rejecting an UNUSED, UNREVOKED grant with exact " +
+            "request preflight and zero gateway calls/dispatches/model-response releases/publications. Blank output " +
+            "is expected; timeout or generic denial is NOT success. No revocation/replay, reissue or fake native clock.\r\n\r\n" +
+            "Maya copies embedded Python 3.13.14, pinned Hermes/dependencies and reviewed sources into a fresh private " +
+            "ProgramData attempt. Same ordinary AppContainer, zero capabilities, reduced tokens, one-process jobs, " +
+            "child-process block and six child-scoped deny-all WFP filters. Shared All Application Packages access " +
+            "remains a limitation. One trusted medium worker is OUTSIDE child containment and implements no networking. " +
+            "No listener, account, service, registry or loopback exception. Protected host request.json, policy.json, " +
+            "worker.json and audit.jsonl stay accessible to SYSTEM, Administrators and this operator.\r\n\r\n" +
+            "Synthetic data only; private UTC does not change Windows timezone. No tools/memory/database workload. " +
+            "Reports/audit contain bounded hashes, elapsed ages and fixed evidence, never raw lease/body/output or " +
+            "exception messages. Required audit failure blocks acceptance. Startup diagnostics remain failure-only. " +
+            "Ready/RPC/partial-frame limits 5000/2000/1000 ms; child 22/30 seconds. The deliberate wait CONSUMES " +
+            "existing budgets; exhaustion blocks, with no timeout/TTL extension. Frame 8192 bytes, channel/audit " +
+            "128 KiB, request/response/stderr 4 KiB, report 64 KiB, output 1024 bytes. No fallback/retry.\r\n\r\n" +
+            "Both jobs stop before temporary security removal/label restoration. Cleanup may fail and needs " +
+            "independent checks. No automatic recovery. Other cases, real inference, containment, Gate A and " +
+            "production remain unqualified. Consent covers one M04a attempt and disclosed setup only.";
+#elif HERMES_MODEL_BODY
+        internal const string Version = "0.2.1-offline-body.1";
+        internal const string Scope = "offline-hermes-body-validation-v1";
+        internal const string Consent =
+            "Maya M03d fixed wrong-body validation candidate " + Version + "\r\n\r\n" +
+            "Unsigned development candidate. NO external inference, credential, customer content or charge. " +
+            "Real pinned Hermes/SDK send their original valid synthetic request. The trusted coordinator verifies " +
+            "the native body and envelope against the host-issued grant, then changes ONLY the last hex digit of the synthetic user-message canary. " +
+            "The digit becomes 1 if originally 0; otherwise 0. Actual host identity, attempt, route, grant and model stay unchanged. " +
+            "This tests WORKER validation, not hostile-child bypass. Positive gateway policy remains present. " +
+            "Expected: exact-body rejection before body admission or any gateway call/dispatch, zero model-response " +
+            "releases/publications and blank model output. Generic failure is NOT success.\r\n\r\n" +
+            "Maya copies embedded Python 3.13.14, pinned Hermes/dependencies and reviewed product sources into a fresh " +
+            "private ProgramData attempt. Setup uses ordinary AppContainer, zero capabilities, reduced tokens, " +
+            "one-process jobs, child-process block and six child-scoped deny-all WFP filters. Shared All Application " +
+            "Packages access remains a limitation. One trusted medium worker is OUTSIDE AppContainer and its network " +
+            "filters; it implements no networking. No listener, account, service, registry or loopback exception.\r\n\r\n" +
+            "Protected host request.json, policy.json, worker.json and audit.jsonl remain accessible to SYSTEM, " +
+            "Administrators and this operator. The request contains only synthetic canary/private state path and UTC day; " +
+            "Windows timezone is unchanged. No tools, memory/database workload, fallback or retries. Reports/audit " +
+            "contain hashes and fixed metadata, not raw request, grant lease, model output or exception messages. " +
+            "Exact body hashes bind original/mutant request bytes without publishing the body or lease. " +
+            "Audit failure blocks acceptance.\r\n\r\n" +
+            "Child deadlines remain 22/30 seconds; frames 8192 bytes; request/response/stderr 4 KiB; channel/audit " +
+            "128 KiB; report 64 KiB; output 1024 bytes. Startup failure reports may include allowlisted stage/error " +
+            "codes, channel category, stderr byte counts and available exit snapshots. Diagnostics never qualify a failure. " +
+            "Both jobs stop before temporary security removal/label restoration. Cleanup may fail and needs independent checks. " +
+            "No automatic recovery/retry. Later variants, real inference, containment, Gate A and production remain unqualified. " +
+            "Consent covers one M03d attempt and its disclosed setup only.";
+#elif HERMES_MODEL_ATTEMPT
+        internal const string Version = "0.2.1-offline-attempt.1";
+        internal const string Scope = "offline-hermes-attempt-validation-v1";
+        internal const string Consent =
+            "Maya M03c fixed wrong-attempt validation candidate " + Version + "\r\n\r\n" +
+            "Unsigned development candidate. NO external inference, credential, customer content or charge. " +
+            "Real pinned Hermes/SDK send their original valid synthetic request. The trusted coordinator verifies " +
+            "the native body and envelope against the host-issued grant, then changes ONLY the first hex digit of the request attempt ID. " +
+            "The digit becomes 1 if originally 0; otherwise 0. Actual host identity, route and body stay unchanged. " +
+            "This tests WORKER validation, not hostile-child bypass. Positive gateway policy remains present. " +
+            "Expected: attempt-binding rejection before body admission or any gateway call/dispatch, zero model-response " +
+            "releases/publications and blank model output. Generic failure is NOT success.\r\n\r\n" +
+            "Maya copies embedded Python 3.13.14, pinned Hermes/dependencies and reviewed product sources into a fresh " +
+            "private ProgramData attempt. Setup uses ordinary AppContainer, zero capabilities, reduced tokens, " +
+            "one-process jobs, child-process block and six child-scoped deny-all WFP filters. Shared All Application " +
+            "Packages access remains a limitation. One trusted medium worker is OUTSIDE AppContainer and its network " +
+            "filters; it implements no networking. No listener, account, service, registry or loopback exception.\r\n\r\n" +
+            "Protected host request.json, policy.json, worker.json and audit.jsonl remain accessible to SYSTEM, " +
+            "Administrators and this operator. The request contains only synthetic canary/private state path and UTC day; " +
+            "Windows timezone is unchanged. No tools, memory/database workload, fallback or retries. Reports/audit " +
+            "contain hashes and fixed metadata, not raw request, grant lease, model output or exception messages. " +
+            "Versioned envelope projections bind original/mutated request attempt IDs and unchanged body without publishing the lease. " +
+            "Audit failure blocks acceptance.\r\n\r\n" +
+            "Child deadlines remain 22/30 seconds; frames 8192 bytes; request/response/stderr 4 KiB; channel/audit " +
+            "128 KiB; report 64 KiB; output 1024 bytes. Startup failure reports may include allowlisted stage/error " +
+            "codes, channel category, stderr byte counts and available exit snapshots. Diagnostics never qualify a failure. " +
+            "Both jobs stop before temporary security removal/label restoration. Cleanup may fail and needs independent checks. " +
+            "No automatic recovery/retry. Later variants, real inference, containment, Gate A and production remain unqualified. " +
+            "Consent covers one M03c attempt and its disclosed setup only.";
+#elif HERMES_MODEL_ROUTE
+        internal const string Version = "0.2.1-offline-route.1";
+        internal const string Scope = "offline-hermes-route-validation-v1";
+        internal const string Consent =
+            "Maya M03b fixed wrong-route validation candidate " + Version + "\r\n\r\n" +
+            "Unsigned development candidate. NO external inference, credential, customer content or charge. " +
+            "Real pinned Hermes/SDK send their original valid synthetic request. The trusted coordinator verifies " +
+            "the native body and envelope against the host-issued grant, then changes ONLY route " +
+            "maya.offline.model.v1 to maya.offline.model.v0. The body bytes remain identical. " +
+            "This tests WORKER validation, not hostile-child bypass. Positive gateway policy remains present. " +
+            "Expected: route rejection before body admission or any gateway call/dispatch, zero model-response " +
+            "releases/publications and blank model output. Generic failure is NOT success.\r\n\r\n" +
+            "Maya copies embedded Python 3.13.14, pinned Hermes/dependencies and reviewed product sources into a fresh " +
+            "private ProgramData attempt. Setup uses ordinary AppContainer, zero capabilities, reduced tokens, " +
+            "one-process jobs, child-process block and six child-scoped deny-all WFP filters. Shared All Application " +
+            "Packages access remains a limitation. One trusted medium worker is OUTSIDE AppContainer and its network " +
+            "filters; it implements no networking. No listener, account, service, registry or loopback exception.\r\n\r\n" +
+            "Protected host request.json, policy.json, worker.json and audit.jsonl remain accessible to SYSTEM, " +
+            "Administrators and this operator. The request contains only synthetic canary/private state path and UTC day; " +
+            "Windows timezone is unchanged. No tools, memory/database workload, fallback or retries. Reports/audit " +
+            "contain hashes and fixed metadata, not raw request, grant lease, model output or exception messages. " +
+            "Versioned envelope projections bind original/mutated routes and unchanged body without publishing the lease. " +
+            "Audit failure blocks acceptance.\r\n\r\n" +
+            "Child deadlines remain 22/30 seconds; frames 8192 bytes; request/response/stderr 4 KiB; channel/audit " +
+            "128 KiB; report 64 KiB; output 1024 bytes. Startup failure reports may include allowlisted stage/error " +
+            "codes, channel category, stderr byte counts and available exit snapshots. Diagnostics never qualify a failure. " +
+            "Both jobs stop before temporary security removal/label restoration. Cleanup may fail and needs independent checks. " +
+            "No automatic recovery/retry. Later variants, real inference, containment, Gate A and production remain unqualified. " +
+            "Consent covers one M03b attempt and its disclosed setup only.";
+#elif HERMES_MODEL_VALIDATION
+        internal const string Version = "0.2.1-offline-validation.2";
+        internal const string Scope = "offline-hermes-model-validation-v1";
+        internal const string Consent =
+            "Maya M03a fixed wrong-model validation candidate " + Version + "\r\n\r\n" +
+            "Unsigned development candidate. NO external inference, credential, customer content or charge. " +
+            "Real pinned Hermes/SDK send their original valid synthetic request. The trusted coordinator verifies " +
+            "its exact bytes, then derives one separate worker request changing only maya-offline-wire-v1 to " +
+            "maya-offline-wire-v0. Existing child guards stay enabled. This tests WORKER validation, not hostile-child " +
+            "bypass. Positive gateway policy stays present. Expected: rejection BEFORE any gateway call or dispatch, " +
+            "zero model-response releases/publications and a blank model-output field. Generic failure is NOT success.\r\n\r\n" +
+            "Maya copies embedded Python 3.13.14, pinned Hermes/dependencies and reviewed product sources into a fresh " +
+            "private ProgramData attempt. Setup uses ordinary AppContainer, zero capabilities, reduced tokens, " +
+            "one-process jobs, child-process block and six child-scoped deny-all WFP filters. Shared All Application " +
+            "Packages access remains a limitation. One trusted medium worker is OUTSIDE AppContainer and its network " +
+            "filters; it implements no networking. No listener, account, service, registry or loopback exception.\r\n\r\n" +
+            "Protected host request.json, policy.json, worker.json and audit.jsonl remain accessible to SYSTEM, " +
+            "Administrators and this operator. The request includes synthetic canary/private state path and UTC day; " +
+            "Windows timezone is unchanged. No tools, memory/database workload, fallback or retries. Reports/audit " +
+            "contain bounded hashes and evidence, not raw request or model output. Audit failure blocks acceptance.\r\n\r\n" +
+            "Child deadlines remain 22/30 seconds; frames 8192 bytes; request/response/stderr 4 KiB; channel/audit " +
+            "128 KiB; report 64 KiB; output 1024 bytes. Startup failure reports may include allowlisted stage/error " +
+            "codes, channel category, observed stderr byte counts and available process exit snapshots; no raw " +
+            "stderr, paths or exception messages are released. Diagnostics never qualify a failed test. " +
+            "Both jobs stop before removing temporary security resources " +
+            "and restoring labels. Cleanup may fail and needs independent checks. No automatic recovery/retry. " +
+            "Other M03 variants, later cases, real inference, containment, Gate A and production remain unqualified. " +
+            "Consent covers one M03a attempt and its disclosed setup only.";
+#elif HERMES_MODEL_DENY
+        internal const string Version = "0.2.1-offline-denial.1";
+        internal const string Scope = "offline-hermes-model-denial-v1";
+        internal const string Consent =
+            "Maya offline M02 authorization-denial candidate " + Version + "\r\n\r\n" +
+            "Unsigned development candidate. NO external inference, provider connection, credential, customer content or charge. " +
+            "Real pinned Hermes and its SDK send one valid synthetic request through private inherited pipes. " +
+            "The existing gateway's fixed policy omits model.egress permission. Expected result: deny before dispatch, " +
+            "zero synthetic provider dispatches, zero runtime response releases and zero operator publications. " +
+            "The blank output field is expected; a setup failure, timeout or missing audit is NOT a passed denial.\r\n\r\n" +
+            "Maya copies verified embedded Python 3.13.14, pinned Hermes, dependencies and product code into a fresh " +
+            "private ProgramData attempt. It provisions ordinary AppContainer, zero capabilities, reduced tokens, " +
+            "one-process jobs, child-process block and six child-scoped deny-all WFP filters. Shared All Application " +
+            "Packages access remains a limitation. One trusted medium worker is OUTSIDE AppContainer and its network " +
+            "filters; this profile implements no worker networking. No listener, loopback exemption or OS registry change.\r\n\r\n" +
+            "Protected host request.json, policy.json, worker.json and audit.jsonl remain as evidence, accessible only " +
+            "to SYSTEM, Administrators and this operator. Request includes synthetic canary, private state path and UTC " +
+            "day; Windows timezone is unchanged. No tools, memory/database workload, real response, fallback or retry. " +
+            "A bounded denial control is not model output. Required audit failure blocks acceptance.\r\n\r\n" +
+            "Child deadlines remain 22/30 seconds, frames 8192 bytes, request/response/stderr 4 KiB, report 64 KiB, " +
+            "channel/audit 128 KiB and output 1024 bytes. Maya stops both jobs before removing its temporary security " +
+            "resources and restoring labels. Cleanup can fail and needs independent checks. No automatic recovery or " +
+            "retry. M03-M09, real inference, containment, Gate A and production are not qualified.\r\n\r\n" +
+            "Consent authorizes this single M02 attempt and its disclosed temporary setup only.";
+#elif HERMES_MODEL
         internal const string Version = "0.2.1-offline-model.1";
         internal const string Scope = "offline-hermes-model-wire-v1";
         internal const string Consent =
@@ -486,8 +823,44 @@ namespace ProjectMaya.WindowsRuntime
             string recordPath = Path.Combine(directory, "attempt.json");
 #if HERMES_MODEL
             record["real_inference"] = false;
+#if HERMES_MODEL_RECREATE
+            record["model_case"] = "M05b";
+            record["model_pending_cases"] = new[] {"M06","M07","M08","M09"};
+#elif HERMES_MODEL_BUDGET
+            record["model_case"] = "M05a";
+            record["model_pending_cases"] = new[] {"M05b","M06","M07","M08","M09"};
+#elif HERMES_MODEL_REPLAY
+            record["model_case"] = "M04c";
+            record["model_pending_cases"] = new[] {"M05","M06","M07","M08","M09"};
+#elif HERMES_MODEL_REVOKE
+            record["model_case"] = "M04b";
+            record["model_pending_cases"] = new[] {"M04c","M05","M06","M07","M08","M09"};
+#elif HERMES_MODEL_EXPIRY
+            record["model_case"] = "M04a";
+            record["model_pending_cases"] = new[] {"M04b","M04c","M05","M06","M07","M08","M09"};
+#elif HERMES_MODEL_BODY
+            record["model_case"] = "M03d";
+            record["model_pending_cases"] = new[] {"M04","M05","M06","M07","M08","M09"};
+            record["model_mutation_origin"] = "trusted_fixed_coordinator_diagnostic";
+#elif HERMES_MODEL_ATTEMPT
+            record["model_case"] = "M03c";
+            record["model_pending_cases"] = new[] {"M03d","M04","M05","M06","M07","M08","M09"};
+            record["model_mutation_origin"] = "trusted_fixed_coordinator_diagnostic";
+#elif HERMES_MODEL_ROUTE
+            record["model_case"] = "M03b";
+            record["model_pending_cases"] = new[] {"M03c","M03d","M04","M05","M06","M07","M08","M09"};
+            record["model_mutation_origin"] = "trusted_fixed_coordinator_diagnostic";
+#elif HERMES_MODEL_VALIDATION
+            record["model_case"] = "M03a";
+            record["model_pending_cases"] = new[] {"M03b","M03c","M03d","M04","M05","M06","M07","M08","M09"};
+            record["model_mutation_origin"] = "trusted_fixed_coordinator_diagnostic";
+#elif HERMES_MODEL_DENY
+            record["model_case"] = "M02";
+            record["model_pending_cases"] = new[] {"M03","M04","M05","M06","M07","M08","M09"};
+#else
             record["model_case"] = "M01";
             record["model_pending_cases"] = new[] {"M02","M03","M04","M05","M06","M07","M08","M09"};
+#endif
 #endif
             SaveRecord(recordPath, record);
             var isolation = new WindowsIsolation(moniker);
@@ -564,7 +937,11 @@ namespace ProjectMaya.WindowsRuntime
 #if HERMES_MODEL
                     record["python_started"] = exit == 0 && (bool)record["fresh_state_beacon"] &&
                         record.ContainsKey("model_python_entry_observed") && true.Equals(record["model_python_entry_observed"]);
-                    record["status"] = "offline_model_child_completed";
+                    record["status"] = ModelRecreateAdmission.Enabled ? "offline_model_recreated_client_budget_child_completed" :
+                        ModelBudgetAdmission.Enabled ? "offline_model_adapter_budget_child_completed" :
+                        ModelReplayAdmission.Enabled ? "offline_model_replay_child_completed" :
+                        ModelValidationAdmission.Enabled ? "offline_model_validation_child_completed" :
+                        ModelDenialAdmission.Enabled ? "offline_model_denial_child_completed" : "offline_model_child_completed";
 #else
                     record["python_started"] = exit == 0 && (bool)record["fresh_state_beacon"] &&
                         record.ContainsKey("bridge_python_entry_observed") && true.Equals(record["bridge_python_entry_observed"]);
@@ -676,7 +1053,28 @@ namespace ProjectMaya.WindowsRuntime
                     record["status"] = cleanup && true.Equals(record["python_started"]) &&
                         record.ContainsKey("model_evidence_matches") && true.Equals(record["model_evidence_matches"]) &&
                         record.ContainsKey("model_worker_stopped") && true.Equals(record["model_worker_stopped"])
-                        ? "offline_model_wire_completed_pending_independent_cleanup" : "blocked";
+                        ? (ModelRecreateAdmission.Enabled ?
+                            (record.ContainsKey("model_recreate_evidence_matches") && true.Equals(record["model_recreate_evidence_matches"])
+                            ? "offline_model_recreated_client_budget_rejected_pending_independent_cleanup" : "blocked") : ModelBudgetAdmission.Enabled ?
+                            (record.ContainsKey("model_adapter_budget_evidence_matches") && true.Equals(record["model_adapter_budget_evidence_matches"])
+                            ? "offline_model_adapter_budget_rejected_pending_independent_cleanup" : "blocked") : ModelReplayAdmission.Enabled ?
+                            (record.ContainsKey("model_replay_evidence_matches") && true.Equals(record["model_replay_evidence_matches"])
+                            ? "offline_model_lease_replay_rejected_pending_independent_cleanup" : "blocked") : ModelRevocationAdmission.Enabled ?
+                            (record.ContainsKey("model_revocation_evidence_matches") && true.Equals(record["model_revocation_evidence_matches"])
+                            ? "offline_model_lease_revoked_pending_independent_cleanup" : "blocked") : ModelExpiryAdmission.Enabled ?
+                            (record.ContainsKey("model_expiry_evidence_matches") && true.Equals(record["model_expiry_evidence_matches"])
+                            ? "offline_model_lease_expired_pending_independent_cleanup" : "blocked") : ModelBodyAdmission.Enabled ?
+                            (record.ContainsKey("model_body_evidence_matches") && true.Equals(record["model_body_evidence_matches"])
+                            ? "offline_model_body_rejected_pending_independent_cleanup" : "blocked") : ModelAttemptAdmission.Enabled ?
+                            (record.ContainsKey("model_attempt_evidence_matches") && true.Equals(record["model_attempt_evidence_matches"])
+                            ? "offline_model_attempt_rejected_pending_independent_cleanup" : "blocked") : ModelRouteAdmission.Enabled ?
+                            (record.ContainsKey("model_route_evidence_matches") && true.Equals(record["model_route_evidence_matches"])
+                            ? "offline_model_route_rejected_pending_independent_cleanup" : "blocked") : ModelValidationAdmission.Enabled ?
+                            (record.ContainsKey("model_validation_evidence_matches") && true.Equals(record["model_validation_evidence_matches"])
+                            ? "offline_model_validation_rejected_pending_independent_cleanup" : "blocked") : ModelDenialAdmission.Enabled ?
+                            (record.ContainsKey("model_denial_evidence_matches") && true.Equals(record["model_denial_evidence_matches"])
+                            ? "offline_model_egress_denied_pending_independent_cleanup" : "blocked") :
+                            "offline_model_wire_completed_pending_independent_cleanup") : "blocked";
                     record["independent_cleanup_verified"] = false;
 #elif HERMES_BRIDGE
                     record["status"] = cleanup && true.Equals(record["python_started"]) &&
@@ -840,6 +1238,14 @@ namespace ProjectMaya.WindowsRuntime
                 string description = !(bool)record["cleanup_complete"] ? "Cleanup needs attention. Stop here; do not run Python again." :
                     cleanup ? "Security cleanup completed. Python was not launched again." :
 #if HERMES_MODEL
+                    outcome == "offline_model_lease_replay_rejected_pending_independent_cleanup" ? "M04c replay rejected after one synthetic dispatch/runtime delivery. No operator output was published." :
+                    outcome == "offline_model_lease_revoked_pending_independent_cleanup" ? "M04b unused unexpired-grant revocation verified before any gateway call. No model output was released." :
+                    outcome == "offline_model_lease_expired_pending_independent_cleanup" ? "M04a unused-grant expiry verified before any gateway call. No model output was released." :
+                    outcome == "offline_model_body_rejected_pending_independent_cleanup" ? "M03d exact-body validation verified before any gateway call. No model output was released." :
+                    outcome == "offline_model_attempt_rejected_pending_independent_cleanup" ? "M03c worker attempt binding verified before any gateway call. No model output was released." :
+                    outcome == "offline_model_route_rejected_pending_independent_cleanup" ? "M03b worker route validation verified before any gateway call. No model output was released." :
+                    outcome == "offline_model_validation_rejected_pending_independent_cleanup" ? "M03a worker validation verified before any gateway call. No model output was released." :
+                    outcome == "offline_model_egress_denied_pending_independent_cleanup" ? "M02 gateway denial verified. No model request was dispatched and no model output was released." :
                     outcome == "offline_model_wire_completed_pending_independent_cleanup" ? "Offline model-wire test completed with a synthetic response. No inference occurred." :
 #endif
                     outcome == "startup_completed_not_containment_qualified" ? "Python completed startup. Containment is not yet qualified." :

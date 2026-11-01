@@ -1,0 +1,22 @@
+{
+  "schema": "maya.channel.reader.source_contract.v1",
+  "version": "0.2.1-offline-budget.3",
+  "scope": "source-only",
+  "assembly_approved": true,
+  "assertions": 163,
+  "cases": 13,
+  "limits": {
+    "ready_ms": 5000,
+    "rpc_ms": 2000,
+    "partial_ms": 1000,
+    "frame_bytes": 8192,
+    "channel_bytes": 131072
+  },
+  "product_execution": false,
+  "package_assembled": false,
+  "guest_root_cause_proven": false,
+  "production_qualified": false,
+  "containment_qualified": false,
+  "independent_cleanup_verified": false,
+  "next_gate": "separate offline assembly approval"
+}

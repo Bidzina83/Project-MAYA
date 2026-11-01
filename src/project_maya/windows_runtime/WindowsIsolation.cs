@@ -400,7 +400,27 @@ namespace ProjectMaya.WindowsRuntime
                 Attribute(attributes, 0x20002, inherited, 3 * IntPtr.Size);
                 string runtime = Path.Combine(directory, "runtime"), state = Path.Combine(directory, "state");
                 string python = Path.Combine(runtime, "python", "python.exe"), check = Path.Combine(runtime, "containment_check.py");
-#if HERMES_MODEL
+#if HERMES_MODEL_RECREATE
+                check = Path.Combine(runtime, "model_recreate_child_entry.py");
+#elif HERMES_MODEL_BUDGET
+                check = Path.Combine(runtime, "model_budget_child_entry.py");
+#elif HERMES_MODEL_REPLAY
+                check = Path.Combine(runtime, "model_replay_child_entry.py");
+#elif HERMES_MODEL_REVOKE
+                check = Path.Combine(runtime, "model_revoke_child_entry.py");
+#elif HERMES_MODEL_EXPIRY
+                check = Path.Combine(runtime, "model_expiry_child_entry.py");
+#elif HERMES_MODEL_BODY
+                check = Path.Combine(runtime, "model_body_child_entry.py");
+#elif HERMES_MODEL_ROUTE
+                check = Path.Combine(runtime, "model_route_child_entry.py");
+#elif HERMES_MODEL_ATTEMPT
+                check = Path.Combine(runtime, "model_attempt_child_entry.py");
+#elif HERMES_MODEL_VALIDATION
+                check = Path.Combine(runtime, "model_validation_child_entry.py");
+#elif HERMES_MODEL_DENY
+                check = Path.Combine(runtime, "model_deny_child_entry.py");
+#elif HERMES_MODEL
                 check = Path.Combine(runtime, "model_child_entry.py");
 #elif HERMES_BRIDGE
                 check = Path.Combine(runtime, "bridge_child_entry.py");
