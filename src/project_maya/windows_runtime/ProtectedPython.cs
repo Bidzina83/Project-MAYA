@@ -1,4 +1,19 @@
 // Product-owned startup candidate. No Hermes execution or containment acceptance.
+#if HERMES_MODEL_FINAL && (HERMES_MODEL_ALLOWLIST || HERMES_MODEL_OVERSIZED || !HERMES_MODEL_VALIDATION || HERMES_MODEL_MALFORMED || HERMES_MODEL_OUTPUT_DENY || HERMES_MODEL_DENY || HERMES_MODEL_RECREATE || HERMES_MODEL_BUDGET || HERMES_MODEL_REPLAY || HERMES_MODEL_REVOKE || HERMES_MODEL_EXPIRY || HERMES_MODEL_BODY || HERMES_MODEL_ROUTE || HERMES_MODEL_ATTEMPT)
+#error HERMES_MODEL_FINAL requires VALIDATION and excludes all other fixed cases.
+#endif
+#if HERMES_MODEL_ALLOWLIST && (HERMES_MODEL_OVERSIZED || !HERMES_MODEL_VALIDATION || HERMES_MODEL_MALFORMED || HERMES_MODEL_OUTPUT_DENY || HERMES_MODEL_DENY || HERMES_MODEL_RECREATE || HERMES_MODEL_BUDGET || HERMES_MODEL_REPLAY || HERMES_MODEL_REVOKE || HERMES_MODEL_EXPIRY || HERMES_MODEL_BODY || HERMES_MODEL_ROUTE || HERMES_MODEL_ATTEMPT)
+#error HERMES_MODEL_ALLOWLIST requires VALIDATION and excludes all other fixed cases.
+#endif
+#if HERMES_MODEL_OVERSIZED && (!HERMES_MODEL_VALIDATION || HERMES_MODEL_MALFORMED || HERMES_MODEL_OUTPUT_DENY || HERMES_MODEL_DENY || HERMES_MODEL_RECREATE || HERMES_MODEL_BUDGET || HERMES_MODEL_REPLAY || HERMES_MODEL_REVOKE || HERMES_MODEL_EXPIRY || HERMES_MODEL_BODY || HERMES_MODEL_ROUTE || HERMES_MODEL_ATTEMPT)
+#error HERMES_MODEL_OVERSIZED requires VALIDATION and excludes all other fixed cases.
+#endif
+#if HERMES_MODEL_MALFORMED && (!HERMES_MODEL_VALIDATION || HERMES_MODEL_OUTPUT_DENY || HERMES_MODEL_DENY || HERMES_MODEL_RECREATE || HERMES_MODEL_BUDGET || HERMES_MODEL_REPLAY || HERMES_MODEL_REVOKE || HERMES_MODEL_EXPIRY || HERMES_MODEL_BODY || HERMES_MODEL_ROUTE || HERMES_MODEL_ATTEMPT)
+#error HERMES_MODEL_MALFORMED requires VALIDATION and excludes all other fixed cases.
+#endif
+#if HERMES_MODEL_OUTPUT_DENY && (!HERMES_MODEL_VALIDATION || HERMES_MODEL_DENY || HERMES_MODEL_RECREATE || HERMES_MODEL_BUDGET || HERMES_MODEL_REPLAY || HERMES_MODEL_REVOKE || HERMES_MODEL_EXPIRY || HERMES_MODEL_BODY || HERMES_MODEL_ROUTE || HERMES_MODEL_ATTEMPT)
+#error HERMES_MODEL_OUTPUT_DENY requires VALIDATION and excludes all other fixed model cases.
+#endif
 #if HERMES_MODEL_RECREATE && (!HERMES_MODEL_VALIDATION || HERMES_MODEL_BUDGET || HERMES_MODEL_REPLAY || HERMES_MODEL_REVOKE || HERMES_MODEL_EXPIRY || HERMES_MODEL_BODY || HERMES_MODEL_ROUTE || HERMES_MODEL_ATTEMPT)
 #error HERMES_MODEL_RECREATE requires VALIDATION and excludes all other fixed model cases.
 #endif
@@ -58,7 +73,22 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Maya protected Python startup candidate")]
 [assembly: AssemblyVersion("0.1.0.0")]
-#if HERMES_MODEL_RECREATE
+#if HERMES_MODEL_FINAL
+[assembly: AssemblyFileVersion("0.2.1.21")]
+[assembly: AssemblyInformationalVersion("0.2.1-offline-final.3")]
+#elif HERMES_MODEL_ALLOWLIST
+[assembly: AssemblyFileVersion("0.2.1.18")]
+[assembly: AssemblyInformationalVersion("0.2.1-offline-allowlist.1")]
+#elif HERMES_MODEL_OVERSIZED
+[assembly: AssemblyFileVersion("0.2.1.17")]
+[assembly: AssemblyInformationalVersion("0.2.1-offline-oversized.1")]
+#elif HERMES_MODEL_MALFORMED
+[assembly: AssemblyFileVersion("0.2.1.16")]
+[assembly: AssemblyInformationalVersion("0.2.1-offline-malformed.1")]
+#elif HERMES_MODEL_OUTPUT_DENY
+[assembly: AssemblyFileVersion("0.2.1.15")]
+[assembly: AssemblyInformationalVersion("0.2.1-offline-output-denial.1")]
+#elif HERMES_MODEL_RECREATE
 [assembly: AssemblyFileVersion("0.2.1.14")]
 [assembly: AssemblyInformationalVersion("0.2.1-offline-recreate.1")]
 #elif HERMES_MODEL_BUDGET
@@ -115,7 +145,119 @@ namespace ProjectMaya.WindowsRuntime
 {
     internal static class ProtectedPython
     {
-#if HERMES_MODEL_RECREATE
+#if HERMES_MODEL_FINAL
+        internal const string Version = "0.2.1-offline-final.3";
+        internal const string Scope = "offline-hermes-final-text-rejection-v1";
+        internal const string Consent =
+            "Maya M08 fixed final-text diagnostic " + Version + "\r\n\r\n" +
+            "Unsigned development candidate. One real pinned Hermes synthetic conversation, no inference, credentials or customer data. " +
+            "A valid response is delivered once to Hermes. After genuine final text and report pass the original launcher checks, " +
+            "the trusted coordinator changes one copied canary digit. The original worker text check must reject before operator authorization. " +
+            "Both policy rules and original guards remain; no final text is published. This is not an operator-only policy denial or hostile-child bypass proof. " +
+            "One dispatch, one runtime delivery, zero operator effects, two gateway calls, exactly five audit records, original uncertainty true, " +
+            "positive native conversation/SDK closure and natural exits required. Generic failure never passes.\r\n\r\n" +
+            "Product copies embedded Python3.13.14 and pinned dependencies to a fresh private ProgramData attempt. Same AppContainer, " +
+            "zero capabilities, reduced tokens, one-process jobs, child-process block and six scoped WFP denies. Shared All Application Packages " +
+            "remains a limitation; trusted medium worker is outside child containment. No networking, listener, account, service, registry change " +
+            "or loopback exception. Protected host files retained for SYSTEM, Administrators and this operator. No manual OS setup. " +
+            "TTL2000ms, ready/RPC/partial5000/2000/1000ms, child22/30s, frame8192, channel/audit128KiB, request/response/stderr4KiB, " +
+            "report64KiB, output1024-byte bounds unchanged. No new grant or deadline extension. Hash/count reports only. " +
+            "Bounded original guard diagnostics preserve clock calls and authorization. Wrong-stage failures remain blocked. " +
+            "Separate matching-artifact ONE-run approval and fresh consent required. No retry/fallback/recovery, inference or later cases. " +
+            "Independent cleanup required; all qualification flags false and Gate A open.";
+#elif HERMES_MODEL_ALLOWLIST
+        internal const string Version = "0.2.1-offline-allowlist.1";
+        internal const string Scope = "offline-hermes-response-allowlist-rejection-v1";
+        internal const string Consent =
+            "Maya M07c allowlist-response candidate " + Version + "\r\n\r\n" +
+            "Unsigned development candidate. Real pinned Hermes sends one fixed synthetic request, not inference. " +
+            "No credentials, customer content or charge. Both policy rules remain. A fixed construction-time synthetic " +
+            "provider changes one fixture content byte; the original exact-byte guard must reject it after JSON decoding. " +
+            "No model response or final text is delivered; UI stays blank. A denial control is not model output. " +
+            "Original dispatch uncertainty remains true. One egress gateway decision, one attempted dispatch, zero releases, " +
+            "exactly two audit records and natural child/worker exit are required. Generic failure never passes. " +
+            "Child observations remain untrusted; this is not hostile-child bypass qualification.\r\n\r\n" +
+            "Setup copies embedded Python3.13.14 and pinned Hermes/dependencies to a fresh private ProgramData attempt. " +
+            "Same AppContainer, zero capabilities, reduced tokens, one-process jobs, child-process block and six " +
+            "scoped WFP network denies. Shared All Application Packages remains a limitation. Trusted medium worker " +
+            "is outside child containment and implements no networking. Protected host files are retained for " +
+            "SYSTEM, Administrators and this operator. No listener, account, service, registry change or loopback " +
+            "exception. No tools, memory, database workload or manual OS setup. Private UTC does not change Windows timezone.\r\n\r\n" +
+            "TTL2000ms, ready/RPC/partial5000/2000/1000ms, child22/30s, frame8192 bytes, channel/audit128 KiB, " +
+            "request/response/stderr4 KiB, report64 KiB and output1024-byte bounds stay unchanged. No new grant or " +
+            "deadline extension. Reports contain hashes/counts, not raw response, lease or exception text. " +
+            "One M07c attempt only, with fresh consent and separate matching-artifact run approval. No retry/recovery, " +
+            "fallback, inference or later cases. Cleanup needs independent checks. Production, containment and Gate A remain unqualified.";
+#elif HERMES_MODEL_OVERSIZED
+        internal const string Version = "0.2.1-offline-oversized.1";
+        internal const string Scope = "offline-hermes-response-size-rejection-v1";
+        internal const string Consent =
+            "Maya M07b oversized-response candidate " + Version + "\r\n\r\n" +
+            "Unsigned development candidate. Real pinned Hermes sends one fixed synthetic request, not inference. " +
+            "No credentials, customer content or charge. Both policy rules remain. A fixed construction-time synthetic " +
+            "provider consumes one original dispatch and returns fixed valid JSON of4097 bytes; the original4096-byte guard must reject it before parsing. " +
+            "No model response or final text is delivered; UI stays blank. A denial control is not model output. " +
+            "Original dispatch uncertainty remains true. One egress gateway decision, one attempted dispatch, zero releases, " +
+            "exactly two audit records and natural child/worker exit are required. Generic failure never passes. " +
+            "Child observations remain untrusted; this is not hostile-child bypass qualification.\r\n\r\n" +
+            "Setup copies embedded Python3.13.14 and pinned Hermes/dependencies to a fresh private ProgramData attempt. " +
+            "Same AppContainer, zero capabilities, reduced tokens, one-process jobs, child-process block and six " +
+            "scoped WFP network denies. Shared All Application Packages remains a limitation. Trusted medium worker " +
+            "is outside child containment and implements no networking. Protected host files are retained for " +
+            "SYSTEM, Administrators and this operator. No listener, account, service, registry change or loopback " +
+            "exception. No tools, memory, database workload or manual OS setup. Private UTC does not change Windows timezone.\r\n\r\n" +
+            "TTL2000ms, ready/RPC/partial5000/2000/1000ms, child22/30s, frame8192 bytes, channel/audit128 KiB, " +
+            "request/response/stderr4 KiB, report64 KiB and output1024-byte bounds stay unchanged. No new grant or " +
+            "deadline extension. Only an exact4097-byte rejection has a bounded hash/count diagnostic; acceptance stays4096. Reports contain hashes/counts, not raw response, lease or exception text. " +
+            "One M07b attempt only, with fresh consent and separate matching-artifact run approval. M07c is not enabled. No retry/recovery, " +
+            "fallback, inference or later cases. Cleanup needs independent checks. Production, containment and Gate A remain unqualified.";
+#elif HERMES_MODEL_MALFORMED
+        internal const string Version = "0.2.1-offline-malformed.1";
+        internal const string Scope = "offline-hermes-response-json-rejection-v1";
+        internal const string Consent =
+            "Maya M07a malformed-response candidate " + Version + "\r\n\r\n" +
+            "Unsigned development candidate. Real pinned Hermes sends one fixed synthetic request, not inference. " +
+            "No credentials, customer content or charge. Both policy rules remain. A fixed construction-time synthetic " +
+            "provider consumes one original dispatch and returns one malformed byte; the original JSON guard must reject it. " +
+            "No model response or final text is delivered; UI stays blank. A denial control is not model output. " +
+            "Original dispatch uncertainty remains true. One egress gateway decision, one attempted dispatch, zero releases, " +
+            "exactly two audit records and natural child/worker exit are required. Generic failure never passes. " +
+            "Child observations remain untrusted; this is not hostile-child bypass qualification.\r\n\r\n" +
+            "Setup copies embedded Python3.13.14 and pinned Hermes/dependencies to a fresh private ProgramData attempt. " +
+            "Same AppContainer, zero capabilities, reduced tokens, one-process jobs, child-process block and six " +
+            "scoped WFP network denies. Shared All Application Packages remains a limitation. Trusted medium worker " +
+            "is outside child containment and implements no networking. Protected host files are retained for " +
+            "SYSTEM, Administrators and this operator. No listener, account, service, registry change or loopback " +
+            "exception. No tools, memory, database workload or manual OS setup. Private UTC does not change Windows timezone.\r\n\r\n" +
+            "TTL2000ms, ready/RPC/partial5000/2000/1000ms, child22/30s, frame8192 bytes, channel/audit128 KiB, " +
+            "request/response/stderr4 KiB, report64 KiB and output1024-byte bounds stay unchanged. No new grant or " +
+            "deadline extension. Reports contain hashes/counts, not raw response, lease or exception text. " +
+            "One M07a attempt only, with fresh consent and separate matching-artifact run approval. M07b/M07c are not enabled. No retry/recovery, " +
+            "fallback, inference or later cases. Cleanup needs independent checks. Production, containment and Gate A remain unqualified.";
+#elif HERMES_MODEL_OUTPUT_DENY
+        internal const string Version = "0.2.1-offline-output-denial.1";
+        internal const string Scope = "offline-hermes-runtime-output-denial-v1";
+        internal const string Consent =
+            "Maya M06 runtime-output authorization candidate " + Version + "\r\n\r\n" +
+            "Unsigned development candidate. Real pinned Hermes sends one fixed synthetic request, not inference. " +
+            "No credentials, customer content or charge. The host permits one synthetic dispatch, then omits only " +
+            "the model.output allow so the original gateway denies releasing its validated response to Hermes. " +
+            "No model response or final text is delivered; UI stays blank. A denial control is not model output. " +
+            "Original dispatch uncertainty remains true. Two gateway decisions, one dispatch, zero releases, " +
+            "exactly three audit records and natural child/worker exit are required. Generic failure never passes. " +
+            "Child observations remain untrusted; this is not hostile-child bypass qualification.\r\n\r\n" +
+            "Setup copies embedded Python3.13.14 and pinned Hermes/dependencies to a fresh private ProgramData attempt. " +
+            "Same AppContainer, zero capabilities, reduced tokens, one-process jobs, child-process block and six " +
+            "scoped WFP network denies. Shared All Application Packages remains a limitation. Trusted medium worker " +
+            "is outside child containment and implements no networking. Protected host files are retained for " +
+            "SYSTEM, Administrators and this operator. No listener, account, service, registry change or loopback " +
+            "exception. No tools, memory, database workload or manual OS setup. Private UTC does not change Windows timezone.\r\n\r\n" +
+            "TTL2000ms, ready/RPC/partial5000/2000/1000ms, child22/30s, frame8192 bytes, channel/audit128 KiB, " +
+            "request/response/stderr4 KiB, report64 KiB and output1024-byte bounds stay unchanged. No new grant or " +
+            "deadline extension. Reports contain hashes/counts, not raw response, lease or exception text. " +
+            "One M06 attempt only, with fresh consent and separate matching-artifact run approval. No retry/recovery, " +
+            "fallback, inference or later cases. Cleanup needs independent checks. Production, containment and Gate A remain unqualified.";
+#elif HERMES_MODEL_RECREATE
         internal const string Version = "0.2.1-offline-recreate.1";
         internal const string Scope = "offline-hermes-recreated-client-budget-v1";
         internal const string Consent =
@@ -823,7 +965,23 @@ namespace ProjectMaya.WindowsRuntime
             string recordPath = Path.Combine(directory, "attempt.json");
 #if HERMES_MODEL
             record["real_inference"] = false;
-#if HERMES_MODEL_RECREATE
+#if HERMES_MODEL_FINAL
+            record["model_case"] = "M08";
+            record["model_mutation_origin"] = "trusted_fixed_coordinator_diagnostic";
+            record["model_pending_cases"] = new[] {"M09"};
+#elif HERMES_MODEL_ALLOWLIST
+            record["model_case"] = "M07c";
+            record["model_pending_cases"] = new[] {"M08","M09"};
+#elif HERMES_MODEL_OVERSIZED
+            record["model_case"] = "M07b";
+            record["model_pending_cases"] = new[] {"M07c","M08","M09"};
+#elif HERMES_MODEL_MALFORMED
+            record["model_case"] = "M07a";
+            record["model_pending_cases"] = new[] {"M07b","M07c","M08","M09"};
+#elif HERMES_MODEL_OUTPUT_DENY
+            record["model_case"] = "M06";
+            record["model_pending_cases"] = new[] {"M07","M08","M09"};
+#elif HERMES_MODEL_RECREATE
             record["model_case"] = "M05b";
             record["model_pending_cases"] = new[] {"M06","M07","M08","M09"};
 #elif HERMES_MODEL_BUDGET
@@ -937,7 +1095,7 @@ namespace ProjectMaya.WindowsRuntime
 #if HERMES_MODEL
                     record["python_started"] = exit == 0 && (bool)record["fresh_state_beacon"] &&
                         record.ContainsKey("model_python_entry_observed") && true.Equals(record["model_python_entry_observed"]);
-                    record["status"] = ModelRecreateAdmission.Enabled ? "offline_model_recreated_client_budget_child_completed" :
+                    record["status"] = ModelFinalAdmission.Enabled ? "offline_model_final_text_rejection_child_completed" : ModelAllowlistAdmission.Enabled ? "offline_model_response_allowlist_rejection_child_completed" : ModelOversizedAdmission.Enabled ? "offline_model_response_size_rejection_child_completed" : ModelMalformedAdmission.Enabled ? "offline_model_response_json_rejection_child_completed" : ModelOutputDenialAdmission.Enabled ? "offline_model_runtime_output_denial_child_completed" : ModelRecreateAdmission.Enabled ? "offline_model_recreated_client_budget_child_completed" :
                         ModelBudgetAdmission.Enabled ? "offline_model_adapter_budget_child_completed" :
                         ModelReplayAdmission.Enabled ? "offline_model_replay_child_completed" :
                         ModelValidationAdmission.Enabled ? "offline_model_validation_child_completed" :
@@ -1053,7 +1211,17 @@ namespace ProjectMaya.WindowsRuntime
                     record["status"] = cleanup && true.Equals(record["python_started"]) &&
                         record.ContainsKey("model_evidence_matches") && true.Equals(record["model_evidence_matches"]) &&
                         record.ContainsKey("model_worker_stopped") && true.Equals(record["model_worker_stopped"])
-                        ? (ModelRecreateAdmission.Enabled ?
+                        ? (ModelFinalAdmission.Enabled ?
+                            (record.ContainsKey("model_final_text_evidence_matches") && true.Equals(record["model_final_text_evidence_matches"])
+                            ? "offline_model_final_text_rejected_pending_independent_cleanup" : "blocked") : ModelAllowlistAdmission.Enabled ?
+                            (record.ContainsKey("model_allowlist_evidence_matches") && true.Equals(record["model_allowlist_evidence_matches"])
+                            ? "offline_model_response_allowlist_rejected_pending_independent_cleanup" : "blocked") : ModelOversizedAdmission.Enabled ?
+                            (record.ContainsKey("model_oversized_evidence_matches") && true.Equals(record["model_oversized_evidence_matches"])
+                            ? "offline_model_response_size_rejected_pending_independent_cleanup" : "blocked") : ModelMalformedAdmission.Enabled ?
+                            (record.ContainsKey("model_malformed_evidence_matches") && true.Equals(record["model_malformed_evidence_matches"])
+                            ? "offline_model_response_json_rejected_pending_independent_cleanup" : "blocked") : ModelOutputDenialAdmission.Enabled ?
+                            (record.ContainsKey("model_output_denial_evidence_matches") && true.Equals(record["model_output_denial_evidence_matches"])
+                            ? "offline_model_runtime_output_denied_pending_independent_cleanup" : "blocked") : ModelRecreateAdmission.Enabled ?
                             (record.ContainsKey("model_recreate_evidence_matches") && true.Equals(record["model_recreate_evidence_matches"])
                             ? "offline_model_recreated_client_budget_rejected_pending_independent_cleanup" : "blocked") : ModelBudgetAdmission.Enabled ?
                             (record.ContainsKey("model_adapter_budget_evidence_matches") && true.Equals(record["model_adapter_budget_evidence_matches"])

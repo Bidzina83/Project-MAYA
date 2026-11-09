@@ -10,18 +10,24 @@ namespace ProjectMaya.WindowsRuntime
 {
     internal static class ModelHostFiles
     {
+        internal static Dictionary<string,object>[] Rules(string actor)
+        {
+            return new[] {
+#if !HERMES_MODEL_DENY
+                new Dictionary<string,object>{{"capability","model.egress"},{"target","model:maya-offline-fixture"},{"operation","infer"},{"actor_id",actor}},
+#endif
+#if !HERMES_MODEL_OUTPUT_DENY
+                new Dictionary<string,object>{{"capability","model.output"},{"target","model:maya-offline-fixture"},{"operation","disclose"},{"actor_id",actor}}
+#endif
+            };
+        }
         internal static string Prepare(string directory, string attempt, SecurityIdentifier user, string channel, string canary, string output)
         {
             string host=Path.Combine(directory,"host");ProductFiles.NoLinks(host);
             if(Directory.Exists(host)||File.Exists(host))throw new StartupFailure("model_host_already_exists");
             Directory.CreateDirectory(host,BridgeHostFiles.DirectoryAcl(user));Native.SetLabel(host,false);
             BridgeHostFiles.Verify(Directory.GetAccessControl(host),user,true);
-            var rules=new[] {
-#if !HERMES_MODEL_DENY
-                new Dictionary<string,object>{{"capability","model.egress"},{"target","model:maya-offline-fixture"},{"operation","infer"},{"actor_id","windows:"+user.Value}},
-#endif
-                new Dictionary<string,object>{{"capability","model.output"},{"target","model:maya-offline-fixture"},{"operation","disclose"},{"actor_id","windows:"+user.Value}}
-            };
+            var rules=Rules("windows:"+user.Value);
             var json=new JavaScriptSerializer();
             BridgeHostFiles.Write(Path.Combine(host,"request.json"),new byte[0],user);
             BridgeHostFiles.Write(Path.Combine(host,"audit.jsonl"),new byte[0],user);

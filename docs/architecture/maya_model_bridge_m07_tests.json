@@ -1,0 +1,103 @@
+{
+  "schema": "maya.model.m07.review.v1",
+  "recorded_date": "2026-11-02",
+  "status": "m07a_source_prepared_inert_verified_m07b_c_review_only",
+  "source_preparation_approved": true,
+  "assembly_approved": false,
+  "native_run_approved": false,
+  "recommended_next": "M07a_only",
+  "variants": [
+    {
+      "case": "M07a",
+      "trigger": "one_ASCII_opening_brace",
+      "expected_boundary": "original_response_JSON_decode",
+      "observed_bytes": 1,
+      "recommended_next": true
+    },
+    {
+      "case": "M07b",
+      "trigger": "fixed_valid_JSON_4097_bytes",
+      "expected_boundary": "original_response_size_check",
+      "observed_bytes": 4097,
+      "recommended_next": false
+    },
+    {
+      "case": "M07c",
+      "trigger": "one_final_fixture_text_hex_digit_changed_in_normal_wire_envelope",
+      "expected_boundary": "original_exact_response_byte_allowlist",
+      "recommended_next": false
+    }
+  ],
+  "source_seams_require_approval": [
+    "construction_time_fixed_provider_factory_default_unchanged",
+    "fixed_M07a_provider_calls_original_dispatch_once_expected_wire_unchanged",
+    "bounded_read_only_original_JSON_rejection_stage_digest_count"
+  ],
+  "m07a_expected": {
+    "request_validated": true,
+    "egress_allowed": true,
+    "gateway_calls": 1,
+    "dispatch_attempted": true,
+    "dispatches": 1,
+    "dispatch_outcome_validated": false,
+    "response_validated": false,
+    "validated_response_hash": "",
+    "validated_response_bytes": 0,
+    "denial_uncertain": true,
+    "runtime_output_gateway_denied": false,
+    "egress_gateway_denied": false,
+    "prepared_runtime_releases": 0,
+    "confirmed_runtime_releases": 0,
+    "prepared_operator_releases": 0,
+    "confirmed_operator_releases": 0,
+    "runtime_model_response_pipe_writes": 0,
+    "operator_publications": 0,
+    "native_conversation": false,
+    "natural_child_exit": 0,
+    "natural_worker_exit": 0
+  },
+  "audit": {
+    "exact_records": [
+      "egress_intent",
+      "denied"
+    ],
+    "destinations": [
+      "provider",
+      "provider"
+    ],
+    "capabilities": [
+      "model.egress",
+      "model.egress"
+    ],
+    "operations": [
+      "infer",
+      "infer"
+    ],
+    "dispatches": [
+      0,
+      1
+    ],
+    "validated_response_metadata": [
+      "empty",
+      "empty"
+    ],
+    "not_gateway_denial": true,
+    "new_independent_two_record_admission_required": true
+  },
+  "native_protocol_and_schema_freeze_required": true,
+  "omissions_approved": false,
+  "new_dependency": false,
+  "new_security_grant": false,
+  "grant_ttl_ms": 2000,
+  "deadlines_unchanged": true,
+  "real_inference": false,
+  "retry_recovery": false,
+  "production_qualified": false,
+  "containment_qualified": false,
+  "independent_cleanup_verified": false,
+  "source_preparation_scope": "M07a_only",
+  "m07b_source_preparation_approved": false,
+  "m07c_source_preparation_approved": false,
+  "m07a_source_review": "maya_model_bridge_m07a_source_review.md",
+  "m07a_test_contract": "maya_model_bridge_m07a_tests.json"
+}

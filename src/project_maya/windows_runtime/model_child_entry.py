@@ -10,7 +10,7 @@ import sys
 import time
 
 
-def main(*, deny_egress=False, wrong_model=False, wrong_route=False, wrong_attempt=False, wrong_body=False, expire_grant=False, revoke_grant=False, replay_grant=False, same_client_budget=False, recreated_client_budget=False):
+def main(*, deny_egress=False, wrong_model=False, wrong_route=False, wrong_attempt=False, wrong_body=False, expire_grant=False, revoke_grant=False, replay_grant=False, same_client_budget=False, recreated_client_budget=False, deny_runtime_output=False, malformed_response=False, oversized_response=False, allowlist_response=False, final_text=False):
     if (sys.platform != "win32" or sys.version_info[:3] != (3, 13, 14) or
             not all((sys.flags.isolated, sys.flags.no_site, sys.flags.dont_write_bytecode)) or
             len(sys.argv) != 2 or len(sys.argv[1]) != 32 or any(c not in "0123456789abcdef" for c in sys.argv[1])):
@@ -51,11 +51,11 @@ def main(*, deny_egress=False, wrong_model=False, wrong_route=False, wrong_attem
             if directory.is_dir(): handles.append(os.add_dll_directory(str(directory)))
         contract = json.loads((runtime/"model-contract.json").read_text())
         config_bytes = (runtime/"model-config.json").read_bytes()
-        negative = deny_egress or wrong_model or wrong_route or wrong_attempt or wrong_body or expire_grant or revoke_grant
-        if (any(type(mode) is not bool for mode in (deny_egress, wrong_model, wrong_route, wrong_attempt, wrong_body, expire_grant, revoke_grant, replay_grant, same_client_budget, recreated_client_budget))
-                or sum((deny_egress, wrong_model, wrong_route, wrong_attempt, wrong_body, expire_grant, revoke_grant, replay_grant, same_client_budget, recreated_client_budget)) > 1
+        negative = deny_egress or wrong_model or wrong_route or wrong_attempt or wrong_body or expire_grant or revoke_grant or deny_runtime_output or malformed_response or oversized_response or allowlist_response
+        if (any(type(mode) is not bool for mode in (deny_egress, wrong_model, wrong_route, wrong_attempt, wrong_body, expire_grant, revoke_grant, replay_grant, same_client_budget, recreated_client_budget, deny_runtime_output, malformed_response, oversized_response, allowlist_response, final_text))
+                or sum((deny_egress, wrong_model, wrong_route, wrong_attempt, wrong_body, expire_grant, revoke_grant, replay_grant, same_client_budget, recreated_client_budget, deny_runtime_output, malformed_response, oversized_response, allowlist_response, final_text)) > 1
                 or contract["schema"] != "maya.offline.model.package.v1"
-                or contract.get("cases") != (["M05b"] if recreated_client_budget else ["M05a"] if same_client_budget else ["M04c"] if replay_grant else ["M04b"] if revoke_grant else ["M04a"] if expire_grant else ["M03d"] if wrong_body else ["M03c"] if wrong_attempt else ["M03b"] if wrong_route else ["M03a"] if wrong_model else ["M02"] if deny_egress else ["M01"])
+                or contract.get("cases") != (["M08"] if final_text else ["M07c"] if allowlist_response else ["M07b"] if oversized_response else ["M07a"] if malformed_response else ["M06"] if deny_runtime_output else ["M05b"] if recreated_client_budget else ["M05a"] if same_client_budget else ["M04c"] if replay_grant else ["M04b"] if revoke_grant else ["M04a"] if expire_grant else ["M03d"] if wrong_body else ["M03c"] if wrong_attempt else ["M03b"] if wrong_route else ["M03a"] if wrong_model else ["M02"] if deny_egress else ["M01"])
                 or hashlib.sha256(config_bytes).hexdigest() != contract["config_sha256"]
                 or (state/"config.yaml").read_bytes() != config_bytes):
             raise ValueError("model_bridge.config")
@@ -66,7 +66,7 @@ def main(*, deny_egress=False, wrong_model=False, wrong_route=False, wrong_attem
         report["distributions_verified"] = len(contract["distributions"]) == 64
         from project_maya.bridge.transport import PrivateChannel
         from project_maya.bridge.protocol import ProtocolError
-        from project_maya.hermes_plugins.model_bridge import ModelChannelClient, EgressDenialChannelClient, WrongModelChannelClient, WrongRouteChannelClient, WrongAttemptChannelClient, WrongBodyChannelClient, ExpiredGrantChannelClient, RevokedGrantChannelClient, offline_agent_class
+        from project_maya.hermes_plugins.model_bridge import ModelChannelClient, EgressDenialChannelClient, WrongModelChannelClient, WrongRouteChannelClient, WrongAttemptChannelClient, WrongBodyChannelClient, ExpiredGrantChannelClient, RevokedGrantChannelClient, RuntimeOutputDenialChannelClient, MalformedResponseChannelClient, OversizedResponseChannelClient, AllowlistResponseChannelClient, offline_agent_class
         from project_maya.bridge.model_service import MODEL, ORIGIN, PUBLIC_KEY
         channel = PrivateChannel(sys.stdin.buffer, sys.stdout.buffer)
         channel.send(dict(v=1, type="model_child_hello", attempt=attempt))
@@ -84,7 +84,7 @@ def main(*, deny_egress=False, wrong_model=False, wrong_route=False, wrong_attem
             if (config.get("timezone") != "UTC" or config.get("agent", {}).get("api_max_retries") != 1
                     or config.get("compression", {}).get("enabled") is not False):
                 raise ProtocolError()
-            adapter_type = (RevokedGrantChannelClient if revoke_grant else ExpiredGrantChannelClient if expire_grant else WrongBodyChannelClient if wrong_body else WrongAttemptChannelClient if wrong_attempt else WrongRouteChannelClient if wrong_route else WrongModelChannelClient if wrong_model else EgressDenialChannelClient if deny_egress else ModelChannelClient)
+            adapter_type = (AllowlistResponseChannelClient if allowlist_response else OversizedResponseChannelClient if oversized_response else MalformedResponseChannelClient if malformed_response else RuntimeOutputDenialChannelClient if deny_runtime_output else RevokedGrantChannelClient if revoke_grant else ExpiredGrantChannelClient if expire_grant else WrongBodyChannelClient if wrong_body else WrongAttemptChannelClient if wrong_attempt else WrongRouteChannelClient if wrong_route else WrongModelChannelClient if wrong_model else EgressDenialChannelClient if deny_egress else ModelChannelClient)
             if same_client_budget or recreated_client_budget:
                 from project_maya.hermes_plugins.model_budget import BudgetChannelClient
                 adapter_type = BudgetChannelClient
@@ -130,7 +130,9 @@ def main(*, deny_egress=False, wrong_model=False, wrong_route=False, wrong_attem
             report["native_conversation"] = (not negative and type(final) is str and 1 <= len(final.encode("utf-8")) <= 1024
                 and adapter.requests == 1 and agent.session_api_calls == 1 and report["client_objects"] >= 2)
             if negative:
-                report["schema"] = ("maya.offline.model.revocation.child.v1" if revoke_grant else
+                report["schema"] = ("maya.offline.model.allowlist_response.child.v1" if allowlist_response else "maya.offline.model.oversized_response.child.v1" if oversized_response else "maya.offline.model.malformed_response.child.v1" if malformed_response else
+                    "maya.offline.model.output_denial.child.v1" if deny_runtime_output else
+                    "maya.offline.model.revocation.child.v1" if revoke_grant else
                     "maya.offline.model.expiry.child.v1" if expire_grant else
                     "maya.offline.model.body_validation.child.v1" if wrong_body else
                     "maya.offline.model.attempt_validation.child.v1" if wrong_attempt else

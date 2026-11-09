@@ -1,0 +1,105 @@
+{
+  "schema": "maya.model.m07c.review.v1",
+  "recorded_date": "2026-11-02",
+  "case": "M07c",
+  "status": "offline_assembly_approved_native_execution_not_approved",
+  "source_preparation_approved": true,
+  "assembly_approved": true,
+  "native_run_approved": false,
+  "omissions_approved": true,
+  "fixed_mutation": {
+    "origin": "trusted_host_fixture_text",
+    "field": "choices[0].message.content_final_hex_digit",
+    "rule": "0_if_last_not_0_else_1",
+    "structured_object_manipulation": true,
+    "strict_JSON_required": true,
+    "model_shape_length_unchanged": true,
+    "differing_ASCII_bytes": 1,
+    "normal_fixture_response_bytes": 313,
+    "original_dispatch_once": true,
+    "provider_text_and_wire_reply_unchanged": true,
+    "construction_time": true,
+    "fault_selected_by_child": false
+  },
+  "proposed_observation": {
+    "stage": "response_allowlist",
+    "at_original_compare_digest_mismatch": true,
+    "after_original_decode_success": true,
+    "maximum_hash_bytes": 4096,
+    "raw_response_retained": false,
+    "requires_source_approval": true
+  },
+  "expected": {
+    "original_canonical_expectation_unchanged": true,
+    "independent_normal_and_mutant_oracles": true,
+    "request_validated": true,
+    "gateway_calls": 1,
+    "dispatches": 1,
+    "dispatch_uncertain": true,
+    "validated_response_hash": "",
+    "validated_response_bytes": 0,
+    "dispatch_outcome": false,
+    "gateway_denied": false,
+    "runtime_model_response_pipe_writes": 0,
+    "operator_publications": 0,
+    "native_conversation": false,
+    "natural_child_exit": 0,
+    "natural_worker_exit": 0
+  },
+  "audit": {
+    "exact_events": [
+      "egress_intent",
+      "denied"
+    ],
+    "destinations": [
+      "provider",
+      "provider"
+    ],
+    "dispatches": [
+      0,
+      1
+    ],
+    "validated_response_hashes": [
+      "",
+      ""
+    ],
+    "validated_response_bytes": [
+      0,
+      0
+    ],
+    "may_delegate_unchanged_m07a_ledger_verifier": true
+  },
+  "protocol_schema_freeze_required_at_source_review": true,
+  "response_acceptance_bytes": 4096,
+  "frame_bytes": 8192,
+  "direction_bytes": 131072,
+  "grant_ttl_ms": 2000,
+  "deadlines_unchanged": true,
+  "new_dependency": false,
+  "new_security_grant": false,
+  "real_inference": false,
+  "retry_recovery": false,
+  "production_qualified": false,
+  "containment_qualified": false,
+  "independent_cleanup_verified": false,
+  "candidate_version": "0.2.1-offline-allowlist.1",
+  "future_payload_plan": {
+    "approved_omissions": [
+      "model_oversized_child_entry.py",
+      "model_oversized_worker_entry.py"
+    ],
+    "replacements": [
+      "model-contract.json",
+      "model_child_entry.py",
+      "model_validation_worker_entry.py",
+      "project_maya/bridge/model_worker.py",
+      "project_maya/hermes_plugins/model_bridge.py",
+      "project_maya/bridge/model_service.py"
+    ],
+    "additions": [
+      "model_allowlist_child_entry.py",
+      "model_allowlist_worker_entry.py",
+      "project_maya/bridge/model_allowlist_response.py"
+    ]
+  }
+}

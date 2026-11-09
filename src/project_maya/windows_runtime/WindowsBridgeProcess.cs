@@ -17,7 +17,22 @@ namespace ProjectMaya.WindowsRuntime
         { StartWorkerEntry(directory, run, user, "bridge_worker_entry.py"); }
         internal void StartModelWorker(string directory, string run, SecurityIdentifier user)
         {
-#if HERMES_MODEL_RECREATE
+#if HERMES_MODEL_FINAL
+            bridgeStartupCapture=new WorkerStartupCapture();
+            StartWorkerEntry(directory, run, user, "model_final_worker_entry.py");
+#elif HERMES_MODEL_ALLOWLIST
+            bridgeStartupCapture=new WorkerStartupCapture();
+            StartWorkerEntry(directory, run, user, "model_allowlist_worker_entry.py");
+#elif HERMES_MODEL_OVERSIZED
+            bridgeStartupCapture=new WorkerStartupCapture();
+            StartWorkerEntry(directory, run, user, "model_oversized_worker_entry.py");
+#elif HERMES_MODEL_MALFORMED
+            bridgeStartupCapture=new WorkerStartupCapture();
+            StartWorkerEntry(directory, run, user, "model_malformed_worker_entry.py");
+#elif HERMES_MODEL_OUTPUT_DENY
+            bridgeStartupCapture=new WorkerStartupCapture();
+            StartWorkerEntry(directory, run, user, "model_output_deny_worker_entry.py");
+#elif HERMES_MODEL_RECREATE
             bridgeStartupCapture=new WorkerStartupCapture();
             StartWorkerEntry(directory, run, user, "model_recreate_worker_entry.py");
 #elif HERMES_MODEL_BUDGET

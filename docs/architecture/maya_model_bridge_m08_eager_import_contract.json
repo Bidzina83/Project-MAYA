@@ -1,0 +1,33 @@
+{
+  "schema": "maya.model.m08.eager_import.contract.v1",
+  "source_preparation_approved": true,
+  "assembly_approved": true,
+  "native_run_approved": false,
+  "candidate_version": "0.2.1-offline-final.3",
+  "file_version": "0.2.1.21",
+  "scope": "offline-hermes-final-text-rejection-v1",
+  "case": "M08",
+  "helper_import_before_service_construct_ready_and_issue": true,
+  "import_failure_prevents_ready_and_grant": true,
+  "only_worker_ast_change": "relocate_identical_fixed_helper_import",
+  "guard_diagnostics_unchanged": true,
+  "grant_ttl_ms": 2000,
+  "original_clock_call_count_and_short_circuit_order_unchanged": true,
+  "original_effects_and_audit_admission_unchanged": true,
+  "native_child_postconditions_before_final_command": true,
+  "expected_success_effects": [1, 1, 0],
+  "expected_success_gateway_calls": 2,
+  "expected_success_audit_records": 5,
+  "expiry_result": "blocked",
+  "native_improvement_established": false,
+  "import_duration_measured": false,
+  "future_payload_plan": {
+    "expected_members_subject_to_actual_admission": 6788,
+    "replacements": ["model-contract.json", "project_maya/bridge/model_worker.py"],
+    "additions": [],
+    "omissions": []
+  },
+  "production_qualified": false,
+  "containment_qualified": false,
+  "independent_cleanup_verified": false
+}

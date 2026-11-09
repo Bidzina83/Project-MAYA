@@ -111,7 +111,7 @@ namespace ProjectMaya.WindowsRuntime
             var issued=Reply(issue,"model_grant_reply",rpc(),"grant");
             Dictionary<string,object> revokeExpected=null;string revokeId=null,revokeAge=null;
             Dictionary<string,object> savedReplayRequest=null;string replayLease=null;
-            if(ModelExpiryAdmission.Enabled || ModelRevocationAdmission.Enabled || ModelReplayAdmission.Enabled || ModelBudgetAdmission.Enabled || ModelRecreateAdmission.Enabled)
+            if(ModelExpiryAdmission.Enabled || ModelRevocationAdmission.Enabled || ModelReplayAdmission.Enabled || ModelBudgetAdmission.Enabled || ModelRecreateAdmission.Enabled || ModelOutputDenialAdmission.Enabled || ModelMalformedAdmission.Enabled || ModelOversizedAdmission.Enabled || ModelAllowlistAdmission.Enabled)
             {
                 var grant=issued["grant"] as Dictionary<string,object>;
                 BridgeRuntime.Shape(grant,"v","type","attempt","route","lease","seq","ttl_ms","request_sha256");Identity(grant,"model_grant");
@@ -160,6 +160,12 @@ namespace ProjectMaya.WindowsRuntime
                 record["model_native_body_verified"]=true;record["model_native_envelope_verified"]=true;
             }
             var dispatch=Command("model_dispatch");dispatch["request"]=request;
+            if(ModelOutputDenialAdmission.Enabled)
+            {
+                string lease=(string)((Dictionary<string,object>)issued["grant"])["lease"];
+                ModelBodyAdmission.Envelope(request,attempt,lease,expectedRequest);
+                record["model_native_body_verified"]=true;record["model_native_envelope_verified"]=true;
+            }
             if(ModelRevocationAdmission.Enabled)
             {
                 if(dispatch["request_id"].Equals(issue["request_id"]) || dispatch["request_id"].Equals(revokeId))
@@ -179,7 +185,11 @@ namespace ProjectMaya.WindowsRuntime
                     throw new StartupFailure("route_host_grant");
                 return RunValidation(child,dispatch,request,rpc,left,(string)grant["lease"]);
             }
-            if(ModelValidationAdmission.Enabled && !ModelReplayAdmission.Enabled && !ModelBudgetAdmission.Enabled && !ModelRecreateAdmission.Enabled)return RunValidation(child,dispatch,request,rpc,left);
+            if(ModelValidationAdmission.Enabled && !ModelReplayAdmission.Enabled && !ModelBudgetAdmission.Enabled && !ModelRecreateAdmission.Enabled && !ModelOutputDenialAdmission.Enabled && !ModelMalformedAdmission.Enabled && !ModelOversizedAdmission.Enabled && !ModelAllowlistAdmission.Enabled && !ModelFinalAdmission.Enabled)return RunValidation(child,dispatch,request,rpc,left);
+            if(ModelAllowlistAdmission.Enabled)return RunAllowlist(child,dispatch,rpc,left);
+            if(ModelOversizedAdmission.Enabled)return RunOversized(child,dispatch,rpc,left);
+            if(ModelMalformedAdmission.Enabled)return RunMalformed(child,dispatch,rpc,left);
+            if(ModelOutputDenialAdmission.Enabled)return RunOutputDenial(child,dispatch,rpc,left);
             if(ModelDenialAdmission.Enabled)return RunDenial(child,dispatch,rpc,left);
             var reply=Reply(dispatch,"model_dispatch_reply",rpc(),"response","dispatches","prepared_runtime_releases","confirmed_runtime_releases");
             if(!1.Equals(reply["dispatches"]) || !1.Equals(reply["prepared_runtime_releases"]) || !0.Equals(reply["confirmed_runtime_releases"]))
@@ -230,6 +240,7 @@ namespace ProjectMaya.WindowsRuntime
             foreach(string flag in new[]{"completed","native_constructor","native_conversation","sdk_closed","origins_verified","distributions_verified","config_unchanged"})
                 if(!true.Equals(report[flag]))throw new StartupFailure("model_child_postcondition");
             record["model_child_report_untrusted"]=report;
+            if(ModelFinalAdmission.Enabled)return RunFinalText(child,(string)runtime["request_id"],(string)final["text"],rpc,left);
             record["model_stage"]="operator_validation";
             var prepare=Command("model_prepare_final");prepare["text"]=final["text"];
             var prepared=Reply(prepare,"model_final_prepared",rpc(),"text","prepared_operator_releases","confirmed_operator_releases");
@@ -257,6 +268,44 @@ namespace ProjectMaya.WindowsRuntime
             record["model_audit_sha256"]=BridgeHostFiles.Hash(audit);record["model_worker_exit_hex"]="0x00000000";
             record["model_evidence_matches"]=true;record["real_inference"]=false;record["model_stage"]="complete";return child.ExitCode.Value;
         }
+        uint RunFinalText(WindowsIsolation child,string deliveryId,string nativeText,Func<int> rpc,Func<int> left)
+        {
+            record["model_stage"]="fixed_final_text_derivation";
+            record["model_request_validated"]=true;record["model_response_validated"]=true;
+            record["model_gateway_calls"]=2;record["model_gateway_denied"]=false;
+            record["model_dispatch_attempted"]=true;record["model_dispatch_uncertain"]=true;
+            record["model_operator_publications"]=0;
+            record["model_native_final_verified"]=true;
+            var prepare=Command("model_prepare_final");prepare["text"]=ModelFinalAdmission.Mutate(nativeText);
+            record["model_final_command_id"]=prepare["request_id"];
+            record["model_runtime_delivery_command_id"]=deliveryId;
+            var denied=Reply(prepare,"model_final_observed",rpc(),"guard","effects");
+            var guard=denied["guard"] as Dictionary<string,object>;
+            bool guardAllowed=ModelFinalGuardAdmission.Validate(guard,attempt,deliveryId,(string)prepare["request_id"]);
+            record["model_final_guard_diagnostic"]=guard;
+            if(!guardAllowed || denied["effects"]==null)
+            {
+                if(denied["effects"]!=null)throw new StartupFailure("model_final_guard_unexpected_effects");
+                record["model_stage"]="final_guard_diagnostic_blocked";
+                throw new StartupFailure(guardAllowed?"model_final_evidence_unavailable":"model_final_guard_rejected");
+            }
+            var effects=denied["effects"] as Dictionary<string,object>;
+            ModelFinalAdmission.Effects(effects,expectedRequest,output,deliveryId,(string)prepare["request_id"]);
+            record["model_final_validation_stage"]="operator_text";
+            foreach(string name in new[]{"original_text_sha256","original_text_bytes","observed_text_sha256","observed_text_bytes",
+                "response_sha256","response_bytes","prepared_operator_releases","confirmed_operator_releases"})
+                record["model_"+name]=effects[name];
+            child.CloseBridgeInput();worker.CloseBridgeInput();childChannel.Eof(left());workerChannel.Eof(rpc());
+            child.WaitBridge((uint)left());worker.WaitBridge((uint)rpc());ModelHostFiles.Recheck(directory,user);
+            byte[] audit=ModelHostFiles.ReadBounded(Path.Combine(directory,"host","audit.jsonl"),131072);
+            byte[] response=ModelOutputDenialAdmission.ExpectedResponse(output);
+            record["model_audit_events_verified"]=ModelFinalAuditAdmission.Verify(audit,attempt,"windows:"+user.Value,requestId,
+                BridgeHostFiles.Hash(expectedRequest),expectedRequest.Length,BridgeHostFiles.Hash(response),response.Length,
+                BridgeHostFiles.Hash(Encoding.UTF8.GetBytes(output)),deliveryId);
+            record["model_audit_sha256"]=BridgeHostFiles.Hash(audit);record["model_worker_exit_hex"]="0x00000000";
+            record["model_evidence_matches"]=true;record["model_final_text_evidence_matches"]=true;
+            record["model_stage"]="expected_final_text_rejection_complete";return child.ExitCode.Value;
+        }
         internal void Stop()
         {
             worker.CloseBridgeInput();
@@ -264,6 +313,125 @@ namespace ProjectMaya.WindowsRuntime
             finally{if(startupFailed)RecordWorkerSnapshot("model_worker_after_stop","after_job_stop_attempt_not_natural_exit_evidence");}
             if(workerChannel!=null)workerChannel.Dispose();if(childChannel!=null)childChannel.Dispose();
             stopped=true;record["model_worker_stopped"]=true;ModelHostFiles.Recheck(directory,user);
+        }
+        uint RunAllowlist(WindowsIsolation child,Dictionary<string,object> dispatch,Func<int> rpc,Func<int> left)
+        {
+            record["model_stage"]="response_allowlist_rejection";
+            var denied=Reply(dispatch,"model_response_allowlist_rejected",rpc(),"effects");
+            ModelAllowlistAdmission.Effects(denied["effects"] as Dictionary<string,object>,expectedRequest,output);
+            record["model_request_validated"]=true;record["model_response_validated"]=false;
+            record["model_gateway_denied"]=false;record["model_gateway_calls"]=1;record["model_dispatch_attempted"]=true;
+            record["model_synthetic_dispatches"]=1;record["model_dispatch_uncertain"]=true;
+            record["model_runtime_pipe_writes"]=0;record["model_operator_publications"]=0;
+            byte[] expectedResponse=ModelOutputDenialAdmission.ExpectedResponse(output);
+            record["model_expected_response_sha256"]=BridgeHostFiles.Hash(expectedResponse);
+            record["model_expected_response_bytes"]=expectedResponse.Length;
+            var effects=denied["effects"] as Dictionary<string,object>;
+            record["model_response_validation_stage"]="response_allowlist";
+            record["model_observed_response_sha256"]=effects["observed_response_sha256"];
+            record["model_observed_response_bytes"]=effects["observed_response_bytes"];
+            record["model_validated_response_sha256"]="";record["model_validated_response_bytes"]=0;
+            var control=Message("model_denied");control["seq"]=1;control["case"]="M07c";control["reason"]="response_allowlist_rejected";
+            record["model_denial_control_release_attempted"]=true;
+            childChannel.Write(control,rpc());record["model_denial_control_pipe_writes"]=1;
+            var final=childChannel.Read(left());BridgeRuntime.Shape(final,"v","type","attempt","report");Identity(final,"model_child_denied");
+            var report=final["report"] as Dictionary<string,object>;ModelAllowlistAdmission.Child(report,attempt);
+            record["model_child_report_untrusted"]=report;
+            child.CloseBridgeInput();worker.CloseBridgeInput();childChannel.Eof(left());workerChannel.Eof(rpc());
+            child.WaitBridge((uint)left());worker.WaitBridge((uint)rpc());ModelHostFiles.Recheck(directory,user);
+            byte[] audit=ModelHostFiles.ReadBounded(Path.Combine(directory,"host","audit.jsonl"),131072);
+            record["model_audit_events_verified"]=ModelAllowlistAdmission.Audit(audit,"windows:"+user.Value,attempt,requestId,expectedRequest,output);
+            record["model_audit_sha256"]=BridgeHostFiles.Hash(audit);record["model_worker_exit_hex"]="0x00000000";
+            record["model_evidence_matches"]=true;record["model_allowlist_evidence_matches"]=true;
+            record["model_stage"]="expected_response_allowlist_rejection_complete";return child.ExitCode.Value;
+        }
+        uint RunOversized(WindowsIsolation child,Dictionary<string,object> dispatch,Func<int> rpc,Func<int> left)
+        {
+            record["model_stage"]="response_size_rejection";
+            var denied=Reply(dispatch,"model_response_size_rejected",rpc(),"effects");
+            ModelOversizedAdmission.Effects(denied["effects"] as Dictionary<string,object>,expectedRequest,output);
+            record["model_request_validated"]=true;record["model_response_validated"]=false;
+            record["model_gateway_denied"]=false;record["model_gateway_calls"]=1;record["model_dispatch_attempted"]=true;
+            record["model_synthetic_dispatches"]=1;record["model_dispatch_uncertain"]=true;
+            record["model_runtime_pipe_writes"]=0;record["model_operator_publications"]=0;
+            byte[] expectedResponse=ModelOutputDenialAdmission.ExpectedResponse(output);
+            record["model_expected_response_sha256"]=BridgeHostFiles.Hash(expectedResponse);
+            record["model_expected_response_bytes"]=expectedResponse.Length;
+            var effects=denied["effects"] as Dictionary<string,object>;
+            record["model_response_validation_stage"]="response_size";
+            record["model_observed_response_sha256"]=effects["observed_response_sha256"];
+            record["model_observed_response_bytes"]=effects["observed_response_bytes"];
+            record["model_validated_response_sha256"]="";record["model_validated_response_bytes"]=0;
+            var control=Message("model_denied");control["seq"]=1;control["case"]="M07b";control["reason"]="response_size_rejected";
+            record["model_denial_control_release_attempted"]=true;
+            childChannel.Write(control,rpc());record["model_denial_control_pipe_writes"]=1;
+            var final=childChannel.Read(left());BridgeRuntime.Shape(final,"v","type","attempt","report");Identity(final,"model_child_denied");
+            var report=final["report"] as Dictionary<string,object>;ModelOversizedAdmission.Child(report,attempt);
+            record["model_child_report_untrusted"]=report;
+            child.CloseBridgeInput();worker.CloseBridgeInput();childChannel.Eof(left());workerChannel.Eof(rpc());
+            child.WaitBridge((uint)left());worker.WaitBridge((uint)rpc());ModelHostFiles.Recheck(directory,user);
+            byte[] audit=ModelHostFiles.ReadBounded(Path.Combine(directory,"host","audit.jsonl"),131072);
+            record["model_audit_events_verified"]=ModelOversizedAdmission.Audit(audit,"windows:"+user.Value,attempt,requestId,expectedRequest,output);
+            record["model_audit_sha256"]=BridgeHostFiles.Hash(audit);record["model_worker_exit_hex"]="0x00000000";
+            record["model_evidence_matches"]=true;record["model_oversized_evidence_matches"]=true;
+            record["model_stage"]="expected_response_size_rejection_complete";return child.ExitCode.Value;
+        }
+        uint RunMalformed(WindowsIsolation child,Dictionary<string,object> dispatch,Func<int> rpc,Func<int> left)
+        {
+            record["model_stage"]="response_json_rejection";
+            var denied=Reply(dispatch,"model_response_json_rejected",rpc(),"effects");
+            ModelMalformedAdmission.Effects(denied["effects"] as Dictionary<string,object>,expectedRequest,output);
+            record["model_request_validated"]=true;record["model_response_validated"]=false;
+            record["model_gateway_denied"]=false;record["model_gateway_calls"]=1;record["model_dispatch_attempted"]=true;
+            record["model_synthetic_dispatches"]=1;record["model_dispatch_uncertain"]=true;
+            record["model_runtime_pipe_writes"]=0;record["model_operator_publications"]=0;
+            byte[] expectedResponse=ModelOutputDenialAdmission.ExpectedResponse(output);
+            record["model_expected_response_sha256"]=BridgeHostFiles.Hash(expectedResponse);
+            record["model_expected_response_bytes"]=expectedResponse.Length;
+            var effects=denied["effects"] as Dictionary<string,object>;
+            record["model_response_validation_stage"]="response_json";
+            record["model_observed_response_sha256"]=effects["observed_response_sha256"];
+            record["model_observed_response_bytes"]=effects["observed_response_bytes"];
+            record["model_validated_response_sha256"]="";record["model_validated_response_bytes"]=0;
+            var control=Message("model_denied");control["seq"]=1;control["case"]="M07a";control["reason"]="response_json_rejected";
+            record["model_denial_control_release_attempted"]=true;
+            childChannel.Write(control,rpc());record["model_denial_control_pipe_writes"]=1;
+            var final=childChannel.Read(left());BridgeRuntime.Shape(final,"v","type","attempt","report");Identity(final,"model_child_denied");
+            var report=final["report"] as Dictionary<string,object>;ModelMalformedAdmission.Child(report,attempt);
+            record["model_child_report_untrusted"]=report;
+            child.CloseBridgeInput();worker.CloseBridgeInput();childChannel.Eof(left());workerChannel.Eof(rpc());
+            child.WaitBridge((uint)left());worker.WaitBridge((uint)rpc());ModelHostFiles.Recheck(directory,user);
+            byte[] audit=ModelHostFiles.ReadBounded(Path.Combine(directory,"host","audit.jsonl"),131072);
+            record["model_audit_events_verified"]=ModelMalformedAdmission.Audit(audit,"windows:"+user.Value,attempt,requestId,expectedRequest,output);
+            record["model_audit_sha256"]=BridgeHostFiles.Hash(audit);record["model_worker_exit_hex"]="0x00000000";
+            record["model_evidence_matches"]=true;record["model_malformed_evidence_matches"]=true;
+            record["model_stage"]="expected_response_json_rejection_complete";return child.ExitCode.Value;
+        }
+        uint RunOutputDenial(WindowsIsolation child,Dictionary<string,object> dispatch,Func<int> rpc,Func<int> left)
+        {
+            record["model_stage"]="gateway_runtime_output_denial";
+            var denied=Reply(dispatch,"model_runtime_output_denied",rpc(),"effects");
+            ModelOutputDenialAdmission.Effects(denied["effects"] as Dictionary<string,object>,expectedRequest,output);
+            record["model_request_validated"]=true;record["model_response_validated"]=true;
+            record["model_gateway_denied"]=true;record["model_gateway_calls"]=2;record["model_dispatch_attempted"]=true;
+            record["model_synthetic_dispatches"]=1;record["model_dispatch_uncertain"]=true;
+            record["model_runtime_pipe_writes"]=0;record["model_operator_publications"]=0;
+            byte[] expectedResponse=ModelOutputDenialAdmission.ExpectedResponse(output);
+            record["model_expected_response_sha256"]=BridgeHostFiles.Hash(expectedResponse);
+            record["model_expected_response_bytes"]=expectedResponse.Length;
+            var control=Message("model_denied");control["seq"]=1;control["case"]="M06";control["reason"]="gateway_runtime_output_denied";
+            record["model_denial_control_release_attempted"]=true;
+            childChannel.Write(control,rpc());record["model_denial_control_pipe_writes"]=1;
+            var final=childChannel.Read(left());BridgeRuntime.Shape(final,"v","type","attempt","report");Identity(final,"model_child_denied");
+            var report=final["report"] as Dictionary<string,object>;ModelOutputDenialAdmission.Child(report,attempt);
+            record["model_child_report_untrusted"]=report;
+            child.CloseBridgeInput();worker.CloseBridgeInput();childChannel.Eof(left());workerChannel.Eof(rpc());
+            child.WaitBridge((uint)left());worker.WaitBridge((uint)rpc());ModelHostFiles.Recheck(directory,user);
+            byte[] audit=ModelHostFiles.ReadBounded(Path.Combine(directory,"host","audit.jsonl"),131072);
+            record["model_audit_events_verified"]=ModelOutputDenialAdmission.Audit(audit,"windows:"+user.Value,attempt,requestId,expectedRequest,output);
+            record["model_audit_sha256"]=BridgeHostFiles.Hash(audit);record["model_worker_exit_hex"]="0x00000000";
+            record["model_evidence_matches"]=true;record["model_output_denial_evidence_matches"]=true;
+            record["model_stage"]="expected_runtime_output_denial_complete";return child.ExitCode.Value;
         }
         uint RunDenial(WindowsIsolation child,Dictionary<string,object> dispatch,Func<int> rpc,Func<int> left)
         {

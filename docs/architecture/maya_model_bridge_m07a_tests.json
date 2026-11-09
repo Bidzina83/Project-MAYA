@@ -1,0 +1,159 @@
+{
+  "schema": "maya.model.m07a.source_contract.v1",
+  "recorded_date": "2026-11-02",
+  "status": "offline_assembly_approved_native_execution_not_approved",
+  "case": "M07a",
+  "source_preparation_approved": true,
+  "assembly_approved": true,
+  "native_run_approved": false,
+  "omissions_approved": true,
+  "candidate_version": "0.2.1-offline-malformed.1",
+  "candidate_scope": "offline-hermes-response-json-rejection-v1",
+  "profile": "HERMES_MODEL_MALFORMED",
+  "fault": {
+    "construction_time": true,
+    "bytes_description": "single_ASCII_opening_brace",
+    "length": 1,
+    "original_dispatch_called_once": true,
+    "expected_wire_generator_unchanged": true
+  },
+  "effects": {
+    "case": "M07a",
+    "boundary": "response_json",
+    "request_validated": true,
+    "egress_allowed": true,
+    "gateway_calls": 1,
+    "dispatch_attempted": true,
+    "dispatches": 1,
+    "response_validated": false,
+    "validation_stage": "response_json",
+    "observed_response_sha256": "SHA256_of_fixed_opening_brace",
+    "observed_response_bytes": 1,
+    "response_sha256": "",
+    "response_bytes": 0,
+    "expected_response_sha256": "trusted_canonical_wire_oracle",
+    "expected_response_bytes": "trusted_oracle_integer_length",
+    "prepared_runtime_releases": 0,
+    "confirmed_runtime_releases": 0,
+    "prepared_operator_releases": 0,
+    "confirmed_operator_releases": 0,
+    "real_inference": false,
+    "uncertain": true,
+    "request_sha256": "actual_original_request",
+    "request_bytes": "actual_integer_length",
+    "egress_gateway_denied": false,
+    "runtime_output_gateway_denied": false
+  },
+  "protocol": {
+    "worker": [
+      "v",
+      "type=model_response_json_rejected",
+      "attempt",
+      "request_id",
+      "effects"
+    ],
+    "effects_keys": 25,
+    "child_control": [
+      "v",
+      "type=model_denied",
+      "attempt",
+      "seq",
+      "case=M07a",
+      "reason=response_json_rejected"
+    ],
+    "child_final": [
+      "v",
+      "type=model_child_denied",
+      "attempt",
+      "report"
+    ],
+    "child_schema": "maya.offline.model.malformed_response.child.v1",
+    "child_report_keys": 14,
+    "native_conversation": false,
+    "raw_response_released": false,
+    "control_not_model_response": true,
+    "natural_child_exit": 0,
+    "natural_worker_exit": 0
+  },
+  "audit": {
+    "exact_records": [
+      "egress_intent",
+      "denied"
+    ],
+    "destinations": [
+      "provider",
+      "provider"
+    ],
+    "capabilities": [
+      "model.egress",
+      "model.egress"
+    ],
+    "operations": [
+      "infer",
+      "infer"
+    ],
+    "dispatches": [
+      0,
+      1
+    ],
+    "validated_response_hashes": [
+      "",
+      ""
+    ],
+    "validated_response_bytes": [
+      0,
+      0
+    ],
+    "not_gateway_denial": true
+  },
+  "inert_evidence": {
+    "focused_python_tests": 388,
+    "python_subtests": 1529,
+    "m07a_python_tests": 12,
+    "m07a_python_subtests": 89,
+    "active_csharp_assertions": 311,
+    "paired_profiles": 13,
+    "paired_assertions": {
+      "eleven_profiles_each": 300,
+      "m06": 296,
+      "m02": 296
+    },
+    "invalid_compile_profiles": 17,
+    "reader_assertions": 163,
+    "reader_cases": 13,
+    "native_execution": false
+  },
+  "future_payload_plan": {
+    "assembly_approved": true,
+    "replacements": [
+      "model-contract.json",
+      "model_child_entry.py",
+      "model_validation_worker_entry.py",
+      "project_maya/bridge/model_service.py",
+      "project_maya/bridge/model_worker.py",
+      "project_maya/hermes_plugins/model_bridge.py"
+    ],
+    "additions": [
+      "project_maya/bridge/model_malformed_response.py",
+      "model_malformed_child_entry.py",
+      "model_malformed_worker_entry.py"
+    ],
+    "expected_members_subject_to_actual_checks": 6784,
+    "preserve_canonical_output_denial_helper": true,
+    "approved_omissions": [
+      "model_output_deny_child_entry.py",
+      "model_output_deny_worker_entry.py"
+    ]
+  },
+  "m07b_implemented": false,
+  "m07c_implemented": false,
+  "new_dependency": false,
+  "new_security_grant": false,
+  "grant_ttl_ms": 2000,
+  "deadlines_unchanged": true,
+  "retry_recovery": false,
+  "real_inference": false,
+  "production_qualified": false,
+  "containment_qualified": false,
+  "independent_cleanup_verified": false
+}

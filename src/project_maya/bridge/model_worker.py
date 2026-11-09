@@ -30,7 +30,7 @@ def _command(channel, binding: HostBinding, kind: str, *fields: str) -> dict:
 
 def serve_model(channel: PrivateChannel, config: dict, policy: dict, literals: bytes,
                 audit: RequiredAudit, write_expected, *, deny_egress: bool = False, wrong_model: bool = False,
-                startup=None, wrong_route: bool = False, wrong_attempt: bool = False, wrong_body: bool = False, expire_grant: bool = False, revoke_grant: bool = False, replay_grant: bool = False, same_client_budget: bool = False, recreated_client_budget: bool = False) -> dict:
+                startup=None, wrong_route: bool = False, wrong_attempt: bool = False, wrong_body: bool = False, expire_grant: bool = False, revoke_grant: bool = False, replay_grant: bool = False, same_client_budget: bool = False, recreated_client_budget: bool = False, deny_runtime_output: bool = False, malformed_response: bool = False, oversized_response: bool = False, allowlist_response: bool = False, final_text: bool = False) -> dict:
     """Only the coordinator owns this endpoint and its delivery confirmations.
 
     write_expected is a trusted fixed open-existing private-file writer, never
@@ -38,8 +38,8 @@ def serve_model(channel: PrivateChannel, config: dict, policy: dict, literals: b
     merely by this protocol candidate. A failure terminates this worker attempt.
     """
     if startup is not None: startup.mark('service_config')
-    if (any(type(mode) is not bool for mode in (deny_egress, wrong_model, wrong_route, wrong_attempt, wrong_body, expire_grant, revoke_grant, replay_grant, same_client_budget, recreated_client_budget))
-            or sum((deny_egress, wrong_model, wrong_route, wrong_attempt, wrong_body, expire_grant, revoke_grant, replay_grant, same_client_budget, recreated_client_budget)) > 1
+    if (any(type(mode) is not bool for mode in (deny_egress, wrong_model, wrong_route, wrong_attempt, wrong_body, expire_grant, revoke_grant, replay_grant, same_client_budget, recreated_client_budget, deny_runtime_output, malformed_response, oversized_response, allowlist_response, final_text))
+            or sum((deny_egress, wrong_model, wrong_route, wrong_attempt, wrong_body, expire_grant, revoke_grant, replay_grant, same_client_budget, recreated_client_budget, deny_runtime_output, malformed_response, oversized_response, allowlist_response, final_text)) > 1
             or type(config) is not dict or set(config) !=
             {"operator_sid", "attempt", "channel_id", "utc_day", "canary", "fixture_text"}
             or type(config["fixture_text"]) is not str
@@ -51,6 +51,8 @@ def serve_model(channel: PrivateChannel, config: dict, policy: dict, literals: b
                       for cap, operation in (("model.egress", "infer"), ("model.output", "disclose"))]
     if deny_egress:
         expected_rules = expected_rules[1:]
+    if deny_runtime_output:
+        expected_rules = expected_rules[:1]
     if policy != {"allow": expected_rules}:
         raise ProtocolError()
     if startup is not None: startup.mark('request_build')
@@ -88,9 +90,25 @@ def serve_model(channel: PrivateChannel, config: dict, policy: dict, literals: b
         if startup is not None: startup.mark('service_import')
         from .model_lease_replay import ConsumedGrantBridge
         service_type = ConsumedGrantBridge
+    if allowlist_response:
+        if startup is not None: startup.mark('service_import')
+        from .model_allowlist_response import AllowlistMismatchBridge
+        service_type = AllowlistMismatchBridge
+    if oversized_response:
+        if startup is not None: startup.mark('service_import')
+        from .model_oversized_response import OversizedJSONBridge
+        service_type = OversizedJSONBridge
+    if malformed_response:
+        if startup is not None: startup.mark('service_import')
+        from .model_malformed_response import MalformedJSONBridge
+        service_type = MalformedJSONBridge
+    if final_text:
+        from .model_final_text import final_text_evidence, final_guard_evidence
     if startup is not None: startup.mark('service_construct')
     service = service_type(binding, PolicyAuthorizationGateway(tuple(PolicyRule(**rule) for rule in expected_rules)),
                                  audit, expected, config["fixture_text"])
+    if final_text:
+        service.final_diagnostics_enabled = True
     seen = set()
 
     def command(kind, *fields):
@@ -122,7 +140,27 @@ def serve_model(channel: PrivateChannel, config: dict, policy: dict, literals: b
             service.bind_command(message["request_id"])
         try:
             reply = service.prepare_runtime(message["request"], binding.channel_id)
-        except ModelDenied:
+        except ModelDenied as denial:
+            if allowlist_response:
+                from .model_allowlist_response import allowlist_response_evidence
+                effects = allowlist_response_evidence(service, audit, denial)
+                send("model_response_allowlist_rejected", message["request_id"], effects=effects)
+                return effects
+            if oversized_response:
+                from .model_oversized_response import oversized_response_evidence
+                effects = oversized_response_evidence(service, audit, denial)
+                send("model_response_size_rejected", message["request_id"], effects=effects)
+                return effects
+            if malformed_response:
+                from .model_malformed_response import malformed_response_evidence
+                effects = malformed_response_evidence(service, audit, denial)
+                send("model_response_json_rejected", message["request_id"], effects=effects)
+                return effects
+            if deny_runtime_output:
+                from .model_output_denial import output_denial_evidence
+                effects = output_denial_evidence(service, audit, denial)
+                send("model_runtime_output_denied", message["request_id"], effects=effects)
+                return effects
             if revoke_grant:
                 evidence = service.evidence()
                 send("model_lease_revoked", message["request_id"], evidence=evidence)
@@ -153,12 +191,13 @@ def serve_model(channel: PrivateChannel, config: dict, policy: dict, literals: b
             effects = denial_evidence(service, audit)
             send("model_egress_denied", message["request_id"], effects=effects)
             return effects
-        if deny_egress or wrong_model or wrong_route or wrong_attempt or wrong_body or expire_grant or revoke_grant:
+        if deny_egress or wrong_model or wrong_route or wrong_attempt or wrong_body or expire_grant or revoke_grant or deny_runtime_output or malformed_response or oversized_response or allowlist_response:
             raise ProtocolError()
         send("model_dispatch_reply", message["request_id"], response=reply,
              dispatches=service.dispatches, prepared_runtime_releases=service.prepared_runtime_releases,
              confirmed_runtime_releases=service.confirmed_runtime_releases)
         message = command("model_runtime_delivered", "response_sha256")
+        runtime_delivery_id = message["request_id"]
         delivery_age = service.confirm_runtime_delivery(message["response_sha256"], message["request_id"])
         if replay_grant:
             send("model_runtime_ack", message["request_id"], confirmed_runtime_releases=service.confirmed_runtime_releases,
@@ -185,6 +224,20 @@ def serve_model(channel: PrivateChannel, config: dict, policy: dict, literals: b
             send("model_adapter_complete", message["request_id"], effects=effects)
             return effects
         message = command("model_prepare_final", "text")
+        if final_text:
+            try:
+                service.prepare_operator(message["text"])
+            except ModelDenied as denial:
+                guard = final_guard_evidence(service, denial, runtime_delivery_id, message["request_id"])
+                effects = None
+                if guard["decision"] == "allowed" and guard["timing_valid"]:
+                    try:
+                        effects = final_text_evidence(service, audit, denial, runtime_delivery_id, message["request_id"])
+                    except ProtocolError:
+                        pass
+                send("model_final_observed", message["request_id"], guard=guard, effects=effects)
+                return effects if effects is not None else dict(diagnostic_only=True)
+            raise ProtocolError()
         text = service.prepare_operator(message["text"])
         send("model_final_prepared", message["request_id"], text=text,
              prepared_operator_releases=service.prepared_operator_releases,
@@ -201,7 +254,7 @@ def serve_model(channel: PrivateChannel, config: dict, policy: dict, literals: b
         service.close()
 
 
-def main(*, deny_egress: bool = False, wrong_model: bool = False, startup=None, wrong_route: bool = False, wrong_attempt: bool = False, wrong_body: bool = False, expire_grant: bool = False, revoke_grant: bool = False, replay_grant: bool = False, same_client_budget: bool = False, recreated_client_budget: bool = False) -> int:
+def main(*, deny_egress: bool = False, wrong_model: bool = False, startup=None, wrong_route: bool = False, wrong_attempt: bool = False, wrong_body: bool = False, expire_grant: bool = False, revoke_grant: bool = False, replay_grant: bool = False, same_client_budget: bool = False, recreated_client_budget: bool = False, deny_runtime_output: bool = False, malformed_response: bool = False, oversized_response: bool = False, allowlist_response: bool = False, final_text: bool = False) -> int:
     if startup is not None: startup.mark('worker_preflight')
     if (os.name != "nt" or sys.version_info[:3] != (3, 13, 14) or not all(
             (sys.flags.isolated, sys.flags.no_site, sys.flags.dont_write_bytecode))):
@@ -249,7 +302,7 @@ def main(*, deny_egress: bool = False, wrong_model: bool = False, startup=None, 
         with open_private(root/"audit.jsonl", root, writable=True, limit=0) as stream:
             serve_model(PrivateChannel(sys.stdin.buffer, sys.stdout.buffer), config, policy, literals,
                         RequiredAudit(stream), write_expected, deny_egress=deny_egress, wrong_model=wrong_model,
-                        wrong_route=wrong_route, wrong_attempt=wrong_attempt, wrong_body=wrong_body, expire_grant=expire_grant, revoke_grant=revoke_grant, replay_grant=replay_grant, same_client_budget=same_client_budget, recreated_client_budget=recreated_client_budget, startup=startup)
+                        wrong_route=wrong_route, wrong_attempt=wrong_attempt, wrong_body=wrong_body, expire_grant=expire_grant, revoke_grant=revoke_grant, replay_grant=replay_grant, same_client_budget=same_client_budget, recreated_client_budget=recreated_client_budget, deny_runtime_output=deny_runtime_output, malformed_response=malformed_response, oversized_response=oversized_response, allowlist_response=allowlist_response, final_text=final_text, startup=startup)
         return 0
     except Exception as error:
         if startup is not None: startup.fail(error)

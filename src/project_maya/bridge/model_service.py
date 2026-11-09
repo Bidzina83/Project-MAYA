@@ -14,7 +14,8 @@ from project_maya.audit import AuditRecord
 from project_maya.governance import ActionRequest, AuthorizationResult, GovernanceDecision
 
 from .audit import RequiredAudit
-from .protocol import decode, encode
+from .protocol import ProtocolError, decode, encode
+from .model_guard_observation import UNSAMPLED, observe_guard
 from .service import HostBinding
 
 ORIGIN = "https://maya-offline-model.invalid"
@@ -108,7 +109,7 @@ class OfflineModelBridge:
         checked_request(expected_request)
         self.binding, self._gateway, self._audit, self._clock = binding, gateway, audit, clock
         self._expected = expected_request
-        self._provider = SyntheticModel(fixture_text)
+        self._provider = self._new_provider(fixture_text)
         self._expected_response = self._provider.wire_reply()
         if len(self._expected_response) > 4096:
             raise ValueError("model_bridge.invalid_fixture")
@@ -127,11 +128,24 @@ class OfflineModelBridge:
         self.request_validated = False
         self.request_shape_validated = False
         self.egress_gateway_denied = False
+        self.runtime_output_gateway_denied = False
+        self.response_failure_stage = ""
+        self.response_failure_sha256 = ""
+        self.response_failure_bytes = 0
+        self.final_failure_stage = ""
+        self.final_failure_sha256 = ""
+        self.final_failure_bytes = 0
+        self.final_diagnostics_enabled = False
+        self._final_issue_sample = UNSAMPLED
+        self._final_guard = None
         self.envelope_validated = False
         self.envelope_identity_validated = False
         self.envelope_attempt_context_validated = False
         self.validation_stage = ""
         self.gateway_calls = 0
+
+    def _new_provider(self, fixture_text):
+        return SyntheticModel(fixture_text)
 
     @property
     def dispatches(self) -> int:
@@ -146,15 +160,30 @@ class OfflineModelBridge:
         return self._closed
 
     def _live(self, phase: str) -> None:
-        if (self._closed or self._audit.failed or self._revoked or self._phase != phase
-                or self._clock() >= self._expires):
-            raise ModelDenied(self.dispatch_attempted)
+        closed = audit_failed = revoked = seen_phase = sample = deadline = expired = UNSAMPLED
+        decision = "raised"
+        try:
+            if ((closed := self._closed) or (audit_failed := self._audit.failed)
+                    or (revoked := self._revoked) or (seen_phase := self._phase) != phase
+                    or (expired := (sample := self._clock()) >= (deadline := self._expires))):
+                decision = "rejected"
+                raise ModelDenied(self.dispatch_attempted)
+            decision = "allowed"
+        finally:
+            if self.final_diagnostics_enabled and phase == "runtime_delivered":
+                try:
+                    self._final_guard = observe_guard(phase, closed, audit_failed, revoked, seen_phase,
+                        sample, deadline, expired, decision, self._final_issue_sample)
+                except Exception:
+                    self._final_guard = None
 
     def issue(self) -> dict:
         with self._lock:
             if self._closed or self._audit.failed or self._phase != "new":
                 raise ModelDenied(self.dispatch_attempted)
-            self._token, self._expires, self._phase = secrets.token_hex(32), self._clock() + 2, "issued"
+            self._token, self._expires, self._phase = secrets.token_hex(32), (issued := self._clock()) + 2, "issued"
+            if self.final_diagnostics_enabled:
+                self._final_issue_sample = issued
             return dict(v=1, type="model_grant", attempt=self.binding.attempt, route=ROUTE,
                 lease=self._token, seq=1, ttl_ms=2000, request_sha256=digest(self._expected))
 
@@ -177,6 +206,12 @@ class OfflineModelBridge:
                 and result.reason_code == "governance.no_matching_rule"
                 and not result.constraints and not result.redactions):
             self.egress_gateway_denied = True
+        if (capability == "model.output" and destination == "runtime:" + self.binding.attempt
+                and self._phase == "dispatched" and isinstance(result, AuthorizationResult)
+                and result.decision is GovernanceDecision.DENY
+                and result.reason_code == "governance.no_matching_rule"
+                and not result.constraints and not result.redactions):
+            self.runtime_output_gateway_denied = True
         if (not isinstance(result, AuthorizationResult) or result.decision is not GovernanceDecision.ALLOW
                 or result.constraints or result.redactions):
             raise ModelDenied(self.dispatch_attempted)
@@ -249,10 +284,25 @@ class OfflineModelBridge:
                 self.dispatch_attempted = True
                 raw = self._provider.dispatch()
                 if type(raw) is not bytes or not 1 <= len(raw) <= 4096:
+                    # Bounded rejection observation only; the acceptance limit is unchanged.
+                    if type(raw) is bytes and len(raw) == 4097:
+                        self.response_failure_stage = "response_size"
+                        self.response_failure_sha256 = digest(raw)
+                        self.response_failure_bytes = len(raw)
                     raise ModelDenied(True)
                 # The provider is an explicit fixed fixture, not extensible transport.
-                decode(raw)
+                try:
+                    decode(raw)
+                except ProtocolError:
+                    # Observation only, after the original bytes/size guard; never retain fault bytes.
+                    self.response_failure_stage = "response_json"
+                    self.response_failure_sha256 = digest(raw)
+                    self.response_failure_bytes = len(raw)
+                    raise
                 if not hmac.compare_digest(raw, self._expected_response):
+                    self.response_failure_stage = "response_allowlist"
+                    self.response_failure_sha256 = digest(raw)
+                    self.response_failure_bytes = len(raw)
                     raise ModelDenied(True)
                 self._response = raw
                 self._phase = "dispatched"
@@ -309,6 +359,12 @@ class OfflineModelBridge:
                 self._live("runtime_delivered")
                 self._destination = "operator"
                 if type(final_text) is not str or final_text != self._provider.text:
+                    if type(final_text) is str:
+                        observed = final_text.encode("utf-8", errors="strict")
+                        if 1 <= len(observed) <= 1024:
+                            self.final_failure_stage = "operator_text"
+                            self.final_failure_sha256 = digest(observed)
+                            self.final_failure_bytes = len(observed)
                     raise ModelDenied(True)
                 self._phase = "operator_admitted"
             self._authorize("model.output", "operator")

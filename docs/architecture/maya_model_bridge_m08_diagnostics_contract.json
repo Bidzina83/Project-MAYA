@@ -1,0 +1,131 @@
+{
+  "schema": "maya.model.m08.guard_diagnostics.contract.v1",
+  "source_preparation_approved": true,
+  "assembly_approved": true,
+  "native_run_approved": false,
+  "native_retry_approved": false,
+  "candidate_version": "0.2.1-offline-final.2",
+  "file_version": "0.2.1.20",
+  "worker_reply": [
+    "v",
+    "type=model_final_observed",
+    "attempt",
+    "request_id",
+    "guard",
+    "effects"
+  ],
+  "guard_fields": [
+    "schema",
+    "attempt",
+    "runtime_delivery_command_id",
+    "final_command_id",
+    "expected_phase",
+    "phase",
+    "closed",
+    "audit_failed",
+    "revoked",
+    "clock_called",
+    "clock_returned",
+    "comparison_evaluated",
+    "at_or_after_deadline",
+    "decision",
+    "cause",
+    "timing_valid",
+    "issue_sampled",
+    "elapsed_ms",
+    "remaining_ms",
+    "ttl_ms"
+  ],
+  "guard_schema": "maya.model.final_guard.v1",
+  "decision_values": [
+    "allowed",
+    "rejected",
+    "raised"
+  ],
+  "cause_values": [
+    "allowed",
+    "closed",
+    "audit_failed",
+    "revoked",
+    "phase_mismatch",
+    "expired",
+    "clock_exception",
+    "clock_value_exception",
+    "state_exception"
+  ],
+  "phase_values": [
+    null,
+    "new",
+    "issued",
+    "admitted",
+    "dispatched",
+    "runtime_prepared",
+    "runtime_delivered",
+    "operator_admitted",
+    "operator_prepared",
+    "complete",
+    "other"
+  ],
+  "unobserved_values": null,
+  "guard_rejected_or_raised": "effects_null_and_coordinator_blocked",
+  "guard_allowed_but_evidence_failed": "effects_null_and_coordinator_blocked",
+  "m08_success_requires": "guard_allowed_valid_timing_original_26_field_effects_and_original_five_record_audit",
+  "grant_ttl_ms": 2000,
+  "elapsed_ms_maximum": 2147483647,
+  "remaining_ms_range": [
+    -2147483647,
+    2147483647
+  ],
+  "original_clock_call_count_preserved": true,
+  "original_short_circuit_order_preserved": true,
+  "original_clock_sample_only": true,
+  "raw_clock_values_exported": false,
+  "diagnostic_failure_changes_guard_decision": false,
+  "original_audit_predicates_unchanged": true,
+  "raw_body_text_lease_secrets_or_exception_messages": false,
+  "late_worker_import_order_unchanged": true,
+  "inference_retry_recovery_or_qualification": false,
+  "status": "offline_assembly_approved_native_run_not_approved",
+  "recorded_date": "2026-11-04",
+  "native_fix_established": false,
+  "old_attempt_root_cause_established": false,
+  "inert_results": {
+    "focused_python_tests": 499,
+    "python_subtests": 1796,
+    "new_diagnostic_tests": 25,
+    "active_csharp_assertions": 515,
+    "paired_csharp_profiles": 16,
+    "paired_assertions": {
+      "fourteen_profiles_each": 500,
+      "m06_m02_each": 496
+    },
+    "invalid_compile_profiles": 20,
+    "blocked_guard_vectors": 12,
+    "reader_assertions": 163,
+    "reader_cases": 13,
+    "shared_assertions": [
+      154,
+      874,
+      231,
+      178
+    ],
+    "product_native_execution": false
+  },
+  "source_scope": {
+    "replacements": 5,
+    "additions": 2,
+    "deletions": 0,
+    "frozen_final1_sources_verified": 379,
+    "original_success_audit_admissions_unchanged": true
+  },
+  "future_payload_plan": {
+    "assembly_approved": true,
+    "omissions": [],
+    "expected_members_subject_to_actual_admission": 6788,
+    "preserve_active_m08_roots": true,
+    "preserve_predecessors_and_canonical_helpers": true
+  },
+  "production_qualified": false,
+  "containment_qualified": false,
+  "independent_cleanup_verified": false
+}

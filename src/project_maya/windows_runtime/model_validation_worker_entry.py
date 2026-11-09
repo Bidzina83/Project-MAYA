@@ -36,7 +36,7 @@ class StartupDiagnostic:
             pass
 
 
-def launch(*, wrong_route=False, wrong_attempt=False, wrong_body=False, expire_grant=False, revoke_grant=False, replay_grant=False, same_client_budget=False, recreated_client_budget=False):
+def launch(*, wrong_route=False, wrong_attempt=False, wrong_body=False, expire_grant=False, revoke_grant=False, replay_grant=False, same_client_budget=False, recreated_client_budget=False, deny_runtime_output=False, malformed_response=False, oversized_response=False, allowlist_response=False, final_text=False):
     diagnostic = StartupDiagnostic()
     if (sys.platform != 'win32' or sys.version_info[:3] != (3, 13, 14) or not all(
             (sys.flags.isolated, sys.flags.no_site, sys.flags.dont_write_bytecode))):
@@ -54,10 +54,10 @@ def launch(*, wrong_route=False, wrong_attempt=False, wrong_body=False, expire_g
         sys.path[:0] = [str(runtime), str(runtime/'dependencies')]
         diagnostic.mark('worker_import')
         from project_maya.bridge.model_worker import main
-        if any(type(mode) is not bool for mode in (wrong_route, wrong_attempt, wrong_body, expire_grant, revoke_grant, replay_grant, same_client_budget, recreated_client_budget)) or sum((wrong_route, wrong_attempt, wrong_body, expire_grant, revoke_grant, replay_grant, same_client_budget, recreated_client_budget)) > 1:
+        if any(type(mode) is not bool for mode in (wrong_route, wrong_attempt, wrong_body, expire_grant, revoke_grant, replay_grant, same_client_budget, recreated_client_budget, deny_runtime_output, malformed_response, oversized_response, allowlist_response, final_text)) or sum((wrong_route, wrong_attempt, wrong_body, expire_grant, revoke_grant, replay_grant, same_client_budget, recreated_client_budget, deny_runtime_output, malformed_response, oversized_response, allowlist_response, final_text)) > 1:
             raise ValueError()
-        return main(wrong_model=not (wrong_route or wrong_attempt or wrong_body or expire_grant or revoke_grant or replay_grant or same_client_budget or recreated_client_budget), wrong_route=wrong_route,
-            wrong_attempt=wrong_attempt, wrong_body=wrong_body, expire_grant=expire_grant, revoke_grant=revoke_grant, replay_grant=replay_grant, same_client_budget=same_client_budget, recreated_client_budget=recreated_client_budget, startup=diagnostic)
+        return main(wrong_model=not (wrong_route or wrong_attempt or wrong_body or expire_grant or revoke_grant or replay_grant or same_client_budget or recreated_client_budget or deny_runtime_output or malformed_response or oversized_response or allowlist_response or final_text), wrong_route=wrong_route,
+            wrong_attempt=wrong_attempt, wrong_body=wrong_body, expire_grant=expire_grant, revoke_grant=revoke_grant, replay_grant=replay_grant, same_client_budget=same_client_budget, recreated_client_budget=recreated_client_budget, deny_runtime_output=deny_runtime_output, malformed_response=malformed_response, oversized_response=oversized_response, allowlist_response=allowlist_response, final_text=final_text, startup=diagnostic)
     except Exception as error:
         diagnostic.fail(error)
         return 1

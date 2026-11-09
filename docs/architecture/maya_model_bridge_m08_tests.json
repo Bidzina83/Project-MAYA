@@ -1,0 +1,140 @@
+{
+  "schema": "maya.model.m08.source_contract.v1",
+  "recorded_date": "2026-11-04",
+  "status": "offline_assembly_approved_native_execution_not_approved",
+  "source_preparation_approved": true,
+  "assembly_approved": true,
+  "native_run_approved": false,
+  "omissions_approved": true,
+  "mutation": {
+    "origin": "trusted_fixed_coordinator_diagnostic",
+    "after_genuine_positive_child_final_admission": true,
+    "rule": "final_hex_digit_0_if_nonzero_else_1",
+    "new_command_id": true,
+    "preserve_original_oracle_and_child_report": true
+  },
+  "proposed_observation": {
+    "stage": "operator_text",
+    "at_original_text_mismatch": true,
+    "after_original_liveness": true,
+    "before_operator_authorization": true,
+    "maximum_text_bytes": 1024,
+    "requires_source_approval": false
+  },
+  "expected": {
+    "effects": [
+      1,
+      1,
+      0
+    ],
+    "gateway_calls": 2,
+    "gateway_denied": false,
+    "dispatch_uncertain": true,
+    "validated_response_retained": true,
+    "native_conversation": true,
+    "operator_preparations": 0,
+    "operator_publications": 0,
+    "natural_child_exit": 0,
+    "natural_worker_exit": 0
+  },
+  "audit": {
+    "exact_events": [
+      "egress_intent",
+      "dispatch_outcome",
+      "runtime_release_intent",
+      "runtime_delivery",
+      "denied"
+    ],
+    "last_destination": "operator",
+    "retain_actual_runtime_confirmation_id": true,
+    "retain_validated_response_metadata": true,
+    "retain_original_output_hash": true,
+    "operator_release_intent_absent": true
+  },
+  "protocol_freeze_required_at_source_review": false,
+  "grant_ttl_ms": 2000,
+  "bounds_and_deadlines_unchanged": true,
+  "new_dependency": false,
+  "new_security_grant": false,
+  "real_inference": false,
+  "retry_recovery": false,
+  "production_qualified": false,
+  "containment_qualified": false,
+  "independent_cleanup_verified": false,
+  "candidate_version": "0.2.1-offline-final.1",
+  "file_version": "0.2.1.19",
+  "profile": "HERMES_MODEL_FINAL",
+  "candidate_scope": "offline-hermes-final-text-rejection-v1",
+  "protocol": {
+    "worker": [
+      "v",
+      "type=model_operator_text_rejected",
+      "attempt",
+      "request_id",
+      "effects"
+    ],
+    "effects_keys": 26,
+    "child_final": "unchanged_model_child_complete",
+    "child_schema": "maya.offline.model.child.v1",
+    "child_report_keys": 13,
+    "native_conversation": true,
+    "new_child_denial_control": false
+  },
+  "inert_results": {
+    "model_path_python_tests": 389,
+    "model_path_python_subtests": 1775,
+    "m08_new_tests": 45,
+    "active_csharp_assertions": 444,
+    "paired_csharp_profiles": 16,
+    "paired_assertions": {
+      "fourteen_profiles_each": 429,
+      "m06_m02_each": 425
+    },
+    "invalid_compile_profiles": 20,
+    "reader_assertions": 163,
+    "reader_cases": 13,
+    "shared_csharp_assertions": [
+      154,
+      874,
+      231,
+      178
+    ],
+    "native_execution": false,
+    "focused_python_tests": 474,
+    "focused_python_subtests": 1796
+  },
+  "source_freeze": {
+    "allowlist1_intact": true,
+    "frozen_sources_verified": 361,
+    "product_replacements": 9,
+    "product_additions": 5,
+    "source_deletions": 0
+  },
+  "future_payload_plan": {
+    "assembly_approved": true,
+    "omissions_approved": true,
+    "proposed_successor_only_omissions": [
+      "model_allowlist_child_entry.py",
+      "model_allowlist_worker_entry.py"
+    ],
+    "expected_members_subject_to_actual_admission": 6787,
+    "preserve_canonical_helpers": true,
+    "preserve_frozen_predecessors": true,
+    "approved_omissions": [
+      "model_allowlist_child_entry.py",
+      "model_allowlist_worker_entry.py"
+    ],
+    "replacements": [
+      "model-contract.json",
+      "model_child_entry.py",
+      "model_validation_worker_entry.py",
+      "project_maya/bridge/model_service.py",
+      "project_maya/bridge/model_worker.py"
+    ],
+    "additions": [
+      "project_maya/bridge/model_final_text.py",
+      "model_final_child_entry.py",
+      "model_final_worker_entry.py"
+    ]
+  }
+}

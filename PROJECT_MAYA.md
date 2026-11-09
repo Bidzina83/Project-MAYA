@@ -1,5 +1,342 @@
 # Project MAYA: Product and Architecture Context
 
+## M08 Final3 Offline Assembly Approval (2026-11-04)
+
+User approved separate offline assembly of eager-import Final3. See
+docs/architecture/maya_model_bridge_m08_eager_import_package.md. Only two payload
+replacements(contract/worker),NO additions/omissions; retain6788members/both M08
+roots/canonical helpers. Launcher version-only update. Verify actual profile,
+full inventory/resources/reviewed bindings/source freeze; preserve Final2/all
+predecessors. Compile/inert checks only, no product/native/bundled-runtime/VM run.
+Original guards/clock counts/TTL/deadlines/security/grants/dependencies/effects/
+audit/diagnostics unchanged. No measured import cost/native fix established.
+Separate exact-artifact one-run approval/fresh consent remain mandatory. No retry/
+recovery/inference/M09/M2/qualification. Final identities belong in
+maya_offline_model_final_3_build_record.md after seal; all false flags/Gate A open.
+
+## M08 Eager Import Source Preparation (2026-11-04)
+
+Approved M08-only source/inert preparation complete; candidate0.2.1-offline-final.3/
+file0.2.1.21. Same fixed helper import moved before construction/readiness/issue;
+import failure prevents readiness/grant. Worker AST otherwise unchanged; only
+other product edit is version identifiers. See docs/architecture/
+maya_model_bridge_m08_eager_import_source_review.md.503Python/1796subtests,
+515active C# checks/16earlier profiles,20compile exclusions,163reader checks and
+shared regressions pass. Final2 ZIP/EXE/391frozen files preserved. No measured
+import cost or native improvement established. Original guard/clock counts/
+TTL/deadlines/security/dependencies/effects/audit/diagnostics unchanged.
+No package/native/VM run. Separate assembly approval needed: planned two payload
+replacements/NO additions/omissions,6788members; then actual-profile/freeze checks
+and matching-artifact one-run approval/fresh consent. No retry/recovery/inference/
+M09/M2/qualification. All false flags/Gate A unchanged.
+
+## M08 Final2 Outcome And Lifecycle Review (2026-11-04)
+
+Final2 attempt871cde60efba483cb18a1e3b9d0c0d30 matched sealed EXE and
+observed original guard expiry at2230ms/TTL2000ms, runtime_delivered phase,
+closed/audit/revoked false. M08 remains blocked; no operator_text success or
+Final1 root-cause proof. Scoped cleanup passed as reported: no processes/links/
+SID ACEs(7498entries/zero failures), matching state/host labels and seven WFP IDs
+absent after export0. Profile removal product-reported; false flags unchanged.
+See maya_offline_model_final_2_outcome.md and
+maya_model_bridge_m08_lease_lifecycle_review.md under docs/architecture.
+Review recommends separate M08-only SOURCE approval for eager fixed-helper import
+before readiness/issue, preserving positive-child ordering, original guard/clock
+counts/TTL/deadlines/effects/audit/diagnostics. Native improvement unproven; import
+cost not measured. No source/test implementation, assembly/run, omissions,
+security/grant/dependency change, retry/recovery/inference/M09/M2/qualification
+authorized. Future phase-specific output authorization needs separate design,
+not automatic grant renewal. Preserve frozen Final2/predecessors/Gate A open.
+
+## M08 Diagnostic Offline Assembly Approval (2026-11-04)
+
+User approved offline assembly of Final2 diagnostics only. See
+docs/architecture/maya_model_bridge_m08_diagnostics_package.md. Four payload
+replacements/one addition/NO omissions; preserve both M08 roots, canonical
+helpers and frozen predecessors. Verify actual6788-member inventory, profile,
+resources and source freeze. Compile/inert checks only; no product/native/VM
+execution. Original guards, clock call count/order, TTL/deadlines, security,
+grants/dependencies and exact success/audit admission remain unchanged.
+Rejected/unavailable diagnostic remains blocked, not M08 success. No proven
+old-attempt root cause/native fix. Separate matching-artifact one-run approval
+and fresh consent remain mandatory. No retry/recovery/inference/M09/M2 or
+qualification; all false flags/Gate A unchanged. Final identities belong in
+maya_offline_model_final_2_build_record.md after seal.
+
+## M08 Diagnostic Source Preparation (2026-11-04)
+
+User approved bounded M08 original-guard diagnostic source/inert tests.
+Candidate0.2.1-offline-final.2/file0.2.1.20; see
+docs/architecture/maya_model_bridge_m08_diagnostics_source_review.md/contract JSON.
+Original single guard captures only evaluated operands/original issue and clock
+samples; decision/short-circuit/clock counts/TTL/deadlines unchanged.
+New bound model_final_observed reply has20-field guard and nullable effects.
+Wrong-stage/unavailable diagnostics remain BLOCKED. Original26-field effects/
+positive child/five-record audit still required; original success validators
+unchanged. Final1 cause/native fix NOT established.
+499 Python tests/1796 subtests,515 active C# checks/16 earlier profiles,
+20 compile exclusions/163 reader checks pass. Final1 fixed ZIP/EXE/manifest/
+all379 frozen sources intact. Five source replacements/two additions/no deletion.
+No product/native/bundled-runtime execution, package or VM retry occurred.
+Separate assembly approval needed; NO root omission planned, retain both M08
+roots/canonical helpers/predecessors; expected6788-member actual checks required.
+Matching-artifact one-run approval/fresh consent remain separate. No scheduling/
+grant/security/dependency/TTL/deadline change, inference/recovery/later case/
+qualification. Original blocked attempt/false flags/Gate A preserved.
+
+## M08 Blocked Outcome And Source Review (2026-11-04)
+
+Final1 attempt818a38385fa44fd094d3f5a9bcb0f9b4 matched frozen EXE but blocked
+awaiting specific final-text rejection. Report retained dispatch1/runtime write1/
+positive child completion/operator publications0. Event-name/timestamp readbacks
+show four positive names then denied; supplied final record destination is
+runtime:attempt, NOT required operator. No specific operator_text evidence/full
+five-record audit/natural exits admitted. Do not qualify M08 or erase prior effects.
+Scoped cleanup passed as reported: no processes/links/SID ACEs (7497 entries/zero
+failures), matching labels/seven WFP IDs absent after export0. Profile removal
+product-reported; original false flags/blocked status preserved; allowance consumed.
+See maya_offline_model_final_1_outcome.md and maya_model_bridge_m08_blocked_review.md/JSON.
+Source confirms TTL2000ms spans native completion/SDK closure/origin checks;
+runtime-delivery confirmation intentionally records an actual write even after
+expiry. Late M08 diagnostic import also occurs before final guard. Expiry is
+plausible/leading under serialized source assumptions, NOT observed root cause.
+Read-only rehash: Final1 ZIP/EXE/all379 frozen sources and seven reviewed current
+runtime source pins intact. No implementation/test/compile/package/native retry.
+Recommend separate M08-only bounded original-guard diagnostics SOURCE approval,
+preserving decision/short-circuit/clock-call count/deadlines/effects/audits.
+No fix/retry/recovery/grant/security/dependency/later case/qualification approved.
+Gate A remains open.
+
+## M08 Offline Assembly Approval (2026-11-04)
+
+User approved separate M08 offline assembly INCLUDING only omission of
+model_allowlist_child_entry.py/model_allowlist_worker_entry.py FROM NEW successor.
+See docs/architecture/maya_model_bridge_m08_package.md. Five payload replacements/
+three additions/two omissions; actual6787-member profile/resource/source-freeze
+checks required. Preserve Allowlist1/all predecessors/canonical helpers.
+Compile/inert checks only; no product/native/bundled-runtime/VM/security run.
+Keep gateway2/effects(1,1,0)/uncertaintytrue, original five-record audit and positive
+child evidence. No dependency/security/grant/TTL/deadline change, inference/
+retry/recovery/later case/qualification. Matching-artifact one-run approval and
+fresh consent remain separate; final identities belong in
+maya_offline_model_final_1_build_record.md after seal. Gate A open.
+
+## M08 Source Preparation (2026-11-04)
+
+M08-only approved source preparation/inert integration complete; see
+docs/architecture/maya_model_bridge_m08_source_review.md/tests JSON.
+Candidate0.2.1-offline-final.1/file0.2.1.19 preserves genuine positive child/
+runtime delivery and both original guards; trusted copied final-text mutation,
+bounded original worker operator_text observation and exact26-key effects.
+Gateway2/effects(1,1,0)/uncertaintytrue, validated response retained, exact
+five-event audit and no operator publication. Child report stays positive.
+474 Python tests/1796 subtests,444 active C# checks/16 older profiles,
+20 invalid compile profiles,163 reader checks/13 cases and shared regressions pass.
+Allowlist1 ZIP/EXE/all361 frozen source entries intact;9 source replacements/
+five additions/no deletion. No package/product/native/bundled-runtime/VM run.
+Separate assembly approval MUST include only omission of
+model_allowlist_child_entry.py/model_allowlist_worker_entry.py FROM NEW successor.
+Keep canonical helpers/predecessors; full expected6787-member actual-profile/
+resource/freeze checks and matching-artifact one-run approval/fresh consent
+remain gated. No security/dependency/grant/TTL/deadline change, inference/
+retry/recovery/later case/qualification. Native timing unverified; Gate A open.
+
+## M07c Outcome And M08 Review (2026-11-04)
+
+Allowlist1 attemptbd71354f342e4c589ee5f30876700cb8 matched frozen EXE;
+reported original313-byte allowlist rejection, gateway1/effects(1,0,0),
+two verified audit records and natural exits0. Scoped cleanup passed as
+reported: no processes/links/SID ACEs (7499 entries/zero failures), matching
+host/state labels and seven WFP IDs absent after export0.
+See maya_offline_model_allowlist_1_outcome.md. Original status/false flags
+preserved; profile removal remains product-reported.
+M08 REVIEW only: see maya_model_bridge_m08_review.md/tests JSON.
+Recommend separate M08-only SOURCE approval: genuine positive native exchange/
+runtime confirmation/child final admission, then fixed trusted copied final-text
+substitution at new prepare-final command. Preserve BOTH original guards.
+Require named post-liveness worker operator-text rejection, gateway2/effects(1,1,0),
+validated response retained, exact four positive audit records plus operator
+denied, no publication/third gateway call. Not operator-only policy denial.
+No implementation/compile/package/native run/omissions/security/dependency/grant/
+deadline change/inference/retry/recovery/qualification. Preserve predecessors.
+
+## M07b Outcome And M07c Review (2026-11-02)
+
+Oversized1 attempt790c07424aea493ba04ee3a9acc2ee13 matched frozen EXE and
+reported original size rejection of fixed4097 bytes, gateway1/effects(1,0,0),
+uncertaintytrue, zero validated response/delivery/publication, two verified audit
+records and natural exits0. Scoped cleanup passed as reported: no processes/
+links/SID ACEs (7498 entries/zero failures), matching state/host labels and seven
+WFP IDs absent after export0. See maya_offline_model_oversized_1_outcome.md.
+Profile removal product-reported; original false flags/pending status preserved.
+User approved M07c REVIEW only; see maya_model_bridge_m07c_review.md/tests JSON.
+Recommend M07c-only SOURCE approval next: fixed final content hex-digit mutation
+(0 if nonzero else1), unchanged shape/model/length/original expected wire, strict
+JSON success then ORIGINAL exact-byte mismatch; bounded post-decode named
+response_allowlist observation and independent normal/mutant oracles.
+Keep gateway1/dispatch1/uncertain=true, all releases0 and unchanged TWO-record
+provider ledger with empty validated-response metadata. No implementation,
+compile/package/native run/omission/security/grant/dependency/deadline change,
+inference/retry/recovery/later case or qualification follows review.
+Preserve Oversized1/all predecessors/canonical helpers; Gate A remains open.
+
+## M07b Offline Assembly Approval (2026-11-02)
+
+User approved separate M07b offline assembly INCLUDING only omissions of
+model_malformed_child_entry.py/model_malformed_worker_entry.py FROM NEW successor.
+See docs/architecture/maya_model_bridge_m07b_package.md. Six replacements/three
+additions/two omissions; verify full expected6785-member actual-profile inventory,
+resources and source freeze. Preserve frozen Malformed1/predecessors/canonical
+helpers. Compilation/inert checks only, not product/native/bundled-runtime/VM/
+security execution. No guard/security/grant/dependency/TTL/deadline change,
+inference/retry/recovery/later case/qualification. Separate matching-artifact
+one-run approval/fresh consent remain mandatory. Final identities belong in
+maya_offline_model_oversized_1_build_record.md after seal. Gate A remains open.
+
+## M07b Source Preparation (2026-11-02)
+
+User approved M07b-only source preparation/inert tests. Candidate
+0.2.1-offline-oversized.1/file0.2.1.17 uses construction-time fixed valid4097-byte
+JSON, original4096 size guard and exact4097-only bounded rejection observation
+BEFORE decoding. Acceptance limit/security/grants/dependencies/deadlines unchanged.
+See docs/architecture/maya_model_bridge_m07b_source_review.md/tests JSON.
+317 model-path Python tests/1597 subtests;313 active C# assertions/14 paired
+profiles,18 invalid compile guards and163 reader assertions/13 cases pass.
+Exact25-key effects/14-key child report; gateway1/dispatch1/uncertain=true,
+zero validated response/delivery/publication and unchanged exact TWO-record ledger.
+Frozen Malformed1 ZIP/EXE/all336 source records verified;10 replacements/four
+additions/no source deletion. No package/product/native/bundled-runtime/VM run.
+Separate assembly approval must explicitly include any two inactive Malformed1
+root omissions FROM NEW successor only; preserve canonical helpers/predecessors.
+Full actual-profile inventory/freeze and matching-artifact one-run approval/fresh
+consent remain gated. No inference/retry/recovery/later case/qualification.
+M07b native compatibility unverified; all false flags/Gate A unchanged.
+
+
+## M07a Outcome And M07b Review (2026-11-02)
+
+Malformed1 attemptd58c14b46be74b4180155cb584a2aaf5 matched frozen EXE,
+rejected exact one-byte fault at original JSON guard, gateway1/effects(1,0,0),
+uncertain=true, zero validated response/model delivery/publication, exact two
+audit records and natural exits0. Scoped cleanup passed as reported: no processes/
+links/SID ACEs (7497 entries/zero failures), matching labels and seven WFP IDs
+absent after export0. See maya_offline_model_malformed_1_outcome.md.
+Profile removal product-reported; original false flags/status preserved.
+User approved M07b REVIEW only; see maya_model_bridge_m07b_review.md/tests JSON.
+Recommend M07b-only SOURCE preparation: fixed valid4097-byte JSON provider at
+construction, original4096 size guard, exact4097-only bounded stage/hash/count
+observation BEFORE parsing. Diagnostic allowance is NOT acceptance-limit change.
+Keep canonical expected bytes, gateway1/dispatch1/uncertain=true and unchanged
+two-record provider ledger with EMPTY validated-response metadata. No source/test
+implementation, package/native run, omissions, dependency/security/grant/deadline
+change, inference, retry/recovery or qualification. M07c unimplemented; preserve
+frozen predecessors/all false flags/Gate A open.
+
+## M07a Offline Assembly Approval (2026-11-02)
+
+User approved separate M07a offline assembly INCLUDING only omission of
+model_output_deny_child_entry.py/model_output_deny_worker_entry.py FROM NEW
+successor. See docs/architecture/maya_model_bridge_m07a_package.md.
+Six replacements/three additions/two omissions; full expected6784-member actual-
+profile/resource/source-freeze checks required. Preserve M06/predecessors and
+canonical model_output_denial.py/all helpers. Compile/inert checks only,
+not product/native/bundled-runtime/VM/security execution. No guard/decision/
+dependency/security/grant/TTL/deadline/bound change, inference, retry/recovery,
+M07b/c or later case/qualification. Separate exact-artifact one-run VM approval
+and fresh consent remain mandatory. Final identities go in
+maya_offline_model_malformed_1_build_record.md after seal; all false flags/Gate A
+unchanged.
+
+## M07a Source Preparation (2026-11-02)
+
+User approved M07a-only source preparation/inert tests. Candidate
+0.2.1-offline-malformed.1/file0.2.1.16 uses construction-time fixed provider
+(default unchanged), original dispatch once and original JSON rejection with
+bounded read-only stage/hash/count. Canonical expected bytes/guards unchanged.
+See docs/architecture/maya_model_bridge_m07a_source_review.md/tests JSON.
+388 Python tests/1529 subtests;311 active C# assertions/13 older profiles,
+17 invalid compile guards and163 reader assertions/13 cases pass; earlier shared/
+M06 regressions pass. Frozen M06/322 frozen source files intact.
+No package/product/native/bundled-runtime/VM/security execution.
+Future assembly approval MUST explicitly include only omitting
+model_output_deny_child_entry.py/model_output_deny_worker_entry.py FROM NEW
+successor; retain canonical model_output_denial.py (oracle) and all predecessors.
+No omissions approved here. Full expected6784-member actual-profile/resource/
+freeze checks, separate artifact one-run approval/fresh consent remain gated.
+M07b/c unimplemented. No dependency/security/grant/TTL/deadline/bound change,
+inference, retry/recovery, later case or qualification; Gate A/all false flags open.
+
+## M06 Outcome And M07 Review (2026-11-02)
+
+M06 attempt6a0510935ad347b89c9fbedb01223b35 matched frozen EXE and reported
+gateway2/effects(1,0,0), named runtime-output denial, exact three-record audit,
+one denial CONTROL write/zero model-response writes, natural child/worker exit0.
+Scoped manual cleanup passed as reported: no processes/links/SID ACEs (7496
+entries/zero failures), matching labels, seven WFP IDs absent after export0.
+See docs/architecture/maya_offline_model_output_denial_1_outcome.md.
+Profile removal product-reported; original false flags/status preserved.
+User approved M07 REVIEW only; see maya_model_bridge_m07_review.md/tests JSON.
+Split malformed JSON/4097 bytes/nonallowlisted wire into M07a/b/c. Recommend
+M07a-only SOURCE preparation including construction-time fixed provider factory
+(default unchanged) and bounded read-only original JSON-rejection observation.
+Original guard must reject; gateway1/dispatch1/uncertain=true, no response
+assignment/releases and EXACT TWO-record provider ledger egress_intent/denied.
+Not a gateway denial or validated dispatch_outcome. Expected bytes stay canonical.
+No implementation/package/native run, omissions, dependency/grant/deadline/
+security change, inference, retry/recovery or qualification. M07b/c/later cases
+remain pending; preserve frozen predecessors/Gate A/all false flags unchanged.
+
+## M06 Offline Assembly Approval (2026-11-01)
+
+User approved separate M06 offline assembly INCLUDING only omissions of
+model_recreate_child_entry.py/model_recreate_worker_entry.py FROM NEW successor.
+See docs/architecture/maya_model_bridge_m06_package.md. Six replacements/three
+additions/two omissions; verify full6783-member actual-profile inventory/resources/
+source freeze. Preserve Recreate1/predecessors/canonical helpers.
+Compile/inert checks only; no product/native/bundled-runtime/VM/security run.
+No decision/guard/security/grant/dependency/TTL/deadline revision, inference,
+retry/recovery, later case or qualification. Separate exact-artifact one-run VM
+approval/fresh consent remain mandatory. Final identities belong in
+maya_offline_model_output_denial_1_build_record.md after seal; Gate A stays open.
+
+## M06 Source Preparation (2026-11-01)
+
+User approved M06-only source preparation/inert tests. Candidate
+0.2.1-offline-output-denial.1/file0.2.1.15 implements fixed egress-only policy,
+approved named read-only runtime-output decision observation, host response
+oracle, case-specific denial controls and EXACT three-record audit admission.
+Original authorization/uncertainty/dispatch/release predicates remain unchanged.
+See docs/architecture/maya_model_bridge_m06_source_review.md/tests JSON.
+376 Python tests/1440 subtests;341 active C# assertions/12 paired older profiles,
+16 invalid compile guards and163 reader assertions/13 cases pass; earlier shared/
+M05 regressions pass. No product/native/bundled-runtime/VM/security run or package.
+Future assembly approval MUST include only omitting model_recreate_child_entry.py
+and model_recreate_worker_entry.py from NEW successor payload. Preserve canonical
+helpers/frozen predecessors; verify full expected6783-member actual inventory.
+No omission approved here. No security/grant/dependency/TTL/deadline change,
+inference, retry/recovery, M07-M09/M2 or qualification. Native M06 compatibility
+unverified. Separate assembly, matching-artifact one-run approval/fresh consent
+remain mandatory; all false flags/Gate A unchanged.
+
+## M05b Outcome And M06 Review (2026-11-01)
+
+Recreate1 attempt19f2f03dcb38449f971c8caddf734ec2 matched frozen EXE and
+reported positive first exchange, post-native-close distinct client recreation
+with same consumed adapter/local rejection, gateway2/effects(1,1,0), no extra
+pipe/gateway/effects/publication, four verified audit records and natural exits0.
+Scoped manual cleanup passed as reported: no processes/links/SID ACEs (7492
+entries/zero failures), matching labels and seven WFP IDs absent after export0.
+See docs/architecture/maya_offline_model_recreate_1_outcome.md.
+Profile deletion product-reported; original false flags/status preserved.
+User approved M06 REVIEW only; see maya_model_bridge_m06_review.md/tests JSON.
+Propose original egress allow then runtime output-rule-absent denial: effects
+(1,0,0), gateway2, validated response retained host-side, EXACT three-record audit.
+Original uncertain=true after dispatch must stay. Narrow read-only named output
+gateway observation/response oracle/control admission need SOURCE approval next.
+No implementation/package/native run, omissions, security/grant/dependency/
+deadline change, inference, retry/recovery or qualification. Preserve all frozen
+artifacts; operator-only policy denial remains deferred/Gate A open.
+
 ## M05b Offline Assembly Approval (2026-11-01)
 
 User approved separate offline assembly INCLUDING only omission of

@@ -161,6 +161,21 @@ namespace ProjectMaya.WindowsRuntime
 #if HERMES_MODEL_BUDGET
             importPath = importPath || relative == "model_budget_child_entry.py" || relative == "model_budget_worker_entry.py";
 #endif
+#if HERMES_MODEL_FINAL
+            importPath = importPath || relative == "model_final_child_entry.py" || relative == "model_final_worker_entry.py";
+#endif
+#if HERMES_MODEL_ALLOWLIST
+            importPath = importPath || relative == "model_allowlist_child_entry.py" || relative == "model_allowlist_worker_entry.py";
+#endif
+#if HERMES_MODEL_OVERSIZED
+            importPath = importPath || relative == "model_oversized_child_entry.py" || relative == "model_oversized_worker_entry.py";
+#endif
+#if HERMES_MODEL_MALFORMED
+            importPath = importPath || relative == "model_malformed_child_entry.py" || relative == "model_malformed_worker_entry.py";
+#endif
+#if HERMES_MODEL_OUTPUT_DENY
+            importPath = importPath || relative == "model_output_deny_child_entry.py" || relative == "model_output_deny_worker_entry.py";
+#endif
 #if HERMES_MODEL_RECREATE
             importPath = importPath || relative == "model_recreate_child_entry.py" || relative == "model_recreate_worker_entry.py";
 #endif

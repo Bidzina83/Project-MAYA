@@ -115,6 +115,29 @@ class EgressDenialChannelClient(ModelChannelClient):
         raise ProtocolError()
 
 
+class AllowlistResponseChannelClient(EgressDenialChannelClient):
+    """M07c size-rejection control only; never allowlist provider bytes."""
+    denial_case = "M07c"
+    denial_reason = "response_allowlist_rejected"
+
+class OversizedResponseChannelClient(EgressDenialChannelClient):
+    """M07b size-rejection control only; never oversized provider bytes."""
+    denial_case = "M07b"
+    denial_reason = "response_size_rejected"
+
+
+class MalformedResponseChannelClient(EgressDenialChannelClient):
+    """M07a rejection control only, never malformed provider bytes."""
+    denial_case = "M07a"
+    denial_reason = "response_json_rejected"
+
+
+class RuntimeOutputDenialChannelClient(EgressDenialChannelClient):
+    """M06 denial control only; never releases the validated host-side model response."""
+    denial_case = "M06"
+    denial_reason = "gateway_runtime_output_denied"
+
+
 class WrongModelChannelClient(EgressDenialChannelClient):
     """The native child sends its original VALID request; only host injects M03a."""
     denial_case = "M03a"
