@@ -1,4 +1,4 @@
-#if MAYA_FINAL_OUTPUT_INERT_FIXTURE
+#if MAYA_FINAL_OUTPUT_INERT_FIXTURE || HERMES_JOURNAL_ACCESS
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -74,11 +74,22 @@ namespace ProjectMaya.WindowsRuntime
         // The fixture factory cannot choose the path or the creation descriptor.
         internal CoordinatorJournalCandidate(CoordinatorJournalBinding binding, string parentId, string volumeId,
             Func<string,string,ICoordinatorJournalHandle> createExclusive)
+            : this(binding,parentId,volumeId,createExclusive,binding==null?null:Path.Combine(ProductFiles.Root,binding.Attempt)) { }
+
+#if MAYA_JOURNAL_NATIVE_BASELINE
+        internal CoordinatorJournalCandidate(CoordinatorJournalBinding binding, CoordinatorJournalScratchTarget scratch,
+            Func<string,string,ICoordinatorJournalHandle> createExclusive)
+            : this(binding,scratch.ParentId,scratch.Volume,createExclusive,scratch.DirectoryFor(binding))
+        { }
+#endif
+
+        CoordinatorJournalCandidate(CoordinatorJournalBinding binding, string parentId, string volumeId,
+            Func<string,string,ICoordinatorJournalHandle> createExclusive,string directory)
         {
             if(binding==null || createExclusive==null || !CoordinatorJournalBinding.Hex(parentId,16) ||
                 !CoordinatorJournalBinding.Hex(volumeId,8)) throw new ArgumentException("coordinator_journal_parent");
             this.binding=binding; parent=parentId; volume=volumeId;
-            handle=createExclusive(Path.Combine(ProductFiles.Root,binding.Attempt,Leaf),CreationDescriptor);
+            handle=createExclusive(Path.Combine(directory,Leaf),CreationDescriptor);
             Require(handle!=null,"coordinator_journal_open");
             try
             {
@@ -110,7 +121,7 @@ namespace ProjectMaya.WindowsRuntime
                 {"channel",binding.Channel},{"actor",binding.Actor},{"delivery_id",binding.Delivery},
                 {"request_sha256",binding.RequestHash},{"response_sha256",binding.ResponseHash},
                 {"output_sha256",binding.OutputHash},{"output_bytes",binding.OutputBytes},
-                {"destination",FinalOutputInertAdapter.Destination},{"consent_id",binding.Consent},
+                {"destination","synthetic:fake-operator"},{"consent_id",binding.Consent},
                 {"epoch",binding.Epoch},{"deadline",binding.Deadline}};
             return new UTF8Encoding(false,true).GetBytes(new JavaScriptSerializer().Serialize(fields)+"\n");
         }

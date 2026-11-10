@@ -1,4 +1,7 @@
 // Product-owned startup candidate. No Hermes execution or containment acceptance.
+#if HERMES_JOURNAL_ACCESS && (!HERMES_BRIDGE || !HERMES_CONSTRUCTION || !HERMES_IMPORT || HERMES_MODEL || HERMES_MODEL_FINAL || HERMES_MODEL_ALLOWLIST || HERMES_MODEL_OVERSIZED || HERMES_MODEL_VALIDATION || HERMES_MODEL_MALFORMED || HERMES_MODEL_OUTPUT_DENY || HERMES_MODEL_DENY || HERMES_MODEL_RECREATE || HERMES_MODEL_BUDGET || HERMES_MODEL_REPLAY || HERMES_MODEL_REVOKE || HERMES_MODEL_EXPIRY || HERMES_MODEL_BODY || HERMES_MODEL_ROUTE || HERMES_MODEL_ATTEMPT || HERMES_STATE || HERMES_MEMORY || MAYA_FINAL_OUTPUT_INERT_FIXTURE || MAYA_JOURNAL_NATIVE_BASELINE || MAYA_JOURNAL_TOKEN_ACCESS_FIXTURE || MAYA_JOURNAL_TOKEN_ACCESS_NATIVE_FIXTURE)
+#error HERMES_JOURNAL_ACCESS requires the private bridge topology and excludes other cases and fixture profiles.
+#endif
 #if HERMES_MODEL_FINAL && (HERMES_MODEL_ALLOWLIST || HERMES_MODEL_OVERSIZED || !HERMES_MODEL_VALIDATION || HERMES_MODEL_MALFORMED || HERMES_MODEL_OUTPUT_DENY || HERMES_MODEL_DENY || HERMES_MODEL_RECREATE || HERMES_MODEL_BUDGET || HERMES_MODEL_REPLAY || HERMES_MODEL_REVOKE || HERMES_MODEL_EXPIRY || HERMES_MODEL_BODY || HERMES_MODEL_ROUTE || HERMES_MODEL_ATTEMPT)
 #error HERMES_MODEL_FINAL requires VALIDATION and excludes all other fixed cases.
 #endif
@@ -73,7 +76,10 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Maya protected Python startup candidate")]
 [assembly: AssemblyVersion("0.1.0.0")]
-#if HERMES_MODEL_FINAL
+#if HERMES_JOURNAL_ACCESS
+[assembly: AssemblyFileVersion("0.2.2.1")]
+[assembly: AssemblyInformationalVersion("0.2.2-journal-access.1")]
+#elif HERMES_MODEL_FINAL
 [assembly: AssemblyFileVersion("0.2.1.21")]
 [assembly: AssemblyInformationalVersion("0.2.1-offline-final.3")]
 #elif HERMES_MODEL_ALLOWLIST
@@ -145,7 +151,16 @@ namespace ProjectMaya.WindowsRuntime
 {
     internal static class ProtectedPython
     {
-#if HERMES_MODEL_FINAL
+#if HERMES_JOURNAL_ACCESS
+        internal const string Version = "0.2.2-journal-access.1";
+        internal const string Scope = "offline-journal-access-matrix-v1";
+        internal const string Consent =
+            "Maya journal access diagnostic " + Version + "\r\n\r\n" +
+            "One offline test with synthetic files. The reduced worker and AppContainer child test access " +
+            "to a journal and its directory without modifying either. No Hermes conversation, inference, credentials, " +
+            "network traffic or publication. Synthetic evidence remains for independent cleanup checks. " +
+            "This does not qualify containment or production use.";
+#elif HERMES_MODEL_FINAL
         internal const string Version = "0.2.1-offline-final.3";
         internal const string Scope = "offline-hermes-final-text-rejection-v1";
         internal const string Consent =
@@ -1026,7 +1041,9 @@ namespace ProjectMaya.WindowsRuntime
             var observations = new Dictionary<string, string>(StringComparer.Ordinal);
             record["security_resource_inventory"] = isolation.ResourceInventory();
             bool cleanup = false;
-#if HERMES_MODEL
+#if HERMES_JOURNAL_ACCESS
+            JournalAccessRuntime bridge = null;
+#elif HERMES_MODEL
             ModelBridgeRuntime bridge = null;
 #elif HERMES_BRIDGE
             BridgeRuntime bridge = null;
@@ -1042,7 +1059,10 @@ namespace ProjectMaya.WindowsRuntime
                     isolation.CreateProfile();
                     screen.Stage = "file_grants";
                     ProductFiles.Grant(directory, isolation.Package, user);
-#if HERMES_MODEL
+#if HERMES_JOURNAL_ACCESS
+                    record["real_inference"] = false;
+                    record["independent_cleanup_verified"] = false;
+#elif HERMES_MODEL
                     HermesImport.Prepare(directory);
                     File.Copy(Path.Combine(directory,"runtime","model-config.json"),Path.Combine(directory,"state","config.yaml"),false);
 #elif HERMES_MEMORY
@@ -1059,7 +1079,9 @@ namespace ProjectMaya.WindowsRuntime
                     record["network_filters_verified"] = 6;
 #if HERMES_BRIDGE
                     screen.Stage = "bridge_worker_setup";
-#if HERMES_MODEL
+#if HERMES_JOURNAL_ACCESS
+                    bridge = new JournalAccessRuntime(directory, run, user, record);
+#elif HERMES_MODEL
                     record["real_inference"] = false;
                     bridge = new ModelBridgeRuntime(directory, run, user, record, publish);
 #else
@@ -1087,7 +1109,10 @@ namespace ProjectMaya.WindowsRuntime
                     screen.Stage = "suspended_record_write";
                     SaveRecord(recordPath, record);
                     screen.Stage = "child_resume_wait";
-#if HERMES_BRIDGE
+#if HERMES_JOURNAL_ACCESS
+                    bridge.Run(isolation);
+                    record["child_resumed"] = isolation.Resumed;
+#elif HERMES_BRIDGE
                     uint exit = bridge.Run(isolation);
                     record["child_resumed"] = true;
                     record["child_exit_hex"] = "0x" + exit.ToString("X8");
@@ -1139,6 +1164,7 @@ namespace ProjectMaya.WindowsRuntime
 #if HERMES_BRIDGE
                     if (bridge != null) bridge.Stop();
 #endif
+#if !HERMES_JOURNAL_ACCESS
                     if (!recover && isolation.Resumed && (string)record["startup_status"] == "blocked")
                     {
                         try
@@ -1184,6 +1210,7 @@ namespace ProjectMaya.WindowsRuntime
                                 observations["host.effect"] = "failed";
                         }
                     }
+#endif
                     screen.Cleanup();
                     screen.Stage = "file_grant_revocation";
                     ProductFiles.Revoke(directory, isolation.Package);
@@ -1207,7 +1234,9 @@ namespace ProjectMaya.WindowsRuntime
                 record["cleanup_complete"] = cleanup;
                 if (!recover)
                 {
-#if HERMES_MODEL
+#if HERMES_JOURNAL_ACCESS
+                    record["status"] = JournalAccessRuntime.FinalStatus(record, cleanup);
+#elif HERMES_MODEL
                     record["status"] = cleanup && true.Equals(record["python_started"]) &&
                         record.ContainsKey("model_evidence_matches") && true.Equals(record["model_evidence_matches"]) &&
                         record.ContainsKey("model_worker_stopped") && true.Equals(record["model_worker_stopped"])
@@ -1405,6 +1434,11 @@ namespace ProjectMaya.WindowsRuntime
                 string outcome = (string)record["status"];
                 string description = !(bool)record["cleanup_complete"] ? "Cleanup needs attention. Stop here; do not run Python again." :
                     cleanup ? "Security cleanup completed. Python was not launched again." :
+#if HERMES_JOURNAL_ACCESS
+                    outcome == "access_matrix_denied_pending_independent_cleanup" ?
+                    "Both journal access probes reported complete denials. Independent cleanup checks are still required." :
+                    "The journal access test was blocked.";
+#else
 #if HERMES_MODEL
                     outcome == "offline_model_lease_replay_rejected_pending_independent_cleanup" ? "M04c replay rejected after one synthetic dispatch/runtime delivery. No operator output was published." :
                     outcome == "offline_model_lease_revoked_pending_independent_cleanup" ? "M04b unused unexpired-grant revocation verified before any gateway call. No model output was released." :
@@ -1418,6 +1452,7 @@ namespace ProjectMaya.WindowsRuntime
 #endif
                     outcome == "startup_completed_not_containment_qualified" ? "Python completed startup. Containment is not yet qualified." :
                     "Python did not complete startup.";
+#endif
                 status.Text = description + "\r\n" +
                     (record.ContainsKey("child_exit_hex") ? "Python exit: " + record["child_exit_hex"] + ". " : "") +
                     "Cleanup complete: " + record["cleanup_complete"] + ".\r\n" + reportPath;

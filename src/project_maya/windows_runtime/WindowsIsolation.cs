@@ -400,7 +400,9 @@ namespace ProjectMaya.WindowsRuntime
                 Attribute(attributes, 0x20002, inherited, 3 * IntPtr.Size);
                 string runtime = Path.Combine(directory, "runtime"), state = Path.Combine(directory, "state");
                 string python = Path.Combine(runtime, "python", "python.exe"), check = Path.Combine(runtime, "containment_check.py");
-#if HERMES_MODEL_FINAL
+#if HERMES_JOURNAL_ACCESS
+                check = Path.Combine(runtime, "journal_access_child_entry.py");
+#elif HERMES_MODEL_FINAL
                 check = Path.Combine(runtime, "model_final_child_entry.py");
 #elif HERMES_MODEL_ALLOWLIST
                 check = Path.Combine(runtime, "model_allowlist_child_entry.py");

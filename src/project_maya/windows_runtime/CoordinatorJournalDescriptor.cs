@@ -1,4 +1,4 @@
-#if MAYA_FINAL_OUTPUT_INERT_FIXTURE
+#if MAYA_FINAL_OUTPUT_INERT_FIXTURE || HERMES_JOURNAL_ACCESS
 using System;
 using System.Collections.Generic;
 using System.Security.Principal;

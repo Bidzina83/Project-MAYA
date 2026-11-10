@@ -13,6 +13,15 @@ namespace ProjectMaya.WindowsRuntime
         internal IntPtr BridgeInput;
         WorkerStartupCapture bridgeStartupCapture=null;
         internal IntPtr BridgeOutput { get { return readOutput; } }
+#if HERMES_JOURNAL_ACCESS
+        internal void StartJournalAccessWorker(string directory, string run, SecurityIdentifier user)
+        { StartWorkerEntry(directory, run, user, "journal_access_worker_entry.py"); }
+        internal void CloseJournalAccessInput()
+        {
+            Native.Require(BridgeInput!=IntPtr.Zero && Native.CloseHandle(BridgeInput),"journal_access_close_stdin");
+            BridgeInput=IntPtr.Zero;
+        }
+#endif
         internal void StartWorker(string directory, string run, SecurityIdentifier user)
         { StartWorkerEntry(directory, run, user, "bridge_worker_entry.py"); }
         internal void StartModelWorker(string directory, string run, SecurityIdentifier user)

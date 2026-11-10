@@ -25,7 +25,7 @@ internal static class CoordinatorJournalCandidateFixtures
         Check(false);
     }
 
-    static byte[] Descriptor(string fault=null)
+    internal static byte[] Descriptor(string fault=null)
     {
         var dacl=new RawAcl(2,2);
         var first=new CommonAce(fault=="inherit-ace"?AceFlags.Inherited:AceFlags.None,

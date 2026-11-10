@@ -190,6 +190,9 @@ namespace ProjectMaya.WindowsRuntime
 #if HERMES_STATE || HERMES_MEMORY || HERMES_BRIDGE
             importPath = importPath || relative == "hermes_state_check.py" || relative == "hermes-state-contract.json";
 #endif
+#if HERMES_JOURNAL_ACCESS
+            importPath = importPath || JournalAccessRuntime.IsRoleRoot(relative);
+#endif
             if (!importPath && relative != "startup_check.py" && relative != "containment_check.py" && !relative.StartsWith("python/", StringComparison.Ordinal) &&
                 !relative.StartsWith("notices/", StringComparison.Ordinal)) throw new StartupFailure("payload_scope_rejected");
             return relative.Replace('/', Path.DirectorySeparatorChar);
@@ -215,6 +218,9 @@ namespace ProjectMaya.WindowsRuntime
             }
             if (!names.Contains("python/python.exe") || !names.Contains("python/python313.dll") || !names.Contains("startup_check.py"))
                 throw new StartupFailure("payload_required_file_missing");
+#if HERMES_JOURNAL_ACCESS
+            if (!JournalAccessRuntime.HasRoleRoots(names)) throw new StartupFailure("payload_required_file_missing");
+#endif
             return index;
         }
         static bool Digest(string text)

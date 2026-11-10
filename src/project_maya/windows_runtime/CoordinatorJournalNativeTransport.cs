@@ -1,4 +1,4 @@
-#if MAYA_FINAL_OUTPUT_INERT_FIXTURE
+#if MAYA_FINAL_OUTPUT_INERT_FIXTURE || HERMES_JOURNAL_ACCESS
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -49,10 +49,19 @@ namespace ProjectMaya.WindowsRuntime
 
         internal CoordinatorJournalNativeTransport(string attempt,string parentId,string volumeId,string path,
             string descriptor,ICoordinatorJournalNativeCalls calls)
+            : this(attempt,parentId,volumeId,path,descriptor,calls,Path.Combine(ProductFiles.Root,attempt??"")) { }
+
+#if MAYA_JOURNAL_NATIVE_BASELINE
+        internal CoordinatorJournalNativeTransport(CoordinatorJournalScratchTarget scratch,string path,
+            string descriptor,ICoordinatorJournalNativeCalls calls)
+            : this(scratch.Attempt,scratch.ParentId,scratch.Volume,path,descriptor,calls,scratch.Directory) { }
+#endif
+
+        CoordinatorJournalNativeTransport(string attempt,string parentId,string volumeId,string path,
+            string descriptor,ICoordinatorJournalNativeCalls calls,string directory)
         {
             if(!CoordinatorJournalBinding.Hex(attempt,32) || !CoordinatorJournalBinding.Hex(parentId,16) ||
                 !CoordinatorJournalBinding.Hex(volumeId,8) || calls==null)throw new ArgumentException("journal_native_binding");
-            string directory=Path.Combine(ProductFiles.Root,attempt);
             Require(string.Equals(path,Path.Combine(directory,CoordinatorJournalCandidate.Leaf),StringComparison.Ordinal) &&
                 descriptor==CoordinatorJournalCandidate.CreationDescriptor,"journal_native_path");
             this.path=path;this.parentId=parentId;this.volumeId=volumeId;this.calls=calls;
