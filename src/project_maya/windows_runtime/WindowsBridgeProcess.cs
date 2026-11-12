@@ -22,6 +22,13 @@ namespace ProjectMaya.WindowsRuntime
             BridgeInput=IntPtr.Zero;
         }
 #endif
+#if HERMES_JOURNAL_DELETE_CHILD_SOURCE
+        internal void CloseDeleteChildInput()
+        {
+            Native.Require(BridgeInput!=IntPtr.Zero && Native.CloseHandle(BridgeInput),"delete_child_close_stdin");
+            BridgeInput=IntPtr.Zero;
+        }
+#endif
         internal void StartWorker(string directory, string run, SecurityIdentifier user)
         { StartWorkerEntry(directory, run, user, "bridge_worker_entry.py"); }
         internal void StartModelWorker(string directory, string run, SecurityIdentifier user)

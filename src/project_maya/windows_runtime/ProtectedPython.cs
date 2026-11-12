@@ -1,4 +1,7 @@
 // Product-owned startup candidate. No Hermes execution or containment acceptance.
+#if HERMES_JOURNAL_DELETE_CHILD_SOURCE && (!HERMES_BRIDGE || !HERMES_CONSTRUCTION || !HERMES_IMPORT || HERMES_JOURNAL_ACCESS || HERMES_MODEL || MAYA_DELETE_CHILD_CONTROL_INERT || MAYA_FINAL_OUTPUT_INERT_FIXTURE || MAYA_JOURNAL_TOKEN_ACCESS_FIXTURE || MAYA_JOURNAL_TOKEN_ACCESS_NATIVE_FIXTURE || MAYA_JOURNAL_NATIVE_BASELINE)
+#error HERMES_JOURNAL_DELETE_CHILD_SOURCE requires the private bridge topology without Access 2, model or fixture profiles.
+#endif
 #if HERMES_JOURNAL_ACCESS && (!HERMES_BRIDGE || !HERMES_CONSTRUCTION || !HERMES_IMPORT || HERMES_MODEL || HERMES_MODEL_FINAL || HERMES_MODEL_ALLOWLIST || HERMES_MODEL_OVERSIZED || HERMES_MODEL_VALIDATION || HERMES_MODEL_MALFORMED || HERMES_MODEL_OUTPUT_DENY || HERMES_MODEL_DENY || HERMES_MODEL_RECREATE || HERMES_MODEL_BUDGET || HERMES_MODEL_REPLAY || HERMES_MODEL_REVOKE || HERMES_MODEL_EXPIRY || HERMES_MODEL_BODY || HERMES_MODEL_ROUTE || HERMES_MODEL_ATTEMPT || HERMES_STATE || HERMES_MEMORY || MAYA_FINAL_OUTPUT_INERT_FIXTURE || MAYA_JOURNAL_NATIVE_BASELINE || MAYA_JOURNAL_TOKEN_ACCESS_FIXTURE || MAYA_JOURNAL_TOKEN_ACCESS_NATIVE_FIXTURE)
 #error HERMES_JOURNAL_ACCESS requires the private bridge topology and excludes other cases and fixture profiles.
 #endif
@@ -76,7 +79,10 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Maya protected Python startup candidate")]
 [assembly: AssemblyVersion("0.1.0.0")]
-#if HERMES_JOURNAL_ACCESS
+#if HERMES_JOURNAL_DELETE_CHILD_SOURCE
+[assembly: AssemblyFileVersion("0.2.3.1")]
+[assembly: AssemblyInformationalVersion("0.2.3-journal-delete-child.1")]
+#elif HERMES_JOURNAL_ACCESS
 [assembly: AssemblyFileVersion("0.2.2.1")]
 [assembly: AssemblyInformationalVersion("0.2.2-journal-access.1")]
 #elif HERMES_MODEL_FINAL
@@ -151,7 +157,13 @@ namespace ProjectMaya.WindowsRuntime
 {
     internal static class ProtectedPython
     {
-#if HERMES_JOURNAL_ACCESS
+#if HERMES_JOURNAL_DELETE_CHILD_SOURCE
+        internal const string Version = "0.2.3-journal-delete-child.1";
+        internal const string Scope = "offline-journal-delete-child-control-v1";
+        internal const string Consent = "One offline delete-child diagnostic using an empty synthetic control folder. " +
+            "The child requests directory handles only and does not delete anything. A temporary permission on the control " +
+            "must be restored. No model, network traffic or production qualification.";
+#elif HERMES_JOURNAL_ACCESS
         internal const string Version = "0.2.2-journal-access.1";
         internal const string Scope = "offline-journal-access-matrix-v1";
         internal const string Consent =
@@ -1041,7 +1053,12 @@ namespace ProjectMaya.WindowsRuntime
             var observations = new Dictionary<string, string>(StringComparer.Ordinal);
             record["security_resource_inventory"] = isolation.ResourceInventory();
             bool cleanup = false;
-#if HERMES_JOURNAL_ACCESS
+#if HERMES_JOURNAL_DELETE_CHILD_SOURCE
+            DeleteChildControlProvision control = null;
+            DeleteChildExchange exchange = null;
+            DeleteChildProbe.OpenResult[] deleteChildRows = null;
+            bool deleteChildReadback = false;
+#elif HERMES_JOURNAL_ACCESS
             JournalAccessRuntime bridge = null;
 #elif HERMES_MODEL
             ModelBridgeRuntime bridge = null;
@@ -1059,7 +1076,7 @@ namespace ProjectMaya.WindowsRuntime
                     isolation.CreateProfile();
                     screen.Stage = "file_grants";
                     ProductFiles.Grant(directory, isolation.Package, user);
-#if HERMES_JOURNAL_ACCESS
+#if HERMES_JOURNAL_ACCESS || HERMES_JOURNAL_DELETE_CHILD_SOURCE
                     record["real_inference"] = false;
                     record["independent_cleanup_verified"] = false;
 #elif HERMES_MODEL
@@ -1077,7 +1094,11 @@ namespace ProjectMaya.WindowsRuntime
                     screen.Stage = "network_provision";
                     isolation.ProvisionNetwork();
                     record["network_filters_verified"] = 6;
-#if HERMES_BRIDGE
+#if HERMES_JOURNAL_DELETE_CHILD_SOURCE
+                    screen.Stage = "delete_child_control_setup";
+                    control = new DeleteChildControlProvision(directory,run);
+                    control.Prepare(user,isolation.Package);
+#elif HERMES_BRIDGE
                     screen.Stage = "bridge_worker_setup";
 #if HERMES_JOURNAL_ACCESS
                     bridge = new JournalAccessRuntime(directory, run, user, record);
@@ -1109,7 +1130,15 @@ namespace ProjectMaya.WindowsRuntime
                     screen.Stage = "suspended_record_write";
                     SaveRecord(recordPath, record);
                     screen.Stage = "child_resume_wait";
-#if HERMES_JOURNAL_ACCESS
+#if HERMES_JOURNAL_DELETE_CHILD_SOURCE
+                    control.VerifyObjects();
+                    exchange = new DeleteChildExchange(isolation);
+                    deleteChildRows = exchange.Run(run,record);
+                    record["child_resumed"] = isolation.Resumed;
+                    control.VerifyObjects();
+                    deleteChildReadback = true;
+                    record["delete_child_readback_verified"] = true;
+#elif HERMES_JOURNAL_ACCESS
                     bridge.Run(isolation);
                     record["child_resumed"] = isolation.Resumed;
 #elif HERMES_BRIDGE
@@ -1159,12 +1188,22 @@ namespace ProjectMaya.WindowsRuntime
                 // Keep durable network denies and grants if stopping the job is uncertain.
                 try
                 {
+#if HERMES_JOURNAL_DELETE_CHILD_SOURCE
+                    screen.Stage = "job_stop";
+                    if (control == null) isolation.Stop();
+                    else control.StopAndRestore(delegate {
+                        isolation.Stop();
+                        screen.Stage = "delete_child_control_restore";
+                    });
+                    if (exchange != null) exchange.Dispose();
+#else
                     screen.Stage = "job_stop";
                     isolation.Stop();
 #if HERMES_BRIDGE
                     if (bridge != null) bridge.Stop();
 #endif
-#if !HERMES_JOURNAL_ACCESS
+#endif
+#if !HERMES_JOURNAL_ACCESS && !HERMES_JOURNAL_DELETE_CHILD_SOURCE
                     if (!recover && isolation.Resumed && (string)record["startup_status"] == "blocked")
                     {
                         try
@@ -1228,13 +1267,38 @@ namespace ProjectMaya.WindowsRuntime
                 }
                 record["screen_last_stage"] = screen.Stage;
                 isolation.Dispose();
-#if HERMES_BRIDGE
+#if HERMES_BRIDGE && !HERMES_JOURNAL_DELETE_CHILD_SOURCE
                 if (bridge != null) bridge.Dispose();
 #endif
                 record["cleanup_complete"] = cleanup;
                 if (!recover)
                 {
-#if HERMES_JOURNAL_ACCESS
+#if HERMES_JOURNAL_DELETE_CHILD_SOURCE
+                    string result = deleteChildRows == null ?
+                        (record.ContainsKey("delete_child_provisional_forbidden_open") ? "provisional_forbidden_open" : "inconclusive") :
+                        DeleteChildProbe.Classify(deleteChildRows[0],deleteChildRows[1],control.ControlIdentity,control.TargetIdentity,
+                            true,true,deleteChildReadback,cleanup);
+                    record["delete_child_outcome"] = result;
+                    if (deleteChildRows != null)
+                    {
+                        record["delete_child_control_opened"] = deleteChildRows[0].Opened;
+                        record["delete_child_control_closed"] = deleteChildRows[0].Closed;
+                        record["delete_child_control_open_error"] = deleteChildRows[0].Error;
+                        record["delete_child_control_identity_matches"] = deleteChildRows[0].Identity == control.ControlIdentity;
+                        record["delete_child_target_opened"] = deleteChildRows[1].Opened;
+                        record["delete_child_target_open_error"] = deleteChildRows[1].Error;
+                    }
+                    record["delete_child_control_cleanup_pending"] = control != null && control.CleanupPending;
+                    record["delete_child_control_grant_write_attempted"] = control != null && control.WriteAttempted;
+                    record["delete_child_control_restoration_verified"] = control != null && control.RestorationVerified;
+                    if (control != null)
+                    {
+                        record["delete_child_control_last_setup_step"] = control.LastSetupStep;
+                        if (control.DescriptorCheck != null) record["delete_child_control_descriptor_check"] = control.DescriptorCheck;
+                        if (control.RejectedAce != null) record["delete_child_control_rejected_ace"] = control.RejectedAce;
+                    }
+                    record["status"] = result == "target_specific_denial" ? "delete_child_denied_pending_independent_cleanup" : "blocked";
+#elif HERMES_JOURNAL_ACCESS
                     record["status"] = JournalAccessRuntime.FinalStatus(record, cleanup);
 #elif HERMES_MODEL
                     record["status"] = cleanup && true.Equals(record["python_started"]) &&
