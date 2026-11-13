@@ -122,6 +122,10 @@ namespace ProjectMaya.WindowsRuntime
                     throw new StartupFailure("payload_path_rejected");
             }
             bool importPath = false;
+#if MAYA_RESET_PRIVATE
+            importPath = relative == "maya_reset_demo.py" ||
+                relative.StartsWith("hermes/", StringComparison.Ordinal) || relative.StartsWith("dependencies/", StringComparison.Ordinal);
+#endif
 #if HERMES_IMPORT
             importPath = relative == "hermes_import_check.py" || relative == "hermes-import-contract.json" ||
                 relative.StartsWith("hermes/", StringComparison.Ordinal) || relative.StartsWith("dependencies/", StringComparison.Ordinal);
@@ -220,6 +224,9 @@ namespace ProjectMaya.WindowsRuntime
             }
             if (!names.Contains("python/python.exe") || !names.Contains("python/python313.dll") || !names.Contains("startup_check.py"))
                 throw new StartupFailure("payload_required_file_missing");
+#if MAYA_RESET_PRIVATE
+            if (!names.Contains("maya_reset_demo.py")) throw new StartupFailure("payload_required_file_missing");
+#endif
 #if HERMES_JOURNAL_DELETE_CHILD_SOURCE
             if (!names.Contains("journal_delete_child_entry.py") || !names.Contains("journal_access_role.py"))
                 throw new StartupFailure("payload_required_file_missing");
@@ -238,7 +245,7 @@ namespace ProjectMaya.WindowsRuntime
             using (var manifest = assembly.GetManifestResourceStream("MayaPython.payload-index.json"))
             {
                 if (manifest == null) throw new StartupFailure("embedded_index_missing");
-#if HERMES_IMPORT
+#if HERMES_IMPORT || MAYA_RESET_PRIVATE
                 index = ReadIndex(manifest, true);
 #else
                 index = ReadIndex(manifest);

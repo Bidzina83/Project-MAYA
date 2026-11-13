@@ -79,7 +79,13 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Maya protected Python startup candidate")]
 [assembly: AssemblyVersion("0.1.0.0")]
-#if HERMES_JOURNAL_DELETE_CHILD_SOURCE
+#if MAYA_RESET_PRIVATE && !MAYA_RESET_TCP
+[assembly: AssemblyFileVersion("0.2.5.2")]
+[assembly: AssemblyInformationalVersion("0.2.5-reset-pipe-review.2")]
+#elif MAYA_RESET_PRIVATE
+[assembly: AssemblyFileVersion("0.2.4.3")]
+[assembly: AssemblyInformationalVersion("0.2.4-reset-review.3")]
+#elif HERMES_JOURNAL_DELETE_CHILD_SOURCE
 [assembly: AssemblyFileVersion("0.2.3.1")]
 [assembly: AssemblyInformationalVersion("0.2.3-journal-delete-child.1")]
 #elif HERMES_JOURNAL_ACCESS
@@ -749,6 +755,23 @@ namespace ProjectMaya.WindowsRuntime
             "Closing forcibly may leave cleanup pending. Do not retry or weaken protection after " +
             "failure. Import success does not qualify construction, Hermes execution, governance " +
             "or containment; independent cleanup is still required.";
+#elif MAYA_RESET_PRIVATE
+#if MAYA_RESET_TCP
+        internal const string Version = "0.2.4-reset-review.3";
+        internal const string Scope = "synthetic-hermes-reset-review-v1";
+#else
+        internal const string Version = "0.2.5-reset-pipe-review.2";
+        internal const string Scope = "synthetic-hermes-reset-pipe-review-v1";
+#endif
+        internal const string Consent =
+            "One synthetic Hermes turn. Maya extracts its bundled runtime under ProgramData, " +
+            "creates a temporary AppContainer and network filters, and asks you to approve or deny " +
+            "a fixed synthetic request over private local pipes. No real provider or business data.\r\n\r\n" +
+#if MAYA_RESET_TCP
+            "The launcher connects to the laptop listener at 100.127.155.29:49187. The isolated " +
+            "Hermes child then attempts the same TCP connection so Maya can check for a Windows block.\r\n\r\n" +
+#endif
+            "Allow cleanup to finish. This test does not qualify production containment.";
 #else
         internal const string Version = "0.1.0-screen.11";
         internal const string Scope = "synthetic-containment-screen-v1";
@@ -1088,7 +1111,7 @@ namespace ProjectMaya.WindowsRuntime
                     HermesConstruction.Prepare(directory);
 #elif HERMES_IMPORT
                     HermesImport.Prepare(directory);
-#else
+#elif !MAYA_RESET_PRIVATE
                     screen.Prepare();
 #endif
                     screen.Stage = "network_provision";
@@ -1110,14 +1133,22 @@ namespace ProjectMaya.WindowsRuntime
 #endif
                     bridge.PrepareWorker();
 #endif
-#if !HERMES_IMPORT
+#if !HERMES_IMPORT && !MAYA_RESET_PRIVATE
                     screen.Stage = "udp_evidence_setup";
                     screen.ConfigureUdp(isolation, record);
 #endif
                     screen.Stage = "child_create_suspended";
+#if MAYA_RESET_PRIVATE
+                    File.WriteAllText(Path.Combine(directory, "state", "config.yaml"),
+                        "agent:\n  environment_probe: false\ncompression:\n  enabled: false\n");
+                    isolation.Start(directory, run, user, resetPrivate: true);
+#else
                     isolation.Start(directory, run, user);
+#endif
+#if !MAYA_RESET_PRIVATE
                     screen.BindChild(checked((int)isolation.ChildPid));
-#if !HERMES_IMPORT
+#endif
+#if !HERMES_IMPORT && !MAYA_RESET_PRIVATE
                     screen.Stage = "plan_write";
                     screen.WritePlan(isolation.StandardHandles);
                     record["screen_fixture_inventory"] = screen.Plan;
@@ -1130,7 +1161,37 @@ namespace ProjectMaya.WindowsRuntime
                     screen.Stage = "suspended_record_write";
                     SaveRecord(recordPath, record);
                     screen.Stage = "child_resume_wait";
-#if HERMES_JOURNAL_DELETE_CHILD_SOURCE
+#if MAYA_RESET_PRIVATE
+#if MAYA_RESET_TCP
+                    bool approved;
+                    record["reset_network_verdict"] = "inconclusive";
+                    using (var listener = new ResetTcpControl(run))
+                    using (var tcp = new UdpEvidence(Path.Combine(directory, "runtime", "python", "python.exe"),
+                        isolation.Package, isolation.VerifiedNetworkIds()))
+                    {
+                        long begin = DateTime.UtcNow.ToFileTimeUtc();
+                        approved = ResetPrivateExchange.RunChild(isolation, ResetPrivateExchange.Review);
+                        long end = DateTime.UtcNow.ToFileTimeUtc();
+                        int extraReceipts = listener.Finish();
+                        record["reset_tcp_extra_receipts"] = extraReceipts;
+                        if (extraReceipts > 0)
+                            record["reset_network_verdict"] = "direct_receipt_observed";
+                        var evidence = new Dictionary<string, object>();
+                        tcp.CollectResetTcp(evidence, 0x647F9B1Du, 49187, begin, end);
+                        record["reset_tcp_wfp_observation"] = evidence;
+                        if (extraReceipts == 0 && tcp.HasSingleResetTcpBlock)
+                            record["reset_network_verdict"] = "tested_route_blocked_indirect";
+                    }
+#else
+                    bool approved = ResetPrivateExchange.RunChild(isolation, ResetPrivateExchange.Review);
+#endif
+                    record["child_resumed"] = true;
+                    record["child_exit_hex"] = "0x" + isolation.ExitCode.Value.ToString("X8");
+                    record["python_started"] = true;
+                    record["reset_decision"] = approved ? "approved" : "denied";
+                    record["reset_child_stderr_bytes"] = isolation.StderrBytes;
+                    record["status"] = "reset_private_exchange_completed";
+#elif HERMES_JOURNAL_DELETE_CHILD_SOURCE
                     control.VerifyObjects();
                     exchange = new DeleteChildExchange(isolation);
                     deleteChildRows = exchange.Run(run,record);
@@ -1216,6 +1277,7 @@ namespace ProjectMaya.WindowsRuntime
                         }
                         catch (Exception error) { record["evidence_reason_code"] = FailureCode(error); }
                     }
+#if !MAYA_RESET_PRIVATE
                     if (!recover && isolation.Resumed)
                     {
                         try {
@@ -1250,7 +1312,10 @@ namespace ProjectMaya.WindowsRuntime
                         }
                     }
 #endif
+#endif
+#if !MAYA_RESET_PRIVATE
                     screen.Cleanup();
+#endif
                     screen.Stage = "file_grant_revocation";
                     ProductFiles.Revoke(directory, isolation.Package);
                     screen.Stage = "profile_delete";

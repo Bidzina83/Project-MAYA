@@ -70,6 +70,88 @@ class TcpDropSnapshot:
     drops: tuple[PackageDrop, ...]
 
 
+@dataclass(frozen=True)
+class SecurityConnectionBlock:
+    """Normalized event 5157 data from the trusted Windows Security log."""
+
+    filetime: int
+    pid: int
+    executable: str
+    filter_id: int
+    route: Route
+    outbound: bool
+
+
+def corroborate_tcp_block(
+    verdict: str,
+    expected: Block,
+    *,
+    executable: str,
+    child_start_filetime: int,
+    child_stop_filetime: int,
+    events: tuple[SecurityConnectionBlock, ...],
+) -> bool:
+    """Report optional PID corroboration without changing the network verdict."""
+    if (verdict != "tested_route_blocked_indirect" or expected.route.protocol != "tcp"
+            or expected.pid <= 0 or expected.filter_id <= 0 or not executable
+            or not 0 < child_start_filetime < child_stop_filetime):
+        return False
+    return any(
+        event.outbound is True
+        and type(event.pid) is int and event.pid == expected.pid
+        and event.executable == executable
+        and event.filter_id == expected.filter_id
+        and event.route == expected.route
+        and type(event.filetime) is int
+        and child_start_filetime <= event.filetime < child_stop_filetime
+        for event in events
+    )
+
+
+def tcp_listener_receipts(attempt: str, records: list[dict]) -> int | None:
+    """Validate a complete transcript from the trusted listener."""
+    if not attempt or not 2 <= len(records) <= 66:
+        return None
+    common = {"schema": "maya.reset.tcp.listener.v1", "attempt": attempt}
+    if records[0] != {**common, "event": "ready"}:
+        return None
+    for ordinal, record in enumerate(records[1:-1], 1):
+        if (not isinstance(record, dict) or type(record.get("ordinal")) is not int
+                or record != {**common, "event": "receipt", "ordinal": ordinal}):
+            return None
+    count = len(records) - 2
+    last = records[-1]
+    if (not isinstance(last, dict) or type(last.get("peer_receipts")) is not int
+            or last != {**common, "event": "window_closed", "peer_receipts": count}):
+        return None
+    return count
+
+
+def admit_tcp_listener_transcript(
+    attempt: str,
+    route: Route,
+    records: list[dict],
+    *,
+    host_receipt_filetime: int,
+    observation_open_filetime: int,
+    observation_close_filetime: int,
+    host_control_is_first_verified: bool,
+    coverage_verified: bool,
+) -> EndpointObservation | None:
+    """Convert trusted coordinator evidence, not remote clock samples."""
+    count = tcp_listener_receipts(attempt, records)
+    if (count is None or count < 1 or host_control_is_first_verified is not True
+            or coverage_verified is not True):
+        return None
+    times = (host_receipt_filetime, observation_open_filetime,
+             observation_close_filetime)
+    if any(type(value) is not int or value <= 0 for value in times):
+        return None
+    if not host_receipt_filetime <= observation_open_filetime < observation_close_filetime:
+        return None
+    return EndpointObservation(attempt, route, *times, count - 1, True)
+
+
 def admit_tcp_snapshot(
     attempt: str,
     expected: Block,

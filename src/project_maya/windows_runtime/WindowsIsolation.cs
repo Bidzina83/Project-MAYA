@@ -370,7 +370,7 @@ namespace ProjectMaya.WindowsRuntime
             Native.Require(UpdateProcThreadAttribute(list, 0, new IntPtr(type), value, new UIntPtr((uint)length),
                 IntPtr.Zero, IntPtr.Zero), "process_attribute");
         }
-        internal void Start(string directory, string run, SecurityIdentifier user)
+        internal void Start(string directory, string run, SecurityIdentifier user, bool resetPrivate = false)
         {
             for (int i = 0; i < Layers.Length; i++) if (!VerifyFilter(i)) throw new StartupFailure("network_filter_missing_before_start");
             job = CreateJobObject(IntPtr.Zero, null); Native.Require(job != IntPtr.Zero, "create_job");
@@ -448,22 +448,30 @@ namespace ProjectMaya.WindowsRuntime
                 check = Path.Combine(runtime, "hermes_import_check.py");
 #endif
                 StandardHandles = new[] { inputRead.ToInt64(), outputWrite.ToInt64(), errorWrite.ToInt64() };
+                if (resetPrivate) check = Path.Combine(runtime, "maya_reset_demo.py");
                 string system = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
                 string env = "HERMES_HOME=" + state + "\0LOCALAPPDATA=" + state + "\0PATH=" + Path.Combine(runtime, "python") + ";" + Environment.SystemDirectory +
                     "\0SYSTEMROOT=" + system + "\0TEMP=" + state + "\0TMP=" + state + "\0USERPROFILE=" + state + "\0WINDIR=" + system + "\0\0";
 #if HERMES_IMPORT
                 env = "HERMES_DISABLE_LAZY_INSTALLS=1\0" + env;
 #endif
+                if (resetPrivate) env = "HERMES_DISABLE_LAZY_INSTALLS=1\0" + env;
                 environment = Marshal.StringToHGlobalUni(env);
                 var startup = new StartupEx { startup = new Startup { size = (uint)Marshal.SizeOf(typeof(StartupEx)), flags = 0x100,
                     input = inputRead, output = outputWrite, error = errorWrite }, attributes = attributes };
                 launchToken = CreateReducedLaunchToken(user);
                 ReducedLaunchTokenVerified = true;
-                Native.Require(CreateProcessAsUserW(launchToken, python, new StringBuilder(Quote(python) + " -I -S -B " + Quote(check) + " " + run),
+                string resetEntry = "--private-hermes-turn";
+#if MAYA_RESET_TCP
+                resetEntry = "--private-hermes-tcp-turn";
+#endif
+                Native.Require(CreateProcessAsUserW(launchToken, python, new StringBuilder(Quote(python) + " -I -S -B " + Quote(check) + " " + (resetPrivate ? resetEntry : run)),
                     IntPtr.Zero, IntPtr.Zero, true, LaunchCreationFlags, environment, state, ref startup, out child), "create_suspended_python");
                 TokenCheck(child.process, user);
 #if HERMES_BRIDGE
                 BridgeInput = inputWrite; handles.Remove(inputWrite);
+#else
+                if (resetPrivate) { BridgeInput = inputWrite; handles.Remove(inputWrite); }
 #endif
             }
             finally

@@ -76,7 +76,7 @@ def hermes_request(review=None):
             process.stdout.close()
 
 
-def hermes_turn_main():
+def hermes_turn_main(exchange=None, finish=None):
     from contextlib import redirect_stdout
     import logging
     from unittest.mock import patch
@@ -95,12 +95,18 @@ def hermes_turn_main():
             raise ValueError("Unexpected synthetic SDK request")
         captured.append(request.content.decode("utf-8"))
         validate_payload(captured[0])
-        print(json.dumps(captured[0]), file=sys.__stdout__, flush=True)
-        answer = json.loads(sys.stdin.readline(8193))
+        if exchange is None:
+            print(json.dumps(captured[0]), file=sys.__stdout__, flush=True)
+            answer = json.loads(sys.stdin.readline(8193))
+        else:
+            answer = exchange(captured[0])
         if answer is None:
             # This callback runs on a Hermes worker thread. Exit the dedicated
             # process rather than let a transport error enter Hermes retry logic.
-            print("null", file=sys.__stdout__, flush=True)
+            if finish is None:
+                print("null", file=sys.__stdout__, flush=True)
+            else:
+                finish(None)
             os._exit(0)
         return httpx.Response(200, json={
             "id": "maya-reset-local", "object": "chat.completion", "created": 0,
@@ -140,7 +146,64 @@ def hermes_turn_main():
         turn = agent.run_conversation(DOCUMENT + "\n\n" + QUESTION)
     if len(captured) != 1:
         raise ValueError("Synthetic Hermes turn did not complete")
-    print(json.dumps(turn.get("final_response")))
+    answer = turn.get("final_response")
+    if finish is None:
+        print(json.dumps(answer))
+    else:
+        finish(answer)
+
+
+def private_hermes_turn_main(probe=False):
+    """One synthetic turn over the launcher's inherited standard handles."""
+    import struct
+
+    incoming, outgoing = sys.stdin.buffer, sys.__stdout__.buffer
+
+    def send(record):
+        body = json.dumps(record, ensure_ascii=False).encode("utf-8")
+        if not 1 <= len(body) <= 8192:
+            raise ValueError("Invalid private frame size")
+        outgoing.write(struct.pack("<I", len(body)) + body)
+        outgoing.flush()
+
+    def exchange(payload):
+        send({"kind": "request", "payload": payload})
+        header = incoming.read(4)
+        if len(header) != 4:
+            raise EOFError("Missing private reply")
+        size, = struct.unpack("<I", header)
+        if not 1 <= size <= 8192:
+            raise ValueError("Invalid private reply size")
+        body = incoming.read(size)
+        if len(body) != size:
+            raise EOFError("Incomplete private reply")
+        reply = json.loads(body)
+        if (not isinstance(reply, dict) or set(reply) != {"kind", "answer"}
+                or reply["kind"] != "decision"
+                or reply["answer"] not in (None, "Payment is due within 30 days of invoice.")):
+            raise ValueError("Invalid private decision")
+        return reply["answer"]
+
+    if probe:
+        reset_tcp_probe()
+    hermes_turn_main(exchange, lambda answer: send({"kind": "complete", "answer": answer}))
+
+
+def reset_tcp_probe():
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.settimeout(2.0)
+        try:
+            probe.connect(("100.127.155.29", 49187))
+        except OSError:
+            # Only trusted WFP and listener evidence can classify this attempt.
+            pass
+
+
+def isolated_hermes_turn_main():
+    reset_tcp_probe()
+    hermes_turn_main()
 
 
 class FixtureEndpoint:
@@ -241,6 +304,12 @@ if __name__ == "__main__":
         broker_main()
     elif sys.argv[1:] == ["--hermes-turn"]:
         hermes_turn_main()
+    elif sys.argv[1:] == ["--isolated-hermes-turn"]:
+        isolated_hermes_turn_main()
+    elif sys.argv[1:] == ["--private-hermes-turn"]:
+        private_hermes_turn_main()
+    elif sys.argv[1:] == ["--private-hermes-tcp-turn"]:
+        private_hermes_turn_main(probe=True)
     elif len(sys.argv) == 1:
         main()
     else:

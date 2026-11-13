@@ -65,6 +65,8 @@ namespace ProjectMaya.WindowsRuntime
         readonly long start;
         IntPtr engine;
         internal bool SnapshotExhausted { get; private set; }
+        internal bool HasSingleResetTcpBlock
+        { get { return SnapshotExhausted && Failure == null && matches.Count == 1; } }
         internal string Failure { get; private set; }
         internal UdpEvidence(string python, SecurityIdentifier package, Dictionary<ulong, int> ids)
         {

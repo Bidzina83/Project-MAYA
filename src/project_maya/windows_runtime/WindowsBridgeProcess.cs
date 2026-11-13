@@ -165,7 +165,10 @@ namespace ProjectMaya.WindowsRuntime
         {
             if (WaitForSingleObject(child.process, milliseconds) != 0) throw new StartupFailure("bridge_exit_timeout");
             uint code; Native.Require(GetExitCodeProcess(child.process, out code), "bridge_exit_code"); ExitCode = code;
-            if (!errorThread.Join(1000) || captureFailed || StderrBytes != 0) throw new StartupFailure("bridge_stderr_rejected");
+            if (!errorThread.Join(1000) || captureFailed) throw new StartupFailure("bridge_stderr_rejected");
+#if !MAYA_RESET_PRIVATE || MAYA_RESET_TCP
+            if (StderrBytes != 0) throw new StartupFailure("bridge_stderr_rejected");
+#endif
             if (code != 0) throw new StartupFailure("bridge_exit_failed");
         }
         internal void CloseBridgeInput()
