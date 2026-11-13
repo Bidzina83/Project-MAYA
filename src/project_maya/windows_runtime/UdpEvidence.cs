@@ -130,14 +130,35 @@ namespace ProjectMaya.WindowsRuntime
                 ((index < 2 && drop.Direction == 0x3901) || (index >= 4 && drop.Direction == 0x3900)) &&
                 (header.Version == 0 ? index % 2 == 0 : index % 2 == 1);
         }
+        internal static bool EligibleResetTcp(Header header, Drop drop, int index, ushort layer,
+            uint address, ushort port, long start, long end)
+        {
+            return (header.Flags & 0x53f) == 0x53f && header.Version == 0 && header.Protocol == 6 &&
+                address != 0 && (address >> 24) != 127 && port != 0 &&
+                header.Remote4 == address && header.RemotePort == port && header.LocalPort != 0 &&
+                header.Time >= start && header.Time < end && index == 0 && drop.Layer == layer &&
+                drop.Direction == 0x3901 && drop.Loopback == 0;
+        }
+
         internal void Collect(Dictionary<string, object> record)
+        { CollectCore(record, 0, 0, start, DateTime.UtcNow.ToFileTimeUtc()); }
+
+        internal void CollectResetTcp(Dictionary<string, object> record,uint address,ushort port,long childStart,long childStop)
+        {
+            if(address==0 || (address >> 24)==127 || port==0 || childStart<start || childStop<=childStart)
+                throw new StartupFailure("reset_tcp_observation_window");
+            CollectCore(record,address,port,childStart,childStop);
+        }
+
+        void CollectCore(Dictionary<string, object> record,uint tcpAddress,ushort tcpPort,long begin,long end)
         {
             IntPtr enumeration = IntPtr.Zero;
-            long end = DateTime.UtcNow.ToFileTimeUtc();
+            bool tcp=tcpPort!=0;
+            matches.Clear(); otherDrops.Clear(); SnapshotExhausted=false; Failure=null;
             try
             {
                 VerifyEnabled();
-                var template = new Template { Start = start, End = end };
+                var template = new Template { Start = begin, End = end };
                 Native.Check(FwpmNetEventCreateEnumHandle0(engine, ref template, out enumeration), "udp_event_enum_create");
                 for (int page = 0; page < 4; page++)
                 {
@@ -153,8 +174,10 @@ namespace ProjectMaya.WindowsRuntime
                             var item = (Event)Marshal.PtrToStructure(pointer, typeof(Event));
                             if (item.Type != 3 || item.Data == IntPtr.Zero) continue;
                             var drop = (Drop)Marshal.PtrToStructure(item.Data, typeof(Drop)); int index;
-                            if ((item.Header.Flags & 0x53f) != 0x53f || item.Header.Protocol != 17 ||
-                                item.Header.Time < start || item.Header.Time > end || !Loopback(item.Header)) continue;
+                            if ((item.Header.Flags & 0x53f) != 0x53f || item.Header.Protocol != (tcp?6:17) ||
+                                item.Header.Time < begin || item.Header.Time > end ||
+                                (tcp ? item.Header.Version!=0 || item.Header.Remote4!=tcpAddress ||
+                                    item.Header.RemotePort!=tcpPort : !Loopback(item.Header))) continue;
                             if (item.Header.Package == IntPtr.Zero || !new SecurityIdentifier(item.Header.Package).Equals(package) ||
                                 !EqualBytes(application, CopyBlob(item.Header.App))) continue;
                             if (matches.Count + otherDrops.Count == 64) throw new StartupFailure("udp_event_match_limit");
@@ -166,7 +189,8 @@ namespace ProjectMaya.WindowsRuntime
                                     {"layer_id", drop.Layer}, {"direction", drop.Direction}, {"maya_owned", false} });
                                 continue;
                             }
-                            if (!Eligible(item.Header, drop, index, layers[index], start, end)) continue;
+                            if (!(tcp ? EligibleResetTcp(item.Header,drop,index,layers[index],tcpAddress,tcpPort,begin,end)
+                                : Eligible(item.Header, drop, index, layers[index], begin, end))) continue;
                             matches.Add(new Match { Family = item.Header.Version == 0 ? 4 : 6, LocalPort = item.Header.LocalPort,
                                 RemotePort = item.Header.RemotePort, Filter = drop.Filter, LayerIndex = index, Time = item.Header.Time });
                         }
@@ -187,12 +211,33 @@ namespace ProjectMaya.WindowsRuntime
                 {"family", match.Family}, {"local_port", match.LocalPort}, {"remote_port", match.RemotePort},
                 {"filter_id", match.Filter.ToString()}, {"layer_guid", WindowsIsolation.NetworkLayer(match.LayerIndex).ToString()},
                 {"timestamp_filetime", match.Time.ToString()} });
+            if(tcp)
+            {
+                record["reset_tcp_drop_events"]=rows;
+                record["reset_tcp_snapshot_exhausted"]=SnapshotExhausted;
+                record["reset_tcp_event_reason"]=Failure;
+                return;
+            }
             record["screen_udp_drop_events"] = rows;
             record["screen_udp_other_filter_drops_diagnostic_only"] = otherDrops;
             record["screen_udp_snapshot_exhausted"] = SnapshotExhausted;
             record["screen_udp_event_reason"] = Failure;
             record["screen_udp_event_retention_loss_known"] = false;
         }
+        // Export only admitted outbound records; never attach an inferred PID.
+        internal List<Match> ResetOutboundSnapshot(int family,int local,int remote)
+        {
+            var result=new List<Match>();
+            if(!SnapshotExhausted || Failure!=null || (family!=4 && family!=6) ||
+                local<1024 || local>65535 || remote<1 || remote>65535)return null;
+            int layer=family==4?0:1;
+            foreach(var row in matches)
+                if(row.Family==family && row.LayerIndex==layer && row.LocalPort==local && row.RemotePort==remote)
+                    result.Add(new Match {Family=row.Family,LocalPort=row.LocalPort,RemotePort=row.RemotePort,
+                        LayerIndex=row.LayerIndex,Filter=row.Filter,Time=row.Time});
+            return result;
+        }
+
         internal bool Denied(int family, bool receive, int local, int remote)
         {
             return MatchTuple(matches, SnapshotExhausted, Failure, family, receive, local, remote);

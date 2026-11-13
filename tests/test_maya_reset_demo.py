@@ -1,9 +1,24 @@
 from dataclasses import replace
 import runpy
+import io
+import pytest
 from pathlib import Path
 
 
 demo = runpy.run_path(str(Path(__file__).resolve().parents[1] / "scripts/maya_reset_demo.py"))
+
+
+@pytest.mark.parametrize(("value", "expected"), [
+    ("y\n", "approved"), ("n\n", "denied"), ("\n", "blank_input"),
+    ("", "end_of_input"), ("maybe\n", "invalid_input"),
+])
+def test_console_input(monkeypatch, capsys, value, expected):
+    review = demo["operator_review"]
+    monkeypatch.setattr("sys.stdin", io.StringIO(value))
+    monkeypatch.setitem(review.__globals__, "resolve_offline",
+                        lambda request, approved, candidate: {"decision": "approved" if approved else "denied"})
+    assert review(demo["Request"]("id", "document", "question"))["decision"] == expected
+    assert "Type y to approve or n to deny" in capsys.readouterr().out
 Request, Review, FixtureEndpoint = (demo[name] for name in ("Request", "Review", "FixtureEndpoint"))
 
 

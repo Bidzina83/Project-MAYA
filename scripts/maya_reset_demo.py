@@ -21,6 +21,20 @@ class Request:
 
 DOCUMENT = "Acme purchase order 1042 specifies payment within 30 days of invoice."
 QUESTION = "What are Acme's payment terms?"
+SYSTEM = "Answer using only the synthetic document provided."
+
+
+def validate_payload(body):
+    expected = {
+        "messages": [
+            {"role": "system", "content": SYSTEM},
+            {"role": "user", "content": DOCUMENT + "\n\n" + QUESTION},
+        ],
+        "model": "maya-reset-fixture", "max_tokens": 32, "stream": False,
+    }
+    canonical = json.dumps(expected, ensure_ascii=False, separators=(",", ":"))
+    if body != canonical:
+        raise ValueError("Unexpected content in synthetic SDK request")
 
 
 def hermes_request(review=None):
@@ -34,6 +48,7 @@ def hermes_request(review=None):
         process = subprocess.Popen(
             [sys.executable, "-I", "-B", str(Path(__file__).resolve()), "--hermes-turn"],
             cwd=home, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
             text=True, encoding="utf-8",
         )
         try:
@@ -46,6 +61,7 @@ def hermes_request(review=None):
                     process.kill()
                     raise
             request = Request(uuid4().hex, DOCUMENT, QUESTION, payload=json.loads(line))
+            validate_payload(request.payload)
             report = review(request) if review is not None else None
             answer = report["result"]["answer"] if report and report["result"] else None
             stdout, _ = process.communicate(json.dumps(answer) + "\n", timeout=10)
@@ -62,6 +78,12 @@ def hermes_request(review=None):
 
 def hermes_turn_main():
     from contextlib import redirect_stdout
+    import logging
+    from unittest.mock import patch
+
+    bundle = Path(__file__).resolve().parent
+    if Path(sys.executable).resolve().parent == bundle / "python":
+        sys.path[:0] = [str(bundle / name) for name in ("hermes", "dependencies")]
 
     import httpx
     captured = []
@@ -72,6 +94,7 @@ def hermes_turn_main():
         ):
             raise ValueError("Unexpected synthetic SDK request")
         captured.append(request.content.decode("utf-8"))
+        validate_payload(captured[0])
         print(json.dumps(captured[0]), file=sys.__stdout__, flush=True)
         answer = json.loads(sys.stdin.readline(8193))
         if answer is None:
@@ -87,13 +110,18 @@ def hermes_turn_main():
             "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
         })
 
-    with redirect_stdout(sys.stderr), httpx.Client(
+    logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
+    # The broker receipt, not Hermes file logs, is the demo evidence.
+    with redirect_stdout(sys.stderr), patch("hermes_logging.setup_logging", lambda **_: None), httpx.Client(
         transport=httpx.MockTransport(capture), trust_env=False
     ) as client:
         from run_agent import AIAgent
 
         class OfflineAgent(AIAgent):
             _disable_streaming = True
+
+            def _build_system_prompt(self, system_message=None):
+                return SYSTEM
 
             def _create_openai_client(self, client_kwargs, *, reason, shared):
                 return super()._create_openai_client(
@@ -165,6 +193,7 @@ def broker_main():
         DOCUMENT, QUESTION, "synthetic:local-fixture"
     ):
         raise ValueError("Only the fixed synthetic fixture is supported")
+    validate_payload(request.payload)
     endpoint = FixtureEndpoint()
     report = Review(request, endpoint).resolve(approved, candidate)
     report["endpoint_received"] = [asdict(item) for item in endpoint.received]
@@ -175,24 +204,28 @@ def operator_review(request):
     from queue import Empty, Queue
     from threading import Thread
 
-    print(json.dumps(vars(request), indent=2))
+    print(json.dumps(vars(request), indent=2), flush=True)
+    print("Type y to approve or n to deny, then press Enter (60 seconds).", flush=True)
     choices = Queue(maxsize=1)
 
     def read_choice():
         try:
-            choices.put(input("Approve this synthetic request within 60 seconds? [y/N] ").strip().lower())
+            choice = input().strip().lower()
+            choices.put({"y": "approved", "n": "denied", "": "blank_input"}.get(choice, "invalid_input"))
         except EOFError:
-            choices.put("")
+            choices.put("end_of_input")
 
     Thread(target=read_choice, daemon=True).start()
     try:
-        choice = choices.get(timeout=60)
+        outcome = choices.get(timeout=60)
     except Empty:
-        return dict(resolve_offline(request, False, request), decision="approval_timeout")
+        outcome = "approval_timeout"
     except KeyboardInterrupt:
-        choice = ""
+        outcome = "approval_cancelled"
     try:
-        report = resolve_offline(request, choice == "y", request)
+        report = resolve_offline(request, outcome == "approved", request)
+        if report["decision"] == "denied":
+            report["decision"] = outcome
     except (subprocess.SubprocessError, OSError, ValueError):
         report = {"request_id": request.id, "decision": "broker_failed",
                   "result": None, "endpoint_received": None}

@@ -48,3 +48,55 @@ pause. Do not queue another diagnostic build by default.
 approval screen, an instrumented synthetic endpoint, and a result/evidence
 view. Build the approved and denied paths together. No real provider until DP1
 and the offline dispatch checks pass.
+
+## ZIP 3 Baseline and Windows Network Gate
+
+The operator's Windows test-machine transcript confirmed one synthetic
+endpoint receipt and an answer on approval, and zero receipts and no answer
+on denial. Both exited 0 using bundled Python. The shown request contained
+only the fixed fixture content. Preserve ZIP 3 as the workflow baseline.
+The mock transport is not evidence of OS enforcement.
+
+For the next offline milestone, reuse the existing package-scoped
+AppContainer/WFP provisioning rather than build a second network policy.
+First verify whether the existing containment screen evidence can be tied
+to the actual reset child. If not, review a separately packaged reset
+launcher that isolates the Hermes child, not the operator or trusted broker.
+No real credentials or provider endpoints are needed.
+
+Require three independently checkable observations on the same candidate:
+
+1. The trusted host can reach the controlled synthetic test endpoint, so
+   endpoint unavailability cannot explain a negative result.
+2. Windows records a denial attributable to the reset child's package and
+   the expected filters, and the controlled endpoint records no direct
+   request. Report only the routes and address families actually verified.
+   A timeout, missing event, or filter inventory alone is inconclusive.
+3. The approved and denied broker flows still produce one and zero
+   synthetic receipts respectively, and scoped cleanup is verified.
+
+If the same child cannot be bound to both the workflow and the OS evidence,
+stay offline. Do not substitute a result from an unrelated launcher or
+infer a universal egress guarantee. Apply the stop rule before adding more
+diagnostics. The journal investigation stays on hold.
+
+### Reuse Review
+
+The containment screen binds its evidence to the child created by its
+own launcher. ZIP 3 starts Hermes through an ordinary Python subprocess.
+An existing screen result cannot establish network enforcement for that
+subprocess. Reuse the package-scoped filter setup and event attribution,
+not the earlier result or the entire containment screen.
+
+Review a separate offline reset launcher that starts the actual Hermes
+turn as the verified AppContainer child. Keep the operator and synthetic
+broker outside it. Preserve ZIP 3's exact request review and same-turn
+response behavior. Require independent endpoint receipts and Windows
+block evidence tied to the launched child and the tested route. Verify
+owned jobs stop before removing grants or filters. No public endpoints,
+real credentials, production data, or broader containment claims.
+
+Decision: if the launcher cannot tie both observations to the actual
+Hermes child, keep the network gate open and the demo offline. Review
+the integration before assembly; do not build a second network policy
+or reopen journal work to obtain this evidence.
